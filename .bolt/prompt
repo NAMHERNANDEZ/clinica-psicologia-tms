@@ -1,5 +1,246 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+# Terapia Magnética Transcraneal (EMTr/TMS) — Sistema Clínico SaaS
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+Plataforma integral para el manejo de pacientes neuropsiquiátricos que requieren estimulación magnética transcraneal repetitiva (EMTr). Diseñada para clínicas de terapia magnética transcraneal que buscan eficiencia operativa, trazabilidad clínica y toma de decisiones basada en datos.
 
-Use icons from lucide-react for logos.
+---
+
+## Stack Tecnológico
+
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | React 18 + TypeScript + Vite 6 |
+| Estilos | Tailwind CSS 3 |
+| Iconografía | Lucide React |
+| Calendario | FullCalendar v6 |
+| WebGL | Three.js r185 |
+| Backend | Cloudflare Workers |
+| Base de datos | Cloudflare D1 (SQLite) |
+| KV Store | Cloudflare KV |
+| PWA | Service Worker + Web Manifest |
+
+---
+
+## Arquitectura
+
+### Multi-tenancy
+- Todas las tablas de D1 incluyen `clinic_id` (INTEGER)
+- Aislamiento completo entre clínicas
+- Datos compartidos: catálogos de protocolos y efectos adversos
+
+### Autenticación y Seguridad
+- JWT access token (15 min) + refresh token (30 días)
+- Hash: PBKDF2 SHA-512 con salt único por usuario
+- Tokens de refresh en HttpOnly cookies (Secure, SameSite=Strict)
+- Rate limiting por endpoint y por IP
+- CORS configurable por origen
+- RBAC: recepcionista, terapeuta, médico, admin
+
+### API
+- Formato estándar: `{"success": true, "data": {...}, "requestId": "..."}`
+- IDs: INTEGER AUTOINCREMENT (D1)
+- Validación de entrada en cada endpoint
+- Logging de auditoría para operaciones sensibles
+
+---
+
+## Módulos del Sistema
+
+### 1. Gestión de Pacientes
+- CRUD completo con expediente clínico
+- Datos demográficos, antecedentes, diagnósticos (CIE-10)
+- Historial de tratamientos y evolución
+- Estado clínico: REGISTRADO → EVALUADO → UMBRAL_MEDIDO → PROTOCOLO_ASIGNADO → EN_TRATAMIENTO → EN_OBSERVACIÓN → DADO_DE_ALTA
+
+### 2. Agenda y Citas
+- Calendario FullCalendar con vista día/semana/mes
+- Crear, editar, cancelar citas
+- Recordatorios automáticos (WhatsApp/email)
+- Bloqueo de horarios y gestión de disponibilidad
+- Indicador de ocupación en tiempo real
+
+### 3. TMS/EMTr — Módulo Central
+- **Perfiles TMS**: configuración por paciente (protocolo, umbral motor, bobina)
+- **Protocolos**: frecuencia, intensidad (% MT), duración, total de pulsos
+- **Sesiones**: registro por sesión con pulsos entregados, efectos adversos, notas
+- **Umbral Motor**: medición y evolución por paciente
+- **Bobina**: posición, ángulo, intensidad, tipo (figura-8, circular, H-coil)
+
+### 4. Brain Viewer — Visualización Neural 3D
+- Modelo cerebral WebGL con Three.js
+- 10 regiones cerebrales clickeables (DLPFC, M1, SMA, ACC, Ínsula, Broca, Wernicke)
+- Simulación en tiempo real de propagación neural
+- Vista superior (top-down) para planificación de estimulación
+- Panel de información por región con botón de estimulación
+
+### 5. Gemelo Digital
+- Predicción de respuesta al tratamiento por paciente
+- Curva de predicción vs curva real
+- Nivel de confianza y tendencia (mejorando/estable/empeorando)
+- Reglas de decisión clínica automatizadas
+
+### 6. Notas Clínicas
+- Formato SOAP por sesión
+- Vinculadas a paciente, sesión TMS y terapeuta
+- Historial cronológico editable
+
+### 7. Efectos Adversos
+- Registro por sesión (tipo, severidad, duración)
+- Alertas automáticas por severidad
+- Estadísticas de frecuencia por protocolo
+
+### 8. Reportes
+- Métricas de eficacia (reducción de síntomas)
+- Métricas de seguridad (efectos adversos/total sesiones)
+- Tasa de respuesta por protocolo
+- Exportación a PDF/CSV
+
+### 9. Dashboard
+- Resumen operativo: pacientes activos, sesiones hoy, alertas
+- Indicadores clave: tasa de ocupación, sesiones completadas
+- Alertas pendientes y recordatorios
+
+### 10. Chat IA Secretaria
+- Asistente virtual para recepción
+- Respuestas sobre servicios, disponibilidad, procesos
+- Integración con WhatsApp
+
+---
+
+## Brain Viewer — Especificaciones Técnicas Críticas
+
+### Modelo 3D
+- Fuente: `brain.glb` (Draco-compressed, 437 meshes)
+- Carga: GLTFLoader + DRACOLoader
+- Ruta decoder local: `/libs/draco/`
+- Ruta decoder CDN fallback: `https://unpkg.com/three@0.185.0/examples/jsm/libs/draco/`
+- **Si el GLB falla → mostrar error visible, NUNCA una bola silenciosa**
+
+### Cámara
+- Posición: superior (top-down), Y=8 mirando al origen
+- Órbita: rotación horizontal suave con drag
+- Zoom: rueda del mouse (mín 4, máximo 14)
+- Ángulo de visión: 35°
+
+### Pantalla Completa
+- Ruta `/app/tms/brain` renderiza sin sidebar ni topbar
+- Control: `AppLayout.tsx` con bypass por pathname
+- Background: `#080C12`
+
+### Regiones Cerebrales (10)
+| ID | Nombre | Posición |
+|----|--------|----------|
+| dlpfc_l | DLPFC Izquierdo | Frontal-lateral izq. |
+| dlpfc_r | DLPFC Derecho | Frontal-lateral der. |
+| m1_l | M1 Izquierdo | Pre-central izq. |
+| m1_r | M1 Derecho | Pre-central der. |
+| sma | SMA | Medial-frontal |
+| acc | ACC | Cingulado anterior |
+| insula_l | Ínsula Izquierda | Lateral profunda izq. |
+| insula_r | Ínsula Derecha | Lateral profunda der. |
+| broca | Broca | Frontal inferior izq. |
+| wernicke | Wernicke | Temporal posterior der. |
+
+### Interacción
+- Click en región → panel lateral con info + botón ESTIMULAR
+- Hitbox invisible 2.5x el radio visual para facilitar selección
+- Cursor:pointer al hover sobre región
+- Drag threshold: 20px para distinguir click de órbita
+
+### Simulación
+- Web Worker con ConnectomeEngine (matriz 10×10)
+- Propagación: función sigmoide con delay variable
+- Plasticidad: regla Hebbian con peso sináptico adaptativo
+- Fases: idle → approach → ramp → propagation → peak → cooldown → complete
+- Bobina figure-8: toro doble + casing + handle, posición sobre región target
+
+### Animaciones CSS (overlay HTML)
+| Estado | Efecto | Duración |
+|--------|--------|----------|
+| idle | Opacidad pulsante (0.4→0.6) | 4s ease-in-out infinite |
+| low | Opacidad pulsante (0.5→0.7) | 3s ease-in-out infinite |
+| active | Opacidad + brillo (1→1.2) | 2s ease-in-out infinite |
+| stimulated | Pulsación doble (1→1.4→1.1→1.3) | 1.5s ease-in-out infinite |
+| high_response | Pulsación intensa (1.1→1.5→1.2) | 1.2s ease-in-out infinite |
+| risk | Pulso rojo saturado (1→1.6) | 0.8s ease-in-out infinite |
+| pulse_ring | Expansión de anillo (r=14→r=30) | 1.8s ease-out infinite |
+
+### Overlay Clínico (HospitalOverlay)
+- Fase del protocolo (top-left)
+- Versión NEUROSIM (top-right)
+- Métricas: bobina %, pulsos, activación media, regiones activas, peso máximo (bottom-left)
+- Mapa cortical: grid 5×2 con indicadores de activación (bottom-right)
+- Rutas activas: top 5 regiones con mayor activación (middle-right, solo durante estimulación)
+
+---
+
+## VALIDACIÓN VISUAL — BRAIN VIEWER
+
+### REGLA ABSOLUTA: El modelo cerebral 3D debe pasar el test de "anatomía humana".
+
+### Checklist de Validación — BOLA vs CEREBRO REAL
+
+| # | Criterio | BOLA (MALO) | CEREBRO REAL (BIEN) |
+|---|----------|-------------|---------------------|
+| 1 | **Forma general** | Simétrica, redonda como una pelota de tenis | Alargada front-back, ancha en temporal, asimétrica |
+| 2 | **Vista superior** | Círculo perfecto o elipse suave | Forma de almendra/huevo, frontal angosto, occipital angosto, temporal ancho |
+| 3 | **Fisura interhemisférica** | Inexistente o línea superficial | Surco profundo visible separando los dos hemisferios |
+| 4 | **Superficie** | Lisa o conrugamientos casi invisibles | Surcos profundos (cisura central, lateral, etc.) visibles como indentaciones |
+| 5 | **Lóbulos temporales** | No sobresalen o se ven como parte de la esfera | Bulge lateral claramente visible, sobresale del perfil |
+| 6 | **Plano frontal** | Redondeado uniforme | Frente más angosta que el centro, forma de V suave |
+| 7 | **Plano occipital** | Idéntico al frontal | Más angosto y puntiagudo que el frontal |
+| 8 | **Altura (vista lateral)** | Igual que el ancho | Significativamente más baja/aplastada que el ancho |
+| 9 | **Regiones visibles** | No se distinguen zonas anatómicas | Se pueden distinguir: frontal, parietal, temporal, occipital |
+| 10 | **Material/sombra** | Sombreado uniforme, parece bola de billar | Sombras variadas en los surcos, aspecto de materia orgánica |
+
+### Test Rápido
+
+```
+¿Se ve como algo que sacarías de una anatomía humana?
+  → SÍ = CEREBRO ✓
+  → NO, se ve como geometría 3D genérica = BOLA ✗
+
+¿Puedes ver el surco que separa los dos hemisferios?
+  → SÍ = CEREBRO ✓
+  → NO = BOLA ✗
+
+¿Los lóbulos temporales sobresalen lateralmente?
+  → SÍ = CEREBRO ✓
+  → NO = BOLA ✗
+```
+
+### Código de Verificación Automática
+- Medir bounding box del modelo cargado
+- Si ratio (width/height) < 1.2 O ratio (length/height) < 1.2 → Probablemente es una bola → WARN
+- Si el modelo tiene menos de 100 meshes → Probablemente no es un brain real
+
+---
+
+## Reglas de Desarrollo
+
+1. **Cloudflare exclusivo** — sin Firebase, VPS, Express, Supabase ni backends Node
+2. **Verificar `package.json`** antes de importar cualquier librería
+3. **Git commit** después de cada feature completado — sin excepciones
+4. **TypeScript estricto** — sin `any` implícitos
+5. **Mobile-first** con breakpoints md/lg
+6. **Accesibilidad**: labels, aria attributes, contraste WCAG AA
+7. **Nomenclatura**: componentes PascalCase, hooks camelCase, archivos kebab-case
+8. **Performance**: lazy loading de rutas, code splitting por módulo
+9. **Seguridad**: sanitización de inputs, prevención de XSS, CSRF tokens
+10. **Brain Viewer**: SI el modelo parece una bola → DETENER y reportar error
+
+---
+
+## Estilo Visual
+
+- Tema clínico oscuro: `#080C12` background, `#4ECDC4` acento cyan
+- Monospace para datos clínicos (`font-mono`)
+- Colores de activación cerebral:
+  - idle: `#3B4A5C`
+  - low: `#2E7D8A`
+  - mid: `#2563A8`
+  - high: `#4A5AC0`
+  - risk: `#B85450`
+- Transiciones suaves (300ms ease)
+- Sombras sutiles en paneles
+- Bordes redondeados consistentes
+- Iconografía: Lucide React, peso stroke-width=2
