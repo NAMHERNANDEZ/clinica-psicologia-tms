@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { tmsProtocols, motorThresholds, type TmsProtocol, type MotorThreshold } from '../../lib/api';
-import { Play, RotateCcw, Activity, Target, Gauge, Radio, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
-import { BrainCanvas, type BrainCanvasHandle } from '../../brain/render/BrainCanvas';
-import { HospitalOverlay } from '../../brain/render/HospitalOverlay';
-import type { OverlayState } from '../../brain/render/BrainRenderer';
+import { Play, RotateCcw, Radio } from 'lucide-react';
+import { BRAIN_REGIONS } from '../../visual-engine/modules/brain/brain-regions';
+import { BRAIN_ANIMATIONS } from '../../visual-engine/modules/brain/brain-animations';
+import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState, type BrainActivityLevel } from '../../visual-engine/core/StateMapper';
 import type { ProtocolPhase } from '../../brain/simulation/ProtocolStateMachine';
+
+const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
 
 interface RegionInfo {
   id: string;
@@ -14,19 +16,16 @@ interface RegionInfo {
 }
 
 const REGION_INFO: Record<string, RegionInfo> = {
-  dlpfc_l: { id: 'dlpfc_l', name: 'DLPFC Izq.', desc: 'Control ejecutivo, memoria de trabajo.', side: 'left' },
-  dlpfc_r: { id: 'dlpfc_r', name: 'DLPFC Der.', desc: 'Atencion, flexibilidad cognitiva.', side: 'right' },
-  m1_l: { id: 'm1_l', name: 'M1 Izq.', desc: 'Control motor contralateral.', side: 'left' },
-  m1_r: { id: 'm1_r', name: 'M1 Der.', desc: 'Control motor contralateral.', side: 'right' },
-  sma: { id: 'sma', name: 'SMA', desc: 'Planificacion de movimientos.', side: 'mid' },
-  acc: { id: 'acc', name: 'ACC', desc: 'Regulacion emocional.', side: 'mid' },
-  insula_l: { id: 'insula_l', name: 'Insula Izq.', desc: 'Conciencia interoceptiva.', side: 'left' },
-  insula_r: { id: 'insula_r', name: 'Insula Der.', desc: 'Procesamiento emocional.', side: 'right' },
+  prefrontal_left: { id: 'prefrontal_left', name: 'DLPFC Izq.', desc: 'Control ejecutivo, memoria de trabajo.', side: 'left' },
+  prefrontal_right: { id: 'prefrontal_right', name: 'DLPFC Der.', desc: 'Atencion, flexibilidad cognitiva.', side: 'right' },
+  motor_cortex_left: { id: 'motor_cortex_left', name: 'M1 Izq.', desc: 'Control motor contralateral.', side: 'left' },
+  motor_cortex_right: { id: 'motor_cortex_right', name: 'M1 Der.', desc: 'Control motor contralateral.', side: 'right' },
+  dorsal_acc: { id: 'dorsal_acc', name: 'ACC', desc: 'Regulacion emocional.', side: 'mid' },
+  insula_left: { id: 'insula_left', name: 'Insula Izq.', desc: 'Conciencia interoceptiva.', side: 'left' },
+  insula_right: { id: 'insula_right', name: 'Insula Der.', desc: 'Procesamiento emocional.', side: 'right' },
   broca: { id: 'broca', name: 'Broca', desc: 'Produccion del lenguaje.', side: 'left' },
   wernicke: { id: 'wernicke', name: 'Wernicke', desc: 'Comprension del lenguaje.', side: 'right' },
 };
-
-const REGION_IDS = Object.keys(REGION_INFO);
 
 const PHASE_LABELS: Record<ProtocolPhase, string> = {
   idle: 'Sistema listo', approach: 'Acercamiento', ramp: 'Incremento',
@@ -37,49 +36,14 @@ function getPhaseProgress(phase: ProtocolPhase): number {
   return { idle: 0, approach: 15, ramp: 35, propagation: 60, peak: 85, cooldown: 95, complete: 100 }[phase];
 }
 
-interface ConnectomeEdge { from: string; to: string; weight: number; }
-
-function getTopConnections(matrix: number[][], limit: number): ConnectomeEdge[] {
-  const edges: ConnectomeEdge[] = [];
-  for (let i = 0; i < matrix.length; i++) {
-    for (let j = i + 1; j < (matrix[i]?.length || 0); j++) {
-      const w = matrix[i][j];
-      if (w > 0) edges.push({ from: REGION_IDS[i], to: REGION_IDS[j], weight: w });
-    }
-  }
-  return edges.sort((a, b) => b.weight - a.weight).slice(0, limit);
-}
-
 export default function BrainViewerPage() {
   const [protocols, setProtocols] = useState<TmsProtocol[]>([]);
-  const [active, setActive] = useState<Map<string, number>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [simPhase, setSimPhase] = useState<ProtocolPhase>('idle');
   const [loading, setLoading] = useState(true);
   const [measurements, setMeasurements] = useState<MotorThreshold[]>([]);
-  const [connectomeMatrix, setConnectomeMatrix] = useState<number[][]>([]);
-  const [pulseCount, setPulseCount] = useState(0);
-  const [coilIntensity, setCoilIntensity] = useState(0);
-  const brainRef = useRef<BrainCanvasHandle>(null);
-  const [brainStatus, setBrainStatus] = useState<string>('loading');
-  const [brainDetail, setBrainDetail] = useState<string>('');
-
-  useEffect(() => {
-    const check = () => {
-      const r = brainRef.current?.getRenderer();
-      if (r) {
-        const s = r.getLoadStatus();
-        const d = r.getLoadDetail();
-        setBrainStatus(s);
-        setBrainDetail(d);
-        return true;
-      }
-      return false;
-    };
-    const interval = setInterval(() => { if (check()) clearInterval(interval); }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  const [brainStates, setBrainStates] = useState<Map<string, BrainVisualState>>(new Map());
 
   useEffect(() => {
     Promise.all([
@@ -90,55 +54,83 @@ export default function BrainViewerPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { brainRef.current?.onRegionSelected((id) => setSelectedId(id)); }, []);
-  useEffect(() => {
-    brainRef.current?.onOverlay((state: OverlayState) => {
-      setActive(new Map(state.activations));
-      setSimPhase(state.phase);
-      setConnectomeMatrix(state.connectome);
-      setPulseCount(state.pulseCount);
-      setCoilIntensity(state.coilIntensity);
-      if (state.phase === 'complete' || state.phase === 'idle') setSimulating(false);
+  const getBrainStates = useCallback((): Map<string, BrainVisualState> => {
+    const map = new Map<string, BrainVisualState>();
+    BRAIN_REGIONS.forEach(region => {
+      map.set(region.id, {
+        region: region.id as any,
+        activity: 'idle',
+        intensity: 0,
+        color: BRAIN_ACTIVITY_COLORS.idle,
+        pulseActive: false,
+      });
     });
+    return map;
   }, []);
 
-  const clearAll = useCallback(() => {
-    brainRef.current?.stopProtocol();
-    setActive(new Map());
-    setSimPhase('idle');
-    setSimulating(false);
-    setPulseCount(0);
-    setCoilIntensity(0);
-  }, []);
+  useEffect(() => { setBrainStates(getBrainStates()); }, [getBrainStates]);
 
   const stimulateRegion = useCallback((regionId: string) => {
-    const p = protocols[0];
-    if (!p || simulating) return;
-    clearAll();
+    if (simulating) return;
     setSimulating(true);
-    setPulseCount(0);
-    const latestMt = measurements[0]?.mt_pct || 50;
-    brainRef.current?.runProtocol({
-      targetRegion: regionId,
-      protocol: { frequency_hz: p.frequency_hz, intensity_pct_mt: p.intensity_pct_mt, duration_sec: 2, total_pulses: 30 },
-      mtPct: latestMt,
+    setSimPhase('approach');
+
+    const newStates = new Map<string, BrainVisualState>();
+    BRAIN_REGIONS.forEach(region => {
+      const isTarget = region.id === regionId;
+      const activity: BrainActivityLevel = isTarget ? 'stimulated' : 'idle';
+      newStates.set(region.id, {
+        region: region.id as any,
+        activity,
+        intensity: isTarget ? 0.8 : 0,
+        color: BRAIN_ACTIVITY_COLORS[activity],
+        pulseActive: isTarget,
+      });
     });
-  }, [protocols, measurements, simulating, clearAll]);
+    setBrainStates(newStates);
+
+    const phases: ProtocolPhase[] = ['approach', 'ramp', 'propagation', 'peak', 'cooldown', 'complete'];
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      if (i < phases.length) {
+        setSimPhase(phases[i]);
+        if (phases[i] === 'complete') {
+          setSimulating(false);
+          setTimeout(() => {
+            setBrainStates(getBrainStates());
+            setSimPhase('idle');
+          }, 1000);
+          clearInterval(interval);
+        }
+      }
+    }, 800);
+  }, [simulating, getBrainStates]);
+
+  const clearAll = useCallback(() => {
+    setSimulating(false);
+    setSimPhase('idle');
+    setBrainStates(getBrainStates());
+  }, [getBrainStates]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-[#4ECDC4] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   const selectedInfo = selectedId ? REGION_INFO[selectedId] : null;
-  const activeRegionCount = Array.from(active.values()).filter(v => v > 0).length;
-  const avgActivation = active.size > 0 ? Math.round((Array.from(active.values()).reduce((a, b) => a + b, 0) / active.size) * 100) : 0;
+  const activeRegionCount = Array.from(brainStates.values()).filter(s => s.activity !== 'idle').length;
+  const avgIntensity = brainStates.size > 0
+    ? Math.round((Array.from(brainStates.values()).reduce((a, b) => a + b.intensity, 0) / brainStates.size) * 100)
+    : 0;
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-[#080C12] -m-6 flex flex-col font-mono">
+    <div className="h-screen bg-[#080C12] -m-6 flex flex-col font-mono overflow-hidden">
+      <style>{KEYFRAME_CSS}</style>
+
       <div className="px-4 py-2 flex items-center justify-between border-b border-[#1A202C] shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-sm font-bold text-[#C8D0DA] tracking-wider">NEUROSIM ENGINE</h1>
@@ -159,32 +151,106 @@ export default function BrainViewerPage() {
         </button>
       </div>
 
-      <div className="flex-1 relative min-h-0">
-        <BrainCanvas ref={brainRef} />
-        <HospitalOverlay
-          phase={simPhase}
-          regionActivations={active}
-          coilIntensity={coilIntensity}
-          pulseCount={pulseCount}
-          connectome={connectomeMatrix}
-        />
+      <div className="flex-1 relative min-h-0 flex items-center justify-center">
+        <div className="w-full max-w-4xl h-full flex items-center justify-center p-4">
+          <svg viewBox="0 0 500 300" className="w-full h-full" style={{ maxHeight: '100%' }}>
+            <defs>
+              <radialGradient id="brainBg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#1e293b" />
+                <stop offset="100%" stopColor="#0f172a" />
+              </radialGradient>
+              <filter id="glowFilter">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="softGlow">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-        <div className="absolute top-3 right-3 z-20 pointer-events-none">
-          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-sm text-[9px] tracking-wider font-mono ${
-            brainStatus === 'glb_ok'
-              ? 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30'
-              : brainStatus === 'glb_fallback'
-              ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30'
-              : 'bg-[#6b7280]/10 text-[#6b7280] border border-[#6b7280]/30'
-          }`}>
-            {brainStatus === 'glb_ok' && <CheckCircle className="w-3 h-3" />}
-            {brainStatus === 'glb_fallback' && <AlertTriangle className="w-3 h-3" />}
-            {brainStatus === 'loading' && <span className="w-3 h-3 inline-block border border-current border-t-transparent rounded-full animate-spin" />}
-            <span>{brainStatus === 'glb_ok' ? 'GLB REAL' : brainStatus === 'glb_fallback' ? 'FALLBACK' : 'CARGANDO...'}</span>
-          </div>
-          {brainDetail && (
-            <div className="text-[8px] text-[#5A6A7A] mt-0.5 px-2">{brainDetail}</div>
-          )}
+            <ellipse cx="250" cy="150" rx="180" ry="130" fill="url(#brainBg)" stroke="#334155" strokeWidth="1.5" />
+            <line x1="250" y1="20" x2="250" y2="280" stroke="#1e293b" strokeWidth="1" strokeDasharray="4,4" />
+
+            {BRAIN_REGIONS.map(region => {
+              const bs = brainStates.get(region.id);
+              const activity = bs?.activity || 'idle';
+              const intensity = bs?.intensity || 0;
+              const color = bs?.color || BRAIN_ACTIVITY_COLORS.idle;
+              const pulseActive = bs?.pulseActive || false;
+              const animName = activity === 'stimulated' || activity === 'high_response'
+                ? BRAIN_ANIMATIONS[activity]?.name
+                : activity === 'risk'
+                  ? BRAIN_ANIMATIONS.risk.name
+                  : '';
+
+              return (
+                <g
+                  key={region.id}
+                  onClick={() => setSelectedId(region.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <ellipse
+                    cx={region.cx}
+                    cy={region.cy}
+                    rx={region.rx + intensity * 4}
+                    ry={region.ry + intensity * 4}
+                    fill={color}
+                    opacity={0.3 + intensity * 0.7}
+                    filter="url(#softGlow)"
+                    style={animName ? {
+                      animation: `${animName} ${BRAIN_ANIMATIONS[activity]?.duration || '2s'} ${BRAIN_ANIMATIONS[activity]?.timing || 'ease-in-out'} infinite`,
+                    } : undefined}
+                  />
+
+                  {pulseActive && (
+                    <ellipse
+                      cx={region.cx}
+                      cy={region.cy}
+                      rx={region.rx}
+                      ry={region.ry}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1.5"
+                      opacity="0.5"
+                      style={{
+                        animation: `${BRAIN_ANIMATIONS.pulse_ring.name} ${BRAIN_ANIMATIONS.pulse_ring.duration} ${BRAIN_ANIMATIONS.pulse_ring.timing} infinite`,
+                      }}
+                    />
+                  )}
+
+                  <ellipse
+                    cx={region.cx}
+                    cy={region.cy}
+                    rx={region.rx * 0.6}
+                    ry={region.ry * 0.6}
+                    fill={color}
+                    opacity={0.5 + intensity * 0.5}
+                  />
+
+                  <text
+                    x={region.cx}
+                    y={region.cy + region.ry + 16}
+                    textAnchor="middle"
+                    className="fill-slate-400"
+                    style={{ fontSize: '8px', fontFamily: 'system-ui' }}
+                  >
+                    {BRAIN_REGION_LABELS[region.id]}
+                  </text>
+                </g>
+              );
+            })}
+
+            <text x="250" y="295" textAnchor="middle" className="fill-slate-600" style={{ fontSize: '10px' }}>
+              Vista Axial — Simulación de Actividad Cerebral
+            </text>
+          </svg>
         </div>
 
         {selectedInfo && (
@@ -196,8 +262,8 @@ export default function BrainViewerPage() {
             <p className="text-[9px] text-[#6A7A8A] leading-relaxed mb-2">{selectedInfo.desc}</p>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] text-[#4A5A6A] tracking-wider">LADO: {selectedInfo.side === 'left' ? 'IZQ' : selectedInfo.side === 'right' ? 'DER' : 'MEDIO'}</span>
-              {active.get(selectedId!)! > 0 && (
-                <span className="text-[9px] text-[#4ECDC4]">{Math.round(active.get(selectedId!)! * 100)}%</span>
+              {brainStates.get(selectedId!)?.activity !== 'idle' && (
+                <span className="text-[9px] text-[#4ECDC4]">{Math.round((brainStates.get(selectedId!)?.intensity || 0) * 100)}%</span>
               )}
             </div>
             <button onClick={() => stimulateRegion(selectedId!)}
@@ -212,30 +278,29 @@ export default function BrainViewerPage() {
 
       <div className="px-4 py-2 border-t border-[#1A202C] flex items-center gap-4 shrink-0 overflow-x-auto">
         <div className="flex items-center gap-3 text-[9px] text-[#5A6A7A] shrink-0">
-          <span className="flex items-center gap-1"><Gauge className="w-3 h-3 text-[#4ECDC4]" /> <span className="text-[#4ECDC4]">{activeRegionCount}</span>/10</span>
-          <span>PROM <span className="text-[#C8D0DA]">{avgActivation}%</span></span>
-          <span>PULSOS <span className="text-[#D4A843]">{pulseCount}</span></span>
-          <span>BOBINA <span className="text-[#8A6CB0]">{Math.round(coilIntensity * 100)}%</span></span>
+          <span>REGIONES <span className="text-[#4ECDC4]">{activeRegionCount}</span>/9</span>
+          <span>PROM <span className="text-[#C8D0DA]">{avgIntensity}%</span></span>
         </div>
 
         <div className="w-px h-4 bg-[#1A202C] shrink-0" />
 
         <div className="flex items-center gap-2 shrink-0">
-          <Zap className="w-3 h-3 text-[#D4A843] shrink-0" />
           {protocols.map(p => (
-            <button key={p.id} onClick={() => {
-              clearAll(); setSimulating(true); setPulseCount(0);
-              const latestMt = measurements[0]?.mt_pct || 50;
-              brainRef.current?.runProtocol({
-                targetRegion: selectedId || 'dlpfc_l',
-                protocol: { frequency_hz: p.frequency_hz, intensity_pct_mt: p.intensity_pct_mt, duration_sec: 2, total_pulses: 30 },
-                mtPct: latestMt,
-              });
-            }} disabled={simulating}
+            <button key={p.id} onClick={() => stimulateRegion(selectedId || 'prefrontal_left')}
+              disabled={simulating}
               className="px-2 py-0.5 text-[9px] text-[#8A96A3] bg-[#0D1117] border border-[#1A202C] rounded-sm hover:border-[#4ECDC4]/30 hover:text-[#4ECDC4] transition-colors disabled:opacity-30 tracking-wider shrink-0"
             >
               {p.name}
             </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center space-x-4 ml-auto text-xs shrink-0">
+          {(['idle', 'low', 'active', 'stimulated', 'high_response', 'risk'] as const).map(level => (
+            <div key={level} className="flex items-center space-x-1.5">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BRAIN_ACTIVITY_COLORS[level] }} />
+              <span className="text-slate-400 capitalize">{level.replace(/_/g, ' ')}</span>
+            </div>
           ))}
         </div>
       </div>
