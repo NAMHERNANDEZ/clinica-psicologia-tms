@@ -19,9 +19,19 @@ export default function AppLayout() {
   const isMobile = useIsMobile();
   const location = useLocation();
 
+  const isFullscreen = location.pathname.includes('/tms/brain');
+
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  if (isFullscreen) {
+    return (
+      <div className="min-h-screen bg-[#080C12]">
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

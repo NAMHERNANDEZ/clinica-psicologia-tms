@@ -51,7 +51,7 @@ export class BrainRenderer {
   private currentCoilIntensity = 0;
   private disposed = false;
 
-  init(canvas: HTMLCanvasElement) {
+  async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.disposed = false;
 
@@ -64,7 +64,7 @@ export class BrainRenderer {
       0.1,
       100
     );
-    this.camera.position.set(0, 1.8, 7.5);
+    this.camera.position.set(0, 8, 0.1);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -90,7 +90,7 @@ export class BrainRenderer {
     this.scene.add(ambientLight, keyLight, fillLight, rimLight);
 
     this.brainScene = new BrainScene(this.scene);
-    this.brainScene.init();
+    await this.brainScene.init();
     this.connectome = new ConnectomeEngine();
 
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
@@ -252,9 +252,9 @@ export class BrainRenderer {
       const delta = this.clock.getDelta();
 
       this.angle += (this.targetAngle - this.angle) * 0.08;
-      this.camera.position.x = Math.sin(this.angle) * 7.5;
-      this.camera.position.z = Math.cos(this.angle) * 7.5;
-      this.camera.position.y = 1.8 + Math.sin(this.angle * 0.3) * 0.15;
+      this.camera.position.x = Math.sin(this.angle) * 0.3;
+      this.camera.position.z = Math.cos(this.angle) * 0.3;
+      this.camera.position.y = 8;
       this.camera.lookAt(0, 0, 0);
 
       this.brainScene.update(delta);
