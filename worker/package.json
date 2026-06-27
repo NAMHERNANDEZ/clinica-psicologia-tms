@@ -1,0 +1,24 @@
+{
+  "name": "clinica-tms-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "check:env": "node scripts/check-env.js",
+    "check:db": "node scripts/check-db.js",
+    "db:init": "wrangler d1 execute clinica-tms-db --file=./schema.sql",
+    "db:init:remote": "wrangler d1 execute clinica-tms-db --file=./schema.sql --remote",
+    "db:reset": "wrangler d1 execute clinica-tms-db --file=./schema.sql --yes",
+    "db:reset:remote": "wrangler d1 execute clinica-tms-db --file=./schema.sql --yes --remote",
+    "setup": "powershell -File deploy.ps1",
+    "seed": "wrangler d1 execute clinica-tms-db --file=./seed.sql --remote",
+    "health": "curl -s https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/health"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

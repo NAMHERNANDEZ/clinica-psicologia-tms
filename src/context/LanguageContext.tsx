@@ -155,7 +155,7 @@ const translations: Record<Language, Record<string, string>> = {
     'contact.hoursWeekday': 'Lunes - Viernes: 9:00 AM - 7:00 PM',
     'contact.hoursSaturday': 'Sábado: 9:00 AM - 3:00 PM',
     'contact.location': 'Ubicación',
-    'contact.locationDesc': '5 de Febrero esq. Benito Juárez, Centro. Xalapa, Veracruz-Puebla.',
+    'contact.locationDesc': '5 de Febrero esq. Benito Juárez, Centro. Xiutetelco',
 
     // Footer
     'footer.disclaimer': 'La información proporcionada en este sitio es únicamente con fines educativos no sustituye el diagnóstico o tratamiento profesional. Consulte a un profesional de salud mental calificado.',
@@ -163,12 +163,23 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.terms': 'Términos y Condiciones',
     'footer.rights': 'Todos los derechos reservados.',
 
+    // Chat
+    'chat.title': 'Asistente Virtual',
+    'chat.subtitle': 'Asistente inteligente para agendar citas y resolver dudas',
+
+    // Appointments
+    'appointments.title': 'Mis Citas',
+    'appointments.subtitle': 'Gestiona tus citas y recordatorios',
+    'appointments.today': 'Hoy',
+    'appointments.noAppointments': 'No hay citas programadas para este día',
+    'appointments.loading': 'Cargando citas...',
+
     // Common
     'common.learnMore': 'Más Información',
     'common.schedule': 'Agendar Consulta',
     'common.viewAll': 'Ver Todos',
     'common.back': 'Regresar',
-    'common.locale': 'Atención en Xalapa, Puebla y la región de Veracruz-Puebla',
+    'common.locale': 'Atención en Xiutetelco y la región de Veracruz-Puebla',
   },
 
   en: {
@@ -317,7 +328,7 @@ const translations: Record<Language, Record<string, string>> = {
     'contact.hoursWeekday': 'Monday - Friday: 9:00 AM - 7:00 PM',
     'contact.hoursSaturday': 'Saturday: 9:00 AM - 3:00 PM',
     'contact.location': 'Location',
-    'contact.locationDesc': '5 de Febrero cor. Benito Juárez, Centro. Xalapa, Veracruz-Puebla.',
+    'contact.locationDesc': '5 de Febrero cor. Benito Juárez, Centro. Xiutetelco',
 
     // Footer
     'footer.disclaimer': 'The information provided on this site is for educational purposes only and does not substitute professional diagnosis or treatment. Consult a qualified mental health professional.',
@@ -325,12 +336,23 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.terms': 'Terms and Conditions',
     'footer.rights': 'All rights reserved.',
 
+    // Chat
+    'chat.title': 'Virtual Assistant',
+    'chat.subtitle': 'Intelligent assistant for scheduling appointments and answering questions',
+
+    // Appointments
+    'appointments.title': 'My Appointments',
+    'appointments.subtitle': 'Manage your appointments and reminders',
+    'appointments.today': 'Today',
+    'appointments.noAppointments': 'No appointments scheduled for this day',
+    'appointments.loading': 'Loading appointments...',
+
     // Common
     'common.learnMore': 'Learn More',
     'common.schedule': 'Schedule Consultation',
     'common.viewAll': 'View All',
     'common.back': 'Back',
-    'common.locale': 'Care in Xalapa, Puebla and the Veracruz-Puebla region',
+    'common.locale': 'Care in Xiutetelco and the Veracruz-Puebla region',
   },
 };
 
