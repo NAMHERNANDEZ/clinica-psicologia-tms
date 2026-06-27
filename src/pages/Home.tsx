@@ -358,7 +358,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-bold text-navy-900">
-                  {localStorage.getItem('language') === 'es' ? 'Atención en Xalapa, Puebla y la región de Veracruz-Puebla' : 'Care in Xalapa, Puebla and the Veracruz-Puebla region'}
+                  {localStorage.getItem('language') === 'es' ? 'Atención en Xiutetelco y la región de Veracruz-Puebla' : 'Care in Xiutetelco and the Veracruz-Puebla region'}
                 </h3>
                 <p className="text-slate-600 text-sm">
                   {localStorage.getItem('language') === 'es' ? 'Consulta presencial y en línea' : 'In-person and online consultations'}

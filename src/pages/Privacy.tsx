@@ -82,7 +82,7 @@ export default function Privacy() {
                   <p className="text-navy-700 font-medium">Neurociencia Clínica</p>
                   <p className="text-slate-600">Teléfono: +52 231 144 2941</p>
                   <p className="text-slate-600">WhatsApp: +52 231 144 2941</p>
-                  <p className="text-slate-600">Xalapa, Puebla y región Veracruz-Puebla</p>
+                  <p className="text-slate-600">Xiutetelco y región Veracruz-Puebla</p>
                 </div>
               </>
             ) : (
@@ -143,7 +143,7 @@ export default function Privacy() {
                   <p className="text-navy-700 font-medium">Clinical Neuroscience</p>
                   <p className="text-slate-600">Phone: +52 231 144 2941</p>
                   <p className="text-slate-600">WhatsApp: +52 231 144 2941</p>
-                  <p className="text-slate-600">Xalapa, Puebla and Veracruz-Puebla region</p>
+                  <p className="text-slate-600">Xiutetelco and Veracruz-Puebla region</p>
                 </div>
               </>
             )}

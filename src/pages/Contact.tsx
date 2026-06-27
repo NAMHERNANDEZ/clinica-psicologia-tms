@@ -113,7 +113,7 @@ export default function Contact() {
               <div>
                 <h3 className="font-bold text-navy-900">{t('contact.location')}</h3>
                 <p className="text-slate-600 text-sm">{language === 'es' ? '5 de Febrero esq. Benito Juárez, Centro' : '5 de Febrero cor. Benito Juárez, Centro'}</p>
-                <p className="text-slate-500 text-xs">{language === 'es' ? 'Xalapa, Veracruz-Puebla' : 'Xalapa, Veracruz-Puebla'}</p>
+                <p className="text-slate-500 text-xs">Xiutetelco</p>
               </div>
             </div>
           </div>

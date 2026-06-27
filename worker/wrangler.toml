@@ -1,0 +1,14 @@
+name = "clinica-tms-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "clinica-tms-db"
+database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173"

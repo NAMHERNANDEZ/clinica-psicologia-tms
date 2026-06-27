@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Globe, Brain, Phone } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Globe, Brain, Phone, LogOut, LayoutDashboard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,8 +36,25 @@ export default function Header() {
     { path: '/contacto', label: t('nav.contact') },
   ];
 
+  const authNavItems = isAuthenticated
+    ? [
+        { path: '/dashboard', label: language === 'es' ? 'Dashboard' : 'Dashboard', icon: LayoutDashboard },
+        { path: '/calendar', label: language === 'es' ? 'Calendario' : 'Calendar' },
+        { path: '/citas', label: language === 'es' ? 'Citas' : 'Appointments' },
+        { path: '/chat', label: language === 'es' ? 'Asistente' : 'Assistant' },
+      ]
+    : [
+        { path: '/chat', label: language === 'es' ? 'Asistente' : 'Assistant' },
+        { path: '/citas', label: language === 'es' ? 'Citas' : 'Appointments' },
+      ];
+
   const toggleLanguage = () => {
     setLanguage(language === 'es' ? 'en' : 'es');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
   };
 
   return (
@@ -74,7 +94,24 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden xl:flex items-center space-x-1">
-            {navItems.slice(0, 6).map((item) => (
+            {navItems.slice(0, 5).map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  location.pathname === item.path
+                    ? isScrolled
+                      ? 'bg-navy-100 text-navy-900'
+                      : 'bg-white/10 text-white'
+                    : isScrolled
+                      ? 'text-slate-600 hover:text-navy-900 hover:bg-slate-50'
+                      : 'text-white/90 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            {authNavItems.slice(0, 2).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -107,6 +144,48 @@ export default function Header() {
               <Globe className="w-4 h-4" />
               <span>{language === 'es' ? 'ES' : 'EN'}</span>
             </button>
+
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-2">
+                <span className={`text-sm ${isScrolled ? 'text-slate-600' : 'text-white/80'}`}>
+                  {user?.email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isScrolled
+                      ? 'text-red-600 hover:bg-red-50'
+                      : 'text-white hover:bg-white/10'
+                  }`}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{language === 'es' ? 'Salir' : 'Logout'}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to="/login"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isScrolled
+                      ? 'text-navy-700 hover:bg-slate-50'
+                      : 'text-white hover:bg-white/10'
+                  }`}
+                >
+                  {language === 'es' ? 'Iniciar Sesión' : 'Sign In'}
+                </Link>
+                <Link
+                  to="/register"
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    isScrolled
+                      ? 'bg-teal-500 text-white hover:bg-teal-600'
+                      : 'bg-white text-navy-900 hover:bg-slate-50'
+                  }`}
+                >
+                  {language === 'es' ? 'Registrarse' : 'Sign Up'}
+                </Link>
+              </div>
+            )}
 
             {/* CTA Button */}
             <a
@@ -157,6 +236,47 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
+            <div className="border-t border-slate-100 pt-4 mt-4">
+              {isAuthenticated ? (
+                <>
+                  {authNavItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`block px-4 py-3 rounded-xl text-base font-medium transition-colors duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-navy-100 text-navy-900'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-2 px-4 py-3 text-red-600 font-medium rounded-xl hover:bg-red-50"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>{language === 'es' ? 'Cerrar Sesión' : 'Logout'}</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="block px-4 py-3 text-navy-900 font-medium rounded-xl hover:bg-slate-50"
+                  >
+                    {language === 'es' ? 'Iniciar Sesión' : 'Sign In'}
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="block px-4 py-3 bg-teal-500 text-white font-medium rounded-xl text-center hover:bg-teal-600"
+                  >
+                    {language === 'es' ? 'Registrarse' : 'Sign Up'}
+                  </Link>
+                </>
+              )}
+            </div>
             <div className="border-t border-slate-100 pt-4 mt-4 flex items-center justify-between">
               <button
                 onClick={toggleLanguage}

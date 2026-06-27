@@ -126,8 +126,7 @@ export default function Footer() {
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{language === 'es' ? '5 de Febrero esq. Benito Juárez, Centro' : '5 de Febrero cor. Benito Juárez, Centro'}</span>
               </li>
-              <li className="text-sm text-slate-500">
-                {language === 'es' ? 'Xalapa, Veracruz-Puebla' : 'Xalapa, Veracruz-Puebla'}
+              <li className="text-sm text-slate-500">Xiutetelco
               </li>
             </ul>
           </div>
