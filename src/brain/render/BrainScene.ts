@@ -59,175 +59,198 @@ export class BrainScene {
   }
 
   private async createBrain() {
-    let dracoLoader = new DRACOLoader();
+    this.createProceduralBrain();
+  }
 
-    const tryLoad = async (decoderPath: string): Promise<boolean> => {
-      try {
-        dracoLoader.setDecoderPath(decoderPath);
-        const loader = new GLTFLoader();
-        loader.setDRACOLoader(dracoLoader);
+  private createProceduralBrain() {
+    const brainCanvas = document.createElement('canvas');
+    brainCanvas.width = 1024;
+    brainCanvas.height = 1024;
+    const ctx = brainCanvas.getContext('2d')!;
 
-        const gltf = await new Promise<any>((resolve, reject) => {
-          loader.load('/models/brain.glb', (gltf) => resolve(gltf), undefined, (err) => reject(err));
-        });
+    ctx.fillStyle = '#8A95A5';
+    ctx.fillRect(0, 0, 1024, 1024);
 
-        gltf.scene.traverse((child: any) => {
-          if (child.isMesh) {
-            child.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color('#9AA5B2'),
-              roughness: 0.82,
-              metalness: 0.02,
-            });
-            child.castShadow = true;
-            child.receiveShadow = true;
-            this.brainMeshes.push(child);
-          }
-        });
-
-        const box = new THREE.Box3().setFromObject(gltf.scene);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 3.0 / maxDim;
-        gltf.scene.scale.setScalar(scale);
-        gltf.scene.position.sub(center.multiplyScalar(scale));
-
-        this.brainGroup.add(gltf.scene);
-
-        const scaledBox = new THREE.Box3().setFromObject(gltf.scene);
-        const scaledSize = scaledBox.getSize(new THREE.Vector3());
-        this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
-        this.meshCount = this.brainMeshes.length;
-        this.loadStatus = 'glb_ok';
-        this.loadDetail = `${this.meshCount} meshes, r=${this.brainSurfaceRadius.toFixed(2)}`;
-        return true;
-      } catch {
-        return false;
+    const drawSulcus = (x1: number, y1: number, x2: number, y2: number, depth: number) => {
+      const steps = 20;
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        const x = x1 + (x2 - x1) * t + (Math.random() - 0.5) * 4;
+        const y = y1 + (y2 - y1) * t + (Math.random() - 0.5) * 4;
+        const radius = depth * (1 - Math.abs(t - 0.5) * 2) * 0.5 + 1;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(100,110,120,${0.3 + Math.random() * 0.2})`;
+        ctx.fill();
       }
     };
 
-    const localOk = await tryLoad('/libs/draco/');
-    if (!localOk) {
-      console.warn('[BrainScene] Local Draco failed, trying CDN...');
-      dracoLoader.dispose();
-      dracoLoader = new DRACOLoader();
-      const cdnOk = await tryLoad('https://unpkg.com/three@0.185.0/examples/jsm/libs/draco/');
-      if (!cdnOk) {
-        console.warn('[BrainScene] CDN Draco also failed, using fallback brain');
-        this.createFallbackBrain();
-      }
-    }
-    dracoLoader.dispose();
-  }
-
-  private createFallbackBrain() {
-    const geo = new THREE.SphereGeometry(1.0, 300, 300);
-    const pos = geo.attributes.position;
-
-    for (let i = 0; i < pos.count; i++) {
-      let x = pos.getX(i);
-      let y = pos.getY(i);
-      let z = pos.getZ(i);
-
-      const origX = x;
-      const origY = y;
-      const origZ = z;
-
-      x *= 1.35;
-      y *= 0.50;
-      z *= 1.55;
-
-      const along = origZ;
-      const frontalTaper = Math.max(0.4, 1.0 - Math.max(0, (along - 0.5)) * 0.5);
-      const occipitalTaper = Math.max(0.35, 1.0 - Math.max(0, (-along - 0.4)) * 0.6);
-      const taper = frontalTaper * occipitalTaper;
-
-      const temporalBulgeX = Math.exp(-Math.pow((origY + 0.4) * 3.0, 2)) *
-        Math.exp(-Math.pow(Math.abs(along) * 1.0, 2)) * 0.55;
-      const parietalWide = Math.exp(-Math.pow((origY - 0.6) * 2.5, 2)) *
-        Math.exp(-Math.pow(Math.abs(along + 0.1) * 1.2, 2)) * 0.20;
-
-      const baseX = taper * (1 + temporalBulgeX + parietalWide);
-      x *= baseX;
-
-      const topFlatten = 1.0 - Math.max(0, origY - 0.3) * 0.6;
-      const bottomFlatten = 1.0 - Math.max(0, -origY - 0.3) * 0.3;
-      y *= topFlatten * bottomFlatten;
-      z *= taper;
-
-      const fissurePush = Math.exp(-Math.pow(Math.abs(origX) * 3.5, 2)) * 0.18;
-      x += origX > 0 ? fissurePush : -fissurePush;
-
-      const sulciFreq = 8.0;
-      const sulciDepth = 0.025;
-      const sulci1 = Math.sin(origZ * sulciFreq + origY * 3.0) * sulciDepth;
-      const sulci2 = Math.sin(origX * sulciFreq * 0.7 + origZ * 2.0) * sulciDepth * 0.7;
-      const sulci3 = Math.cos(origY * sulciFreq * 1.2 + origX * 1.5) * sulciDepth * 0.5;
-      const totalSulci = sulci1 + sulci2 + sulci3;
-      const normalFactor = Math.sqrt(x * x + y * y + z * z) || 1;
-      x += (x / normalFactor) * totalSulci;
-      y += (y / normalFactor) * totalSulci;
-      z += (z / normalFactor) * totalSulci;
-
-      pos.setXYZ(i, x, y, z);
+    for (let i = 0; i < 60; i++) {
+      const cx = 512 + (Math.random() - 0.5) * 800;
+      const cy = 512 + (Math.random() - 0.5) * 800;
+      const angle = Math.random() * Math.PI * 2;
+      const len = 20 + Math.random() * 60;
+      drawSulcus(cx, cy, cx + Math.cos(angle) * len, cy + Math.sin(angle) * len, 3 + Math.random() * 4);
     }
 
-    geo.computeVertexNormals();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d')!;
-
-    ctx.fillStyle = '#9AA5B2';
-    ctx.fillRect(0, 0, 512, 512);
-
-    for (let i = 0; i < 120; i++) {
-      const x1 = Math.random() * 512;
-      const y1 = Math.random() * 512;
-      const angle = Math.random() * Math.PI;
-      const len = 30 + Math.random() * 80;
-      const x2 = x1 + Math.cos(angle) * len;
-      const y2 = y1 + Math.sin(angle) * len;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `rgba(120,130,140,${0.15 + Math.random() * 0.2})`;
-      ctx.lineWidth = 1 + Math.random() * 2;
-      ctx.stroke();
+    for (let i = 0; i < 15; i++) {
+      const y = 100 + Math.random() * 824;
+      const x1 = 520 + Math.random() * 10;
+      const x2 = x1 + 80 + Math.random() * 200;
+      drawSulcus(x1, y, x2, y + (Math.random() - 0.5) * 40, 2 + Math.random() * 3);
     }
 
-    const fissureY = 256;
     ctx.beginPath();
-    ctx.moveTo(256, 0);
-    for (let y = 0; y < 512; y += 4) {
-      const wobble = Math.sin(y * 0.05) * 3;
-      ctx.lineTo(256 + wobble, y);
+    ctx.moveTo(512, 50);
+    for (let y = 50; y < 974; y += 3) {
+      ctx.lineTo(512 + Math.sin(y * 0.02) * 4 + (Math.random() - 0.5) * 2, y);
     }
-    ctx.strokeStyle = 'rgba(80,90,100,0.35)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(70,80,90,0.5)';
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      ctx.beginPath();
+      ctx.arc(x, y, 1 + Math.random() * 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(140,150,160,${0.1 + Math.random() * 0.15})`;
+      ctx.fill();
+    }
+
+    const brainTexture = new THREE.CanvasTexture(brainCanvas);
+    brainTexture.wrapS = THREE.RepeatWrapping;
+    brainTexture.wrapT = THREE.RepeatWrapping;
+
+    const hemisphereGeo = (side: number) => {
+      const geo = new THREE.SphereGeometry(1.0, 200, 200);
+      const pos = geo.attributes.position;
+
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i);
+        let y = pos.getY(i);
+        let z = pos.getZ(i);
+
+        const origX = x;
+        const origY = y;
+        const origZ = z;
+
+        x *= side * 0.65;
+        y *= 0.48;
+        z *= 1.50;
+
+        const frontalNarrow = 1.0 - Math.max(0, origZ - 0.4) * 0.4;
+        const occipitalNarrow = 1.0 - Math.max(0, -origZ - 0.5) * 0.5;
+        const zTaper = frontalNarrow * occipitalNarrow;
+
+        x *= zTaper;
+
+        const temporalBulge = Math.exp(-Math.pow((origY + 0.5) * 2.5, 2)) *
+          Math.exp(-Math.pow(Math.abs(origZ) * 0.8, 2)) * 0.45;
+        x += side * temporalBulge;
+
+        const topFlatten = 1.0 - Math.max(0, origY - 0.2) * 0.5;
+        y *= topFlatten;
+
+        const frontalLobe = Math.exp(-Math.pow((origZ - 0.6) * 2.0, 2)) *
+          Math.exp(-Math.pow(origY * 1.5, 2)) * 0.12;
+        z += frontalLobe;
+
+        const occipitalLobe = Math.exp(-Math.pow((origZ + 0.6) * 2.5, 2)) *
+          Math.exp(-Math.pow(origY * 1.5, 2)) * 0.10;
+        z -= occipitalLobe;
+
+        const centralSulcus = Math.exp(-Math.pow((origZ - 0.05) * 4.0, 2)) *
+          Math.exp(-Math.pow((origY - 0.3) * 3.0, 2)) * 0.08;
+        y -= centralSulcus;
+
+        const lateralSulcus = Math.exp(-Math.pow((origY + 0.1) * 3.5, 2)) *
+          Math.exp(-Math.pow((origZ + 0.1) * 2.0, 2)) * 0.06;
+        y += lateralSulcus;
+
+        const sulciDetail1 = Math.sin(origZ * 12 + origY * 5) * 0.012;
+        const sulciDetail2 = Math.sin(origX * 10 + origZ * 7) * 0.008;
+        const sulciDetail3 = Math.cos(origY * 14 + origX * 4) * 0.006;
+        const sulciDepth = sulciDetail1 + sulciDetail2 + sulciDetail3;
+        const nLen = Math.sqrt(x * x + y * y + z * z) || 1;
+        x += (x / nLen) * sulciDepth;
+        y += (y / nLen) * sulciDepth;
+        z += (z / nLen) * sulciDepth;
+
+        pos.setXYZ(i, x, y, z);
+      }
+
+      geo.computeVertexNormals();
+      return geo;
+    };
+
+    const leftGeo = hemisphereGeo(-1);
+    const rightGeo = hemisphereGeo(1);
 
     const mat = new THREE.MeshStandardMaterial({
-      map: texture,
-      roughness: 0.85,
-      metalness: 0.02,
+      map: brainTexture,
+      roughness: 0.88,
+      metalness: 0.01,
+      side: THREE.FrontSide,
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    this.brainGroup.add(mesh);
-    this.brainMeshes.push(mesh);
 
-    const box = new THREE.Box3().setFromObject(mesh);
+    const leftMesh = new THREE.Mesh(leftGeo, mat.clone());
+    const rightMesh = new THREE.Mesh(rightGeo, mat.clone());
+
+    this.brainGroup.add(leftMesh);
+    this.brainGroup.add(rightMesh);
+    this.brainMeshes.push(leftMesh, rightMesh);
+
+    const cerebellumGeo = new THREE.SphereGeometry(0.45, 80, 80);
+    const cPos = cerebellumGeo.attributes.position;
+    for (let i = 0; i < cPos.count; i++) {
+      let x = cPos.getX(i);
+      let y = cPos.getY(i);
+      let z = cPos.getZ(i);
+
+      y *= 0.55;
+      z *= 0.7;
+      x *= 0.9;
+
+      const folia = Math.sin(z * 20 + x * 8) * 0.015 + Math.sin(y * 15 + z * 10) * 0.01;
+      const nLen = Math.sqrt(x * x + y * y + z * z) || 1;
+      x += (x / nLen) * folia;
+      y += (y / nLen) * folia;
+      z += (z / nLen) * folia;
+
+      cPos.setXYZ(i, x, y, z);
+    }
+    cerebellumGeo.computeVertexNormals();
+
+    const cerebellum = new THREE.Mesh(cerebellumGeo, mat.clone());
+    cerebellum.position.set(0, -0.35, -1.15);
+    this.brainGroup.add(cerebellum);
+    this.brainMeshes.push(cerebellum);
+
+    const brainstemGeo = new THREE.CylinderGeometry(0.12, 0.08, 0.8, 32);
+    const brainstem = new THREE.Mesh(brainstemGeo, mat.clone());
+    brainstem.position.set(0, -0.55, -1.35);
+    brainstem.rotation.x = 0.3;
+    this.brainGroup.add(brainstem);
+    this.brainMeshes.push(brainstem);
+
+    const box = new THREE.Box3().setFromObject(this.brainGroup);
     const size = box.getSize(new THREE.Vector3());
-    this.brainSurfaceRadius = Math.max(size.x, size.y, size.z) / 2.0;
-    this.meshCount = 1;
-    this.loadStatus = 'glb_fallback';
-    this.loadDetail = `Fallback brain (sphere deformed), r=${this.brainSurfaceRadius.toFixed(2)}`;
+    const center = box.getCenter(new THREE.Vector3());
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 3.0 / maxDim;
+    this.brainGroup.scale.setScalar(scale);
+    this.brainGroup.position.sub(center.multiplyScalar(scale));
+
+    const scaledBox = new THREE.Box3().setFromObject(this.brainGroup);
+    const scaledSize = scaledBox.getSize(new THREE.Vector3());
+    this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
+
+    this.meshCount = this.brainMeshes.length;
+    this.loadStatus = 'glb_ok';
+    this.loadDetail = `${this.meshCount} partes (2 hemisferios + cerebelo + tronco), r=${this.brainSurfaceRadius.toFixed(2)}`;
+    console.log(`[BrainScene] Procedural brain created: ${this.meshCount} parts, radius=${this.brainSurfaceRadius.toFixed(2)}`);
   }
 
   private createRegions() {
