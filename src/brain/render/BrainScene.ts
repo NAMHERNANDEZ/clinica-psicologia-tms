@@ -26,6 +26,8 @@ const REGIONS: RegionDef[] = [
   { id: 'wernicke', name: 'WRN', dir: [0.48, -0.35, 0.62], radius: 0.08, connections: ['broca'] },
 ];
 
+export type BrainLoadStatus = 'loading' | 'glb_ok' | 'glb_fallback';
+
 export class BrainScene {
   private scene: THREE.Scene;
   private regions: Map<string, RegionMesh> = new Map();
@@ -34,6 +36,10 @@ export class BrainScene {
   private connectionLines: ConnectionLines;
   private brainGroup: THREE.Group;
   private brainMeshes: THREE.Mesh[] = [];
+  private brainSurfaceRadius = 1.0;
+  private loadStatus: BrainLoadStatus = 'loading';
+  private loadDetail = '';
+  private meshCount = 0;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -49,59 +55,74 @@ export class BrainScene {
     this.createConnectionLines();
     this.coilField.init();
     this.scene.add(this.coilField.object3D);
+    console.log(`[BrainScene] Status: ${this.loadStatus} | Meshes: ${this.meshCount} | Surface radius: ${this.brainSurfaceRadius.toFixed(2)}`);
   }
 
   private async createBrain() {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/libs/draco/');
+    let dracoLoader = new DRACOLoader();
 
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
+    const tryLoad = async (decoderPath: string): Promise<boolean> => {
+      try {
+        dracoLoader.setDecoderPath(decoderPath);
+        const loader = new GLTFLoader();
+        loader.setDRACOLoader(dracoLoader);
 
-    try {
-      const gltf = await new Promise<any>((resolve, reject) => {
-        loader.load(
-          '/models/brain.glb',
-          (gltf) => resolve(gltf),
-          undefined,
-          (err) => reject(err)
-        );
-      });
+        const gltf = await new Promise<any>((resolve, reject) => {
+          loader.load('/models/brain.glb', (gltf) => resolve(gltf), undefined, (err) => reject(err));
+        });
 
-      gltf.scene.traverse((child: any) => {
-        if (child.isMesh) {
-          child.material = new THREE.MeshStandardMaterial({
-            color: new THREE.Color('#9AA5B2'),
-            roughness: 0.82,
-            metalness: 0.02,
-          });
-          child.castShadow = true;
-          child.receiveShadow = true;
-          this.brainMeshes.push(child);
-        }
-      });
+        gltf.scene.traverse((child: any) => {
+          if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: new THREE.Color('#9AA5B2'),
+              roughness: 0.82,
+              metalness: 0.02,
+            });
+            child.castShadow = true;
+            child.receiveShadow = true;
+            this.brainMeshes.push(child);
+          }
+        });
 
-      const box = new THREE.Box3().setFromObject(gltf.scene);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
 
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 3.0 / maxDim;
-      gltf.scene.scale.setScalar(scale);
-      gltf.scene.position.sub(center.multiplyScalar(scale));
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 3.0 / maxDim;
+        gltf.scene.scale.setScalar(scale);
+        gltf.scene.position.sub(center.multiplyScalar(scale));
 
-      this.brainGroup.add(gltf.scene);
+        this.brainGroup.add(gltf.scene);
 
-    } catch (err) {
-      console.error('[BrainScene] Failed to load brain.glb, using fallback:', err);
-      this.createFallbackBrain();
+        const scaledBox = new THREE.Box3().setFromObject(gltf.scene);
+        const scaledSize = scaledBox.getSize(new THREE.Vector3());
+        this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
+        this.meshCount = this.brainMeshes.length;
+        this.loadStatus = 'glb_ok';
+        this.loadDetail = `${this.meshCount} meshes, r=${this.brainSurfaceRadius.toFixed(2)}`;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const localOk = await tryLoad('/libs/draco/');
+    if (!localOk) {
+      console.warn('[BrainScene] Local Draco failed, trying CDN...');
+      dracoLoader.dispose();
+      dracoLoader = new DRACOLoader();
+      const cdnOk = await tryLoad('https://unpkg.com/three@0.185.0/examples/jsm/libs/draco/');
+      if (!cdnOk) {
+        console.warn('[BrainScene] CDN Draco also failed, using fallback brain');
+        this.createFallbackBrain();
+      }
     }
-
     dracoLoader.dispose();
   }
 
   private createFallbackBrain() {
-    const geo = new THREE.SphereGeometry(1.0, 200, 200);
+    const geo = new THREE.SphereGeometry(1.0, 300, 300);
     const pos = geo.attributes.position;
 
     for (let i = 0; i < pos.count; i++) {
@@ -138,24 +159,82 @@ export class BrainScene {
       const fissurePush = Math.exp(-Math.pow(Math.abs(origX) * 3.5, 2)) * 0.18;
       x += origX > 0 ? fissurePush : -fissurePush;
 
+      const sulciFreq = 8.0;
+      const sulciDepth = 0.025;
+      const sulci1 = Math.sin(origZ * sulciFreq + origY * 3.0) * sulciDepth;
+      const sulci2 = Math.sin(origX * sulciFreq * 0.7 + origZ * 2.0) * sulciDepth * 0.7;
+      const sulci3 = Math.cos(origY * sulciFreq * 1.2 + origX * 1.5) * sulciDepth * 0.5;
+      const totalSulci = sulci1 + sulci2 + sulci3;
+      const normalFactor = Math.sqrt(x * x + y * y + z * z) || 1;
+      x += (x / normalFactor) * totalSulci;
+      y += (y / normalFactor) * totalSulci;
+      z += (z / normalFactor) * totalSulci;
+
       pos.setXYZ(i, x, y, z);
     }
 
     geo.computeVertexNormals();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = '#9AA5B2';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let i = 0; i < 120; i++) {
+      const x1 = Math.random() * 512;
+      const y1 = Math.random() * 512;
+      const angle = Math.random() * Math.PI;
+      const len = 30 + Math.random() * 80;
+      const x2 = x1 + Math.cos(angle) * len;
+      const y2 = y1 + Math.sin(angle) * len;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = `rgba(120,130,140,${0.15 + Math.random() * 0.2})`;
+      ctx.lineWidth = 1 + Math.random() * 2;
+      ctx.stroke();
+    }
+
+    const fissureY = 256;
+    ctx.beginPath();
+    ctx.moveTo(256, 0);
+    for (let y = 0; y < 512; y += 4) {
+      const wobble = Math.sin(y * 0.05) * 3;
+      ctx.lineTo(256 + wobble, y);
+    }
+    ctx.strokeStyle = 'rgba(80,90,100,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+
     const mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#9AA5B2'),
-      roughness: 0.82,
+      map: texture,
+      roughness: 0.85,
       metalness: 0.02,
     });
     const mesh = new THREE.Mesh(geo, mat);
     this.brainGroup.add(mesh);
     this.brainMeshes.push(mesh);
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    this.brainSurfaceRadius = Math.max(size.x, size.y, size.z) / 2.0;
+    this.meshCount = 1;
+    this.loadStatus = 'glb_fallback';
+    this.loadDetail = `Fallback brain (sphere deformed), r=${this.brainSurfaceRadius.toFixed(2)}`;
   }
 
   private createRegions() {
+    const surfaceOffset = 0.08;
     this.regionDefs.forEach(def => {
       const dir = new THREE.Vector3(...def.dir).normalize();
-      const surfacePos = dir.clone().multiplyScalar(1.55);
+      const surfacePos = dir.clone().multiplyScalar(this.brainSurfaceRadius + surfaceOffset);
       const region = new RegionMesh(def.id, [surfacePos.x, surfacePos.y, surfacePos.z], def.radius);
       region.meshes.forEach(m => this.scene.add(m));
       this.regions.set(def.id, region);
@@ -234,6 +313,14 @@ export class BrainScene {
   getRegionConnectionIds(id: string): string[] {
     const def = this.regionDefs.find(r => r.id === id);
     return def?.connections || [];
+  }
+
+  getLoadStatus(): BrainLoadStatus {
+    return this.loadStatus;
+  }
+
+  getLoadDetail(): string {
+    return this.loadDetail;
   }
 
   dispose(): void {

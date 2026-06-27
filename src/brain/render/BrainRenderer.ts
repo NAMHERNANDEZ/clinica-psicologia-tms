@@ -342,6 +342,14 @@ export class BrainRenderer {
     return this.brainScene;
   }
 
+  getLoadStatus() {
+    return this.brainScene.getLoadStatus();
+  }
+
+  getLoadDetail() {
+    return this.brainScene.getLoadDetail();
+  }
+
   getCurrentPhase(): ProtocolPhase {
     return this.currentProtocolPhase;
   }

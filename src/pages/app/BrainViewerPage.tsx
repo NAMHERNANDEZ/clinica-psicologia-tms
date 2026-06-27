@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { tmsProtocols, motorThresholds, type TmsProtocol, type MotorThreshold } from '../../lib/api';
-import { Play, RotateCcw, Activity, Target, Gauge, Radio } from 'lucide-react';
+import { Play, RotateCcw, Activity, Target, Gauge, Radio, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { BrainCanvas, type BrainCanvasHandle } from '../../brain/render/BrainCanvas';
 import { HospitalOverlay } from '../../brain/render/HospitalOverlay';
 import type { OverlayState } from '../../brain/render/BrainRenderer';
@@ -62,6 +62,24 @@ export default function BrainViewerPage() {
   const [pulseCount, setPulseCount] = useState(0);
   const [coilIntensity, setCoilIntensity] = useState(0);
   const brainRef = useRef<BrainCanvasHandle>(null);
+  const [brainStatus, setBrainStatus] = useState<string>('loading');
+  const [brainDetail, setBrainDetail] = useState<string>('');
+
+  useEffect(() => {
+    const check = () => {
+      const r = brainRef.current?.getRenderer();
+      if (r) {
+        const s = r.getLoadStatus();
+        const d = r.getLoadDetail();
+        setBrainStatus(s);
+        setBrainDetail(d);
+        return true;
+      }
+      return false;
+    };
+    const interval = setInterval(() => { if (check()) clearInterval(interval); }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -150,6 +168,24 @@ export default function BrainViewerPage() {
           pulseCount={pulseCount}
           connectome={connectomeMatrix}
         />
+
+        <div className="absolute top-3 right-3 z-20 pointer-events-none">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-sm text-[9px] tracking-wider font-mono ${
+            brainStatus === 'glb_ok'
+              ? 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30'
+              : brainStatus === 'glb_fallback'
+              ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30'
+              : 'bg-[#6b7280]/10 text-[#6b7280] border border-[#6b7280]/30'
+          }`}>
+            {brainStatus === 'glb_ok' && <CheckCircle className="w-3 h-3" />}
+            {brainStatus === 'glb_fallback' && <AlertTriangle className="w-3 h-3" />}
+            {brainStatus === 'loading' && <span className="w-3 h-3 inline-block border border-current border-t-transparent rounded-full animate-spin" />}
+            <span>{brainStatus === 'glb_ok' ? 'GLB REAL' : brainStatus === 'glb_fallback' ? 'FALLBACK' : 'CARGANDO...'}</span>
+          </div>
+          {brainDetail && (
+            <div className="text-[8px] text-[#5A6A7A] mt-0.5 px-2">{brainDetail}</div>
+          )}
+        </div>
 
         {selectedInfo && (
           <div className="absolute top-3 left-3 pointer-events-auto z-20 bg-[#0D1117]/95 border border-[#4ECDC4]/30 rounded-sm p-3 min-w-[200px]">
