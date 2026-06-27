@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RegionMesh } from './RegionMesh';
 import { VolumetricCoil } from './VolumetricCoil';
 import { ConnectionLines } from './ConnectionLines';
@@ -24,50 +26,6 @@ const REGIONS: RegionDef[] = [
   { id: 'wernicke', name: 'WRN', dir: [0.48, -0.35, 0.62], radius: 0.08, connections: ['broca'] },
 ];
 
-function hash3(x: number, y: number, z: number): number {
-  let n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
-  return n - Math.floor(n);
-}
-
-function smoothNoise3d(x: number, y: number, z: number): number {
-  const ix = Math.floor(x);
-  const iy = Math.floor(y);
-  const iz = Math.floor(z);
-  const fx = x - ix;
-  const fy = y - iy;
-  const fz = z - iz;
-  const ux = fx * fx * (3.0 - 2.0 * fx);
-  const uy = fy * fy * (3.0 - 2.0 * fy);
-  const uz = fz * fz * (3.0 - 2.0 * fz);
-  const n000 = hash3(ix, iy, iz);
-  const n100 = hash3(ix + 1, iy, iz);
-  const n010 = hash3(ix, iy + 1, iz);
-  const n110 = hash3(ix + 1, iy + 1, iz);
-  const n001 = hash3(ix, iy, iz + 1);
-  const n101 = hash3(ix + 1, iy, iz + 1);
-  const n011 = hash3(ix, iy + 1, iz + 1);
-  const n111 = hash3(ix + 1, iy + 1, iz + 1);
-  const nx00 = n000 + (n100 - n000) * ux;
-  const nx10 = n010 + (n110 - n010) * ux;
-  const nx01 = n001 + (n101 - n001) * ux;
-  const nx11 = n011 + (n111 - n011) * ux;
-  const nxy0 = nx00 + (nx10 - nx00) * uy;
-  const nxy1 = nx01 + (nx11 - nx01) * uy;
-  return nxy0 + (nxy1 - nxy0) * uz;
-}
-
-function fbm(x: number, y: number, z: number, octaves: number = 5): number {
-  let value = 0;
-  let amplitude = 0.5;
-  let frequency = 1.0;
-  for (let i = 0; i < octaves; i++) {
-    value += amplitude * (smoothNoise3d(x * frequency, y * frequency, z * frequency) * 2.0 - 1.0);
-    amplitude *= 0.5;
-    frequency *= 2.1;
-  }
-  return value;
-}
-
 export class BrainScene {
   private scene: THREE.Scene;
   private regions: Map<string, RegionMesh> = new Map();
@@ -75,6 +33,7 @@ export class BrainScene {
   private coilField: VolumetricCoil;
   private connectionLines: ConnectionLines;
   private brainGroup: THREE.Group;
+  private brainMeshes: THREE.Mesh[] = [];
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -83,8 +42,8 @@ export class BrainScene {
     this.brainGroup = new THREE.Group();
   }
 
-  init() {
-    this.createBrain();
+  async init() {
+    await this.createBrain();
     this.scene.add(this.brainGroup);
     this.createRegions();
     this.createConnectionLines();
@@ -92,116 +51,105 @@ export class BrainScene {
     this.scene.add(this.coilField.object3D);
   }
 
-  private createBrain() {
-    for (const side of [-1, 1]) {
-      const geo = new THREE.SphereGeometry(1.5, 200, 200);
-      const pos = geo.attributes.position;
+  private async createBrain() {
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('/libs/draco/');
 
-      for (let i = 0; i < pos.count; i++) {
-        let x = pos.getX(i);
-        let y = pos.getY(i);
-        let z = pos.getZ(i);
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
 
-        if (side === -1) {
-          x = Math.min(x, 0.04);
-        } else {
-          x = Math.max(x, -0.04);
-        }
-
-        z *= 1.55;
-        y *= 0.78;
-
-        const frontalLobe = Math.exp(-Math.pow((z - 2.3) * 0.9, 2)) * 0.28;
-        const occipitalLobe = Math.exp(-Math.pow((z + 2.2) * 1.1, 2)) * 0.12;
-        const temporalLobe = Math.exp(-Math.pow((y + 0.5) * 1.2, 2)) *
-          Math.exp(-Math.pow(Math.abs(z - 0.3) * 0.6, 2)) * 0.35;
-        const temporalPole = Math.exp(-Math.pow((y + 1.1) * 1.5, 2)) *
-          Math.exp(-Math.pow((z - 1.2) * 1.0, 2)) * 0.20;
-        const parietalBoss = Math.exp(-Math.pow((y - 1.0) * 1.5, 2)) *
-          Math.exp(-Math.pow((z + 0.4) * 1.0, 2)) * 0.10;
-        const orbitalFlare = Math.exp(-Math.pow((y + 0.3) * 1.8, 2)) *
-          Math.exp(-Math.pow((z - 1.8) * 1.2, 2)) * 0.15;
-
-        const bulge = 1 + frontalLobe + occipitalLobe + temporalLobe + temporalPole + parietalBoss + orbitalFlare;
-        x *= bulge;
-        y *= bulge;
-        z *= bulge;
-
-        const r = Math.sqrt(x * x + y * y + z * z);
-        const nx = x / (r || 1);
-        const ny = y / (r || 1);
-        const nz = z / (r || 1);
-
-        const theta = Math.atan2(x, z);
-        const phi = Math.acos(Math.max(-1, Math.min(1, y / (r || 1))));
-
-        const wrinkle = fbm(x * 5.0 + side * 100, y * 5.0, z * 5.0, 6) * 0.30;
-
-        const csAngle = theta - 0.15 * side;
-        const csPole = phi - 1.05;
-        const csDist = Math.sqrt(csAngle * csAngle * 55 + csPole * csPole * 30);
-        const centralSulcus = Math.exp(-csDist * csDist) * 0.40;
-
-        const pcAngle = theta - 0.06 * side;
-        const pcPole = phi - 0.95;
-        const precentralDist = Math.sqrt(pcAngle * pcAngle * 50 + pcPole * pcPole * 28);
-        const precentralSulcus = Math.exp(-precentralDist * precentralDist) * 0.35;
-
-        const postcAngle = theta - 0.28 * side;
-        const postcPole = phi - 1.12;
-        const postcentralDist = Math.sqrt(postcAngle * postcAngle * 48 + postcPole * postcPole * 26);
-        const postcentralSulcus = Math.exp(-postcentralDist * postcentralDist) * 0.32;
-
-        const lfPole = phi - 1.52;
-        const lfAngle = Math.abs(theta);
-        const lateralFissure = Math.exp(-(lfPole * lfPole * 35 + lfAngle * lfAngle * 20)) * 0.38;
-
-        const stsPole = phi - 1.38;
-        const stsAngle = theta + 0.10 * side;
-        const superiorTemporal = Math.exp(-(stsPole * stsPole * 30 + stsAngle * stsAngle * 25)) * 0.28;
-
-        const itsAngle = theta + 0.06 * side;
-        const itsPole = phi - 1.28;
-        const inferTemporal = Math.exp(-(itsPole * itsPole * 26 + itsAngle * itsAngle * 22)) * 0.22;
-
-        const cingAngle = theta;
-        const cingPole = phi - 0.62;
-        const cingulate = Math.exp(-(cingPole * cingPole * 32 + cingAngle * cingAngle * 18)) * 0.18;
-
-        const occAngle = theta - 0.05 * side;
-        const occPole = phi - 0.85;
-        const occipitalSulcus = Math.exp(-(occPole * occPole * 25 + occAngle * occAngle * 20)) * 0.15;
-
-        const calAngle = theta;
-        const calPole = phi - 0.40;
-        const calcarine = Math.exp(-(calPole * calPole * 30 + calAngle * calAngle * 15)) * 0.14;
-
-        const fissureDepth = Math.exp(-Math.pow(Math.abs(x) * 6, 2)) * 0.40;
-
-        const totalDisp = wrinkle + centralSulcus + precentralSulcus + postcentralSulcus +
-          lateralFissure + superiorTemporal + inferTemporal + cingulate + occipitalSulcus + calcarine - fissureDepth;
-
-        x += nx * totalDisp;
-        y += ny * totalDisp * 0.80;
-        z += nz * totalDisp;
-
-        pos.setXYZ(i, x, y, z);
-      }
-
-      geo.computeVertexNormals();
-
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color('#9AA5B2'),
-        roughness: 0.82,
-        metalness: 0.02,
+    try {
+      const gltf = await new Promise<any>((resolve, reject) => {
+        loader.load(
+          '/models/brain.glb',
+          (gltf) => resolve(gltf),
+          undefined,
+          (err) => reject(err)
+        );
       });
 
-      const mesh = new THREE.Mesh(geo, mat);
-      this.brainGroup.add(mesh);
+      gltf.scene.traverse((child: any) => {
+        if (child.isMesh) {
+          child.material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color('#9AA5B2'),
+            roughness: 0.82,
+            metalness: 0.02,
+          });
+          child.castShadow = true;
+          child.receiveShadow = true;
+          this.brainMeshes.push(child);
+        }
+      });
+
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 3.0 / maxDim;
+      gltf.scene.scale.setScalar(scale);
+      gltf.scene.position.sub(center.multiplyScalar(scale));
+
+      this.brainGroup.add(gltf.scene);
+
+    } catch (err) {
+      console.error('[BrainScene] Failed to load brain.glb, using fallback:', err);
+      this.createFallbackBrain();
     }
 
-    this.brainGroup.rotation.x = 0.1;
-    this.brainGroup.rotation.z = 0.02;
+    dracoLoader.dispose();
+  }
+
+  private createFallbackBrain() {
+    const geo = new THREE.SphereGeometry(1.0, 200, 200);
+    const pos = geo.attributes.position;
+
+    for (let i = 0; i < pos.count; i++) {
+      let x = pos.getX(i);
+      let y = pos.getY(i);
+      let z = pos.getZ(i);
+
+      const origX = x;
+      const origY = y;
+      const origZ = z;
+
+      x *= 1.35;
+      y *= 0.50;
+      z *= 1.55;
+
+      const along = origZ;
+      const frontalTaper = Math.max(0.4, 1.0 - Math.max(0, (along - 0.5)) * 0.5);
+      const occipitalTaper = Math.max(0.35, 1.0 - Math.max(0, (-along - 0.4)) * 0.6);
+      const taper = frontalTaper * occipitalTaper;
+
+      const temporalBulgeX = Math.exp(-Math.pow((origY + 0.4) * 3.0, 2)) *
+        Math.exp(-Math.pow(Math.abs(along) * 1.0, 2)) * 0.55;
+      const parietalWide = Math.exp(-Math.pow((origY - 0.6) * 2.5, 2)) *
+        Math.exp(-Math.pow(Math.abs(along + 0.1) * 1.2, 2)) * 0.20;
+
+      const baseX = taper * (1 + temporalBulgeX + parietalWide);
+      x *= baseX;
+
+      const topFlatten = 1.0 - Math.max(0, origY - 0.3) * 0.6;
+      const bottomFlatten = 1.0 - Math.max(0, -origY - 0.3) * 0.3;
+      y *= topFlatten * bottomFlatten;
+      z *= taper;
+
+      const fissurePush = Math.exp(-Math.pow(Math.abs(origX) * 3.5, 2)) * 0.18;
+      x += origX > 0 ? fissurePush : -fissurePush;
+
+      pos.setXYZ(i, x, y, z);
+    }
+
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#9AA5B2'),
+      roughness: 0.82,
+      metalness: 0.02,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    this.brainGroup.add(mesh);
+    this.brainMeshes.push(mesh);
   }
 
   private createRegions() {
@@ -234,6 +182,10 @@ export class BrainScene {
         );
       }
     }
+  }
+
+  getBrainMeshes(): THREE.Mesh[] {
+    return this.brainMeshes;
   }
 
   update(delta: number) {

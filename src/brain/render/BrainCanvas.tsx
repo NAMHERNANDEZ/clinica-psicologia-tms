@@ -28,9 +28,11 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
     if (!canvasRef.current) return;
 
     const renderer = new BrainRenderer();
-    renderer.init(canvasRef.current);
-    renderer.start();
-    engineRef.current = renderer;
+    const canvas = canvasRef.current;
+    renderer.init(canvas).then(() => {
+      renderer.start();
+      engineRef.current = renderer;
+    });
 
     return () => {
       renderer.stop();
