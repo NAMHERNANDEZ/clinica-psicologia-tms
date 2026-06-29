@@ -25,23 +25,18 @@ const REGIONS: RegionDef[] = [
   { id: 'wernicke', name: 'WRN', dir: [0.48, -0.35, 0.62], radius: 0.08, connections: ['broca'] },
 ];
 
-const MATERIAL_COLORS: Record<string, string> = {
-  Brain: '#9AA5B2',
-  'Brain-Inner': '#B0B8C4',
-  'Temporal lobe': '#A0AAB6',
-  Cerebellum: '#8892A0',
-  Nucleus: '#C0C8D0',
-  'White matter': '#D0D8E0',
-  Nerve: '#C8A8A0',
-  Artery: '#B06060',
-  Cartilage: '#A0B0B8',
-  LCR: '#8090A8',
-  Bone: '#E0D8D0',
+const HIDE = ['Nerve', 'Artery', 'LCR', 'Cartilage', 'Bone', 'fasciculus', 'radiation', 'tract', 'peduncle'];
+
+const REGION_COLORS: Record<string, string> = {
+  Brain: '#8A95A5',
+  'Brain-Inner': '#9AA5B5',
+  'Temporal lobe': '#8A95A5',
+  Cerebellum: '#7A8595',
+  Nucleus: '#AAB5C5',
+  'White matter': '#C0CAD8',
 };
 
-const HIDE_KEYWORDS = ['Nerve', 'Artery', 'LCR', 'Cartilage', 'Bone', 'fasciculus', 'radiation', 'tract', 'peduncle'];
-
-export type BrainLoadStatus = 'loading' | 'glb_ok' | 'glb_fallback';
+export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
 
 export class BrainScene {
   private scene: THREE.Scene;
@@ -54,7 +49,6 @@ export class BrainScene {
   private brainSurfaceRadius = 1.0;
   private loadStatus: BrainLoadStatus = 'loading';
   private loadDetail = '';
-  private meshCount = 0;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -64,177 +58,105 @@ export class BrainScene {
   }
 
   async init() {
-    await this.createBrain();
+    await this.loadBrain();
     this.scene.add(this.brainGroup);
     this.createRegions();
     this.createConnectionLines();
     this.coilField.init();
     this.scene.add(this.coilField.object3D);
-    console.log(`[BrainScene] Status: ${this.loadStatus} | Meshes: ${this.meshCount} | Surface radius: ${this.brainSurfaceRadius.toFixed(2)}`);
+    console.log(`[BrainScene] ${this.loadStatus} | ${this.loadDetail}`);
   }
 
-  private async createBrain() {
-    const loader = new GLTFLoader();
-
+  private async loadBrain() {
     try {
+      const loader = new GLTFLoader();
       const gltf = await new Promise<any>((resolve, reject) => {
-        loader.load('/models/brain_nodraco.glb', (gltf) => resolve(gltf), undefined, (err) => reject(err));
+        loader.load('/models/brain_nodraco.glb', resolve, undefined, reject);
       });
 
-      let visibleCount = 0;
-
+      let count = 0;
       gltf.scene.traverse((child: any) => {
         if (!child.isMesh) return;
-
         const name = (child.name || '').toLowerCase();
-        const shouldHide = HIDE_KEYWORDS.some(kw => name.includes(kw.toLowerCase()));
-
-        let color = '#9AA5B2';
-        for (const [key, val] of Object.entries(MATERIAL_COLORS)) {
-          if (name.includes(key.toLowerCase())) {
-            color = val;
-            break;
-          }
+        const hide = HIDE.some(k => name.includes(k.toLowerCase()));
+        let color = '#8A95A5';
+        for (const [key, val] of Object.entries(REGION_COLORS)) {
+          if (name.includes(key.toLowerCase())) { color = val; break; }
         }
-
         child.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(color),
           roughness: 0.85,
           metalness: 0.01,
-          transparent: shouldHide,
-          opacity: shouldHide ? 0.0 : 1.0,
+          transparent: hide,
+          opacity: hide ? 0 : 1,
           side: THREE.FrontSide,
         });
-
-        if (!shouldHide) {
+        if (!hide) {
           child.castShadow = true;
           child.receiveShadow = true;
           this.brainMeshes.push(child);
-          visibleCount++;
+          count++;
         }
       });
 
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 3.0 / maxDim;
       gltf.scene.scale.setScalar(scale);
       gltf.scene.position.sub(center.multiplyScalar(scale));
-
       this.brainGroup.add(gltf.scene);
 
       const scaledBox = new THREE.Box3().setFromObject(gltf.scene);
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
 
-      this.meshCount = visibleCount;
       this.loadStatus = 'glb_ok';
-      this.loadDetail = `${visibleCount} meshes anatómicos, r=${this.brainSurfaceRadius.toFixed(2)}`;
-      console.log(`[BrainScene] GLB loaded: ${visibleCount} visible meshes, radius=${this.brainSurfaceRadius.toFixed(2)}`);
-
+      this.loadDetail = `${count} meshes, r=${this.brainSurfaceRadius.toFixed(2)}`;
     } catch (err) {
-      console.error('[BrainScene] Failed to load brain_nodraco.glb:', err);
-      this.loadStatus = 'glb_fallback';
-      this.loadDetail = 'Error loading GLB';
+      console.error('[BrainScene] GLB failed:', err);
+      this.loadStatus = 'error';
+      this.loadDetail = String(err);
     }
   }
 
   private createRegions() {
-    const surfaceOffset = 0.08;
     this.regionDefs.forEach(def => {
       const dir = new THREE.Vector3(...def.dir).normalize();
-      const surfacePos = dir.clone().multiplyScalar(this.brainSurfaceRadius + surfaceOffset);
-      const region = new RegionMesh(def.id, [surfacePos.x, surfacePos.y, surfacePos.z], def.radius);
+      const pos = dir.clone().multiplyScalar(this.brainSurfaceRadius + 0.08);
+      const region = new RegionMesh(def.id, [pos.x, pos.y, pos.z], def.radius);
       region.meshes.forEach(m => this.scene.add(m));
       this.regions.set(def.id, region);
     });
   }
 
   private createConnectionLines() {
-    const created = new Set<string>();
-    for (const region of this.regionDefs) {
-      for (const connId of region.connections) {
-        const key = [region.id, connId].sort().join('-');
-        if (created.has(key)) continue;
-        created.add(key);
-        const fromRegion = this.regions.get(region.id);
-        const toRegion = this.regions.get(connId);
-        if (!fromRegion || !toRegion) continue;
-        this.connectionLines.addConnection(
-          this.scene,
-          fromRegion.mesh.position.clone(),
-          toRegion.mesh.position.clone(),
-          region.id,
-          connId,
-          0.3,
-        );
+    const done = new Set<string>();
+    for (const r of this.regionDefs) {
+      for (const c of r.connections) {
+        const key = [r.id, c].sort().join('-');
+        if (done.has(key)) continue;
+        done.add(key);
+        const from = this.regions.get(r.id);
+        const to = this.regions.get(c);
+        if (from && to) {
+          this.connectionLines.addConnection(this.scene, from.mesh.position.clone(), to.mesh.position.clone(), r.id, c, 0.3);
+        }
       }
     }
   }
 
-  getBrainMeshes(): THREE.Mesh[] {
-    return this.brainMeshes;
-  }
-
-  update(delta: number) {
-    this.regions.forEach(region => region.update(delta));
-  }
-
+  update(delta: number) { this.regions.forEach(r => r.update(delta)); }
   updateConnections(delta: number, activations: Map<string, number>, connectome: number[][]) {
     this.connectionLines.update(delta, activations, connectome, this.regionDefs.map(r => r.id));
   }
-
-  setActivation(id: string, value: number) {
-    const region = this.regions.get(id);
-    if (region) region.setActivation(value);
-  }
-
-  setActivations(activations: Map<string, number>) {
-    activations.forEach((value, id) => {
-      const region = this.regions.get(id);
-      if (region) region.setActivation(value);
-    });
-  }
-
-  getRegion(id: string): RegionMesh | undefined {
-    return this.regions.get(id);
-  }
-
-  getAllActivations(): Map<string, number> {
-    const result = new Map<string, number>();
-    this.regions.forEach((region, id) => result.set(id, region.getActivation()));
-    return result;
-  }
-
-  getRegionDefs(): RegionDef[] {
-    return this.regionDefs;
-  }
-
-  getCoilField(): VolumetricCoil {
-    return this.coilField;
-  }
-
-  getRegionPosition(id: string): THREE.Vector3 | undefined {
-    const region = this.regions.get(id);
-    return region ? region.mesh.position.clone() : undefined;
-  }
-
-  getRegionConnectionIds(id: string): string[] {
-    const def = this.regionDefs.find(r => r.id === id);
-    return def?.connections || [];
-  }
-
-  getLoadStatus(): BrainLoadStatus {
-    return this.loadStatus;
-  }
-
-  getLoadDetail(): string {
-    return this.loadDetail;
-  }
-
-  dispose(): void {
-    this.connectionLines.dispose(this.scene);
-  }
+  setActivation(id: string, value: number) { this.regions.get(id)?.setActivation(value); }
+  getRegion(id: string) { return this.regions.get(id); }
+  getRegionDefs() { return this.regionDefs; }
+  getCoilField() { return this.coilField; }
+  getRegionPosition(id: string) { return this.regions.get(id)?.mesh.position.clone(); }
+  getLoadStatus() { return this.loadStatus; }
+  getLoadDetail() { return this.loadDetail; }
+  dispose() { this.connectionLines.dispose(this.scene); }
 }

@@ -26,24 +26,11 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
 
   useEffect(() => {
     if (!canvasRef.current) return;
-
     const renderer = new BrainRenderer();
     const canvas = canvasRef.current;
-    renderer.init(canvas).then(() => {
-      renderer.start();
-      engineRef.current = renderer;
-    });
-
-    return () => {
-      renderer.stop();
-      engineRef.current = null;
-    };
+    renderer.init(canvas).then(() => { renderer.start(); engineRef.current = renderer; });
+    return () => { renderer.stop(); engineRef.current = null; };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: '100%', height: '100%', display: 'block' }}
-    />
-  );
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 });
