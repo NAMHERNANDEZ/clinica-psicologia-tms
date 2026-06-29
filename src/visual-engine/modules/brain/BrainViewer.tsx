@@ -9,7 +9,7 @@ const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join(
 import { useState } from 'react';
 
 export default function BrainViewer({ patientId }: { patientId: number }) {
-  const { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, loading, error } = useBrainState(patientId);
+  const { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, notes, loading, error } = useBrainState(patientId);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   const getStateMap = () => {
@@ -239,7 +239,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
           })}
 
           <text x="250" y="335" textAnchor="middle" className="fill-slate-600" style={{ fontSize: '9px' }}>
-            Vista Axial — Simulación de Actividad Cerebral
+            Vista Axial — Actividad Cerebral
           </text>
         </svg>
       </div>
@@ -342,6 +342,23 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                       return <circle key={i} cx={x} cy={y} r="2.5" fill="#22d3ee" />;
                     })}
                   </svg>
+                </div>
+              </div>
+            )}
+
+            {notes.length > 0 && (
+              <div className="border-t border-slate-700 pt-3">
+                <div className="text-slate-500 mb-2">Notas Clínicas</div>
+                <div className="space-y-2">
+                  {notes.map(n => (
+                    <div key={n.id} className="bg-slate-900/50 rounded-lg p-2">
+                      <p className="text-slate-300 text-[11px] leading-relaxed">{n.note}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[10px] text-slate-500">{n.therapist_name || 'Terapeuta'}</span>
+                        <span className="text-[10px] text-slate-600">{new Date(n.created_at).toLocaleDateString('es-MX')}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
