@@ -7,7 +7,10 @@ import { mapStateToBrain } from '../../core/ClinicalRenderer';
 
 import { useState, useEffect, useRef } from 'react';
 
-const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
+const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n') + `
+@keyframes neural-flow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+@keyframes neural-pulse { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+`;
 
 function intensityToActivity(i: number): BrainActivityLevel {
   if (i < 0.1) return 'idle';
@@ -16,6 +19,24 @@ function intensityToActivity(i: number): BrainActivityLevel {
   if (i < 0.85) return 'stimulated';
   return 'high_response';
 }
+
+const NEURAL_PATHWAYS: Array<{ from: string; to: string }> = [
+  { from: 'prefrontal_left', to: 'prefrontal_right' },
+  { from: 'prefrontal_left', to: 'dorsal_acc' },
+  { from: 'prefrontal_right', to: 'dorsal_acc' },
+  { from: 'prefrontal_left', to: 'insula_left' },
+  { from: 'prefrontal_right', to: 'insula_right' },
+  { from: 'motor_cortex_left', to: 'motor_cortex_right' },
+  { from: 'motor_cortex_left', to: 'insula_left' },
+  { from: 'motor_cortex_right', to: 'insula_right' },
+  { from: 'broca', to: 'wernicke' },
+  { from: 'broca', to: 'insula_left' },
+  { from: 'wernicke', to: 'insula_right' },
+  { from: 'dorsal_acc', to: 'motor_cortex_left' },
+  { from: 'dorsal_acc', to: 'motor_cortex_right' },
+  { from: 'prefrontal_left', to: 'motor_cortex_left' },
+  { from: 'prefrontal_right', to: 'motor_cortex_right' },
+];
 
 const DEMO_STATES: { label: string; value: PatientState }[] = [
   { label: 'Registrado', value: 'REGISTERED' },
@@ -243,6 +264,57 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
             {/* Brain outline stroke */}
             <path d="M250,30 C310,30 370,50 400,90 C425,125 435,160 430,195 C425,230 405,260 375,280 C345,298 310,310 275,315 C260,317 250,318 250,318 C250,318 240,317 225,315 C190,310 155,298 125,280 C95,260 75,230 70,195 C65,160 75,125 100,90 C130,50 190,30 250,30 Z" fill="none" stroke="#3a4a5a" strokeWidth="1.5" />
           </g>
+
+          {/* Neural pathways */}
+          <defs>
+            {NEURAL_PATHWAYS.map((path, idx) => {
+              const fromRegion = BRAIN_REGIONS.find(r => r.id === path.from);
+              const toRegion = BRAIN_REGIONS.find(r => r.id === path.to);
+              if (!fromRegion || !toRegion) return null;
+              const midX = (fromRegion.cx + toRegion.cx) / 2;
+              const midY = (fromRegion.cy + toRegion.cy) / 2;
+              const qx = midX + ((idx * 7 + 3) % 5 - 2) * 8;
+              const qy = midY + ((idx * 11 + 5) % 5 - 2) * 6;
+              return (
+                <path key={`np-def-${idx}`} id={`neural-path-${idx}`} d={`M${fromRegion.cx},${fromRegion.cy} Q${qx},${qy} ${toRegion.cx},${toRegion.cy}`} fill="none" />
+              );
+            })}
+          </defs>
+
+          {NEURAL_PATHWAYS.map((path, idx) => {
+            const fromRegion = BRAIN_REGIONS.find(r => r.id === path.from);
+            const toRegion = BRAIN_REGIONS.find(r => r.id === path.to);
+            if (!fromRegion || !toRegion) return null;
+            const fromState = stateMap[path.from];
+            const toState = stateMap[path.to];
+            const fromActivity = fromState?.activity || 'idle';
+            const toActivity = toState?.activity || 'idle';
+            const bothActive = fromActivity !== 'idle' && toActivity !== 'idle';
+            const pathOpacity = bothActive ? 0.5 : 0.15;
+            const pulseSpeed = bothActive ? '2.5s' : '6s';
+            const midX = (fromRegion.cx + toRegion.cx) / 2;
+            const midY = (fromRegion.cy + toRegion.cy) / 2;
+            const qx = midX + ((idx * 7 + 3) % 5 - 2) * 8;
+            const qy = midY + ((idx * 11 + 5) % 5 - 2) * 6;
+            const d = `M${fromRegion.cx},${fromRegion.cy} Q${qx},${qy} ${toRegion.cx},${toRegion.cy}`;
+
+            return (
+              <g key={`neural-${idx}`}>
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={bothActive ? '#22d3ee' : '#334155'}
+                  strokeWidth={bothActive ? 1.2 : 0.6}
+                  strokeDasharray="4 6"
+                  opacity={pathOpacity}
+                  style={{ animation: `neural-flow ${pulseSpeed} linear infinite` }}
+                />
+                {bothActive && (
+                  <circle r="2.5" fill="#22d3ee" opacity="0.9" style={{ offsetPath: `path('${d}')`, animation: `neural-pulse ${pulseSpeed} linear infinite` }} />
+                )}
+              </g>
+            );
+          })}
 
           {/* Brain regions */}
           {BRAIN_REGIONS.map(region => {
