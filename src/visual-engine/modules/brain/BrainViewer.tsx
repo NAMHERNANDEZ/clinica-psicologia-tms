@@ -5,9 +5,17 @@ import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState, type
 import { getRegionById } from './brain-regions';
 import { mapStateToBrain } from '../../core/ClinicalRenderer';
 
+import { useState, useEffect, useRef } from 'react';
+
 const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
 
-import { useState } from 'react';
+function intensityToActivity(i: number): BrainActivityLevel {
+  if (i < 0.1) return 'idle';
+  if (i < 0.3) return 'low';
+  if (i < 0.6) return 'active';
+  if (i < 0.85) return 'stimulated';
+  return 'high_response';
+}
 
 const DEMO_STATES: { label: string; value: PatientState }[] = [
   { label: 'Registrado', value: 'REGISTERED' },
@@ -23,8 +31,23 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
   const { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, notes, loading, error } = useBrainState(patientId);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [demoState, setDemoState] = useState<PatientState | null>(null);
+  const [simulatedLevel, setSimulatedLevel] = useState<number | null>(null);
+  const startTimeRef = useRef(Date.now());
 
   const activeState = demoState || patientState;
+  const isSimulating = !!demoState || !!selectedRegion;
+
+  useEffect(() => {
+    if (!isSimulating) { setSimulatedLevel(null); return; }
+    startTimeRef.current = Date.now();
+    const iv = setInterval(() => {
+      const t = (Date.now() - startTimeRef.current) / 1000;
+      const base = Math.sin(t * 0.8) * 0.3 + 0.5;
+      const noise = (Math.random() - 0.5) * 0.08;
+      setSimulatedLevel(Math.max(0.05, Math.min(1, base + noise)));
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [isSimulating]);
 
   const getActiveBrainStates = (): BrainVisualState[] => {
     if (demoState) return mapStateToBrain(demoState);
@@ -224,17 +247,17 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
           {/* Brain regions */}
           {BRAIN_REGIONS.map(region => {
             const bs = stateMap[region.id];
-            const activity = bs?.activity || 'idle';
-            const intensity = bs?.intensity || 0;
-            const color = bs?.color || BRAIN_ACTIVITY_COLORS.idle;
-            const pulseActive = bs?.pulseActive || false;
+            const isSelected = selectedRegion === region.id;
+            const useSim = isSelected && simulatedLevel !== null;
+            const intensity = useSim ? simulatedLevel! : (bs?.intensity || 0);
+            const activity = useSim ? intensityToActivity(simulatedLevel!) : (bs?.activity || 'idle');
+            const color = useSim ? BRAIN_ACTIVITY_COLORS[activity] : (bs?.color || BRAIN_ACTIVITY_COLORS.idle);
+            const pulseActive = useSim ? intensity > 0.6 : (bs?.pulseActive || false);
             const animName = activity === 'stimulated' || activity === 'high_response'
               ? BRAIN_ANIMATIONS[activity]?.name
               : activity === 'risk'
                 ? BRAIN_ANIMATIONS.risk.name
                 : '';
-
-            const isSelected = selectedRegion === region.id;
 
             return (
               <g key={region.id} onClick={() => setSelectedRegion(region.id)} style={{ cursor: 'pointer' }}>
@@ -365,28 +388,33 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
 
             <div className="bg-slate-800/50 rounded-xl p-3 space-y-3">
               <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Estado Actual</div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300 text-[11px]">Actividad: <span className="capitalize font-medium text-white">{stateMap[selectedRegion]?.activity || 'idle'}</span></span>
-                <span className="text-slate-300 text-[11px]">Intensidad: <span className="font-mono font-semibold text-cyan-400">{((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%</span></span>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex gap-0.5 h-2.5">
-                  {Array.from({ length: 20 }).map((_, i) => {
-                    const filled = Math.round(((stateMap[selectedRegion]?.intensity || 0) * 100 / 100) * 20);
-                    return (
-                      <div key={i} className={`flex-1 rounded-sm transition-all duration-500 ${
-                        i < filled
-                          ? 'bg-gradient-to-t from-medical-700 to-medical-400'
-                          : 'bg-slate-700/50'
-                      }`} />
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between text-[9px] text-slate-600 font-mono">
-                  <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-                </div>
-              </div>
+              {(() => {
+                const panelIntensity = simulatedLevel ?? (stateMap[selectedRegion]?.intensity || 0);
+                const panelActivity = simulatedLevel !== null ? intensityToActivity(simulatedLevel) : (stateMap[selectedRegion]?.activity || 'idle');
+                const filled = Math.round(panelIntensity * 20);
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 text-[11px]">Actividad: <span className="capitalize font-medium text-white">{panelActivity}</span></span>
+                      <span className="text-slate-300 text-[11px]">Intensidad: <span className="font-mono font-semibold text-cyan-400">{(panelIntensity * 100).toFixed(0)}%</span></span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex gap-0.5 h-2.5">
+                        {Array.from({ length: 20 }).map((_, i) => (
+                          <div key={i} className={`flex-1 rounded-sm transition-all duration-500 ${
+                            i < filled
+                              ? 'bg-gradient-to-t from-medical-700 to-medical-400'
+                              : 'bg-slate-700/50'
+                          }`} />
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[9px] text-slate-600 font-mono">
+                        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {history.length > 0 && (
