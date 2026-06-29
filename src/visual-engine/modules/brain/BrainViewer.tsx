@@ -116,6 +116,23 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
               <stop offset="0%" stopColor="#3a4a5a" />
               <stop offset="100%" stopColor="#2a3545" />
             </radialGradient>
+
+            {Object.entries(BRAIN_ACTIVITY_COLORS).map(([level, color]) => (
+              <radialGradient key={level} id={`grad-${level}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor={color} stopOpacity="0.9" />
+                <stop offset="70%" stopColor={color} stopOpacity="0.5" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+              </radialGradient>
+            ))}
+
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
             <filter id="softGlow">
               <feGaussianBlur stdDeviation="2" result="blur" />
               <feMerge>
@@ -123,6 +140,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+
             <filter id="innerShadow">
               <feOffset dx="0" dy="1" />
               <feGaussianBlur stdDeviation="1.5" />
@@ -130,6 +148,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
               <feComponentTransfer><feFuncA type="linear" slope="0.4" /></feComponentTransfer>
               <feBlend in="SourceGraphic" />
             </filter>
+
             <clipPath id="brainClip">
               <path d="M250,30 C310,30 370,50 400,90 C425,125 435,160 430,195 C425,230 405,260 375,280 C345,298 310,310 275,315 C260,317 250,318 250,318 C250,318 240,317 225,315 C190,310 155,298 125,280 C95,260 75,230 70,195 C65,160 75,125 100,90 C130,50 190,30 250,30 Z" />
             </clipPath>
@@ -252,9 +271,10 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                   cy={region.cy}
                   rx={region.rx + intensity * 3}
                   ry={region.ry + intensity * 3}
-                  fill={isSelected ? '#22d3ee' : color}
-                  opacity={isSelected ? 0.5 : 0.25 + intensity * 0.6}
-                  filter="url(#softGlow)"
+                  fill={`url(#grad-${activity})`}
+                  opacity={isSelected ? 0.8 : 0.6}
+                  filter="url(#glow)"
+                  className="cursor-pointer transition-all duration-300"
                   style={animName ? {
                     animation: `${animName} ${BRAIN_ANIMATIONS[activity]?.duration || '2s'} ${BRAIN_ANIMATIONS[activity]?.timing || 'ease-in-out'} infinite`,
                   } : undefined}
@@ -266,7 +286,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                   rx={region.rx * 0.5}
                   ry={region.ry * 0.5}
                   fill={isSelected ? '#22d3ee' : color}
-                  opacity={isSelected ? 0.7 : 0.4 + intensity * 0.6}
+                  opacity={isSelected ? 0.9 : 0.5 + intensity * 0.5}
                 />
 
                 <text
@@ -298,61 +318,87 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
       </div>
 
       {selectedRegion && selectedRegionData && (
-        <div className="mt-4 p-4 bg-slate-800 rounded-xl border border-cyan-500/30 max-h-96 overflow-y-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-sm text-cyan-400 font-bold">{selectedRegionData.label}</div>
-              <div className="text-[10px] text-slate-500">{BRAIN_REGION_LABELS[selectedRegion] || selectedRegion}</div>
+        <div className="mt-4 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+          <div className="px-5 py-3 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-b border-slate-700/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-cyan-400 font-mono uppercase tracking-wider">Región seleccionada</div>
+                <div className="text-sm font-semibold text-white mt-0.5">{selectedRegionData.label}</div>
+                <div className="text-[10px] text-slate-500">{BRAIN_REGION_LABELS[selectedRegion] || selectedRegion}</div>
+              </div>
+              <button onClick={() => setSelectedRegion(null)} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700/50">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
-            <button onClick={() => setSelectedRegion(null)} className="text-slate-500 hover:text-white text-lg leading-none">&times;</button>
           </div>
 
-          <div className="space-y-3 text-xs">
+          <div className="p-5 space-y-4 text-xs max-h-[calc(100vh-16rem)] overflow-y-auto">
             <div>
-              <div className="text-slate-500 mb-0.5">Función</div>
+              <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-1">Función</div>
               <div className="text-slate-300">{selectedRegionData.brainFunction}</div>
             </div>
 
             <div>
-              <div className="text-slate-500 mb-1">Indicaciones TMS</div>
+              <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-1.5">Indicaciones TMS</div>
               <div className="flex flex-wrap gap-1">
                 {selectedRegionData.indications.map((ind: string) => (
-                  <span key={ind} className="bg-cyan-900/40 text-cyan-300 px-2 py-0.5 rounded-full text-[10px]">{ind}</span>
+                  <span key={ind} className="bg-medical-900/40 text-medical-300 px-2 py-0.5 rounded-full text-[10px] border border-medical-700/30">{ind}</span>
                 ))}
               </div>
             </div>
 
-            <div>
-              <div className="text-slate-500 mb-0.5">Frecuencia</div>
-              <div className="text-slate-300">{selectedRegionData.tmsFrequency}</div>
-            </div>
-
-            <div>
-              <div className="text-slate-500 mb-0.5">Nota clínica</div>
-              <div className="text-slate-400 italic text-[11px] leading-relaxed">{selectedRegionData.description}</div>
-            </div>
-
-            <div className="border-t border-slate-700 pt-3">
-              <div className="text-slate-500 mb-1">Estado Actual</div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300">Actividad: <span className="capitalize font-medium">{stateMap[selectedRegion]?.activity || 'idle'}</span></span>
-                <span className="text-slate-300">Intensidad: <span className="font-medium">{((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%</span></span>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5">Frecuencia</div>
+                <div className="text-slate-300 font-medium">{selectedRegionData.tmsFrequency}</div>
               </div>
-              <div className="w-full h-2 bg-slate-700 rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-cyan-500 rounded-full transition-all" style={{ width: `${(stateMap[selectedRegion]?.intensity || 0) * 100}%` }} />
+              <div>
+                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5">Lateralidad</div>
+                <div className="text-slate-300 font-medium capitalize">{selectedRegionData.side === 'left' ? 'Izquierda' : selectedRegionData.side === 'right' ? 'Derecha' : 'Media'}</div>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5">Nota clínica</div>
+              <div className="text-slate-400 italic text-[11px] leading-relaxed border-l-2 border-medical-700/50 pl-3">{selectedRegionData.description}</div>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-xl p-3 space-y-3">
+              <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Estado Actual</div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300 text-[11px]">Actividad: <span className="capitalize font-medium text-white">{stateMap[selectedRegion]?.activity || 'idle'}</span></span>
+                <span className="text-slate-300 text-[11px]">Intensidad: <span className="font-mono font-semibold text-cyan-400">{((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%</span></span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex gap-0.5 h-2.5">
+                  {Array.from({ length: 20 }).map((_, i) => {
+                    const filled = Math.round(((stateMap[selectedRegion]?.intensity || 0) * 100 / 100) * 20);
+                    return (
+                      <div key={i} className={`flex-1 rounded-sm transition-all duration-500 ${
+                        i < filled
+                          ? 'bg-gradient-to-t from-medical-700 to-medical-400'
+                          : 'bg-slate-700/50'
+                      }`} />
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-600 font-mono">
+                  <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                </div>
               </div>
             </div>
 
             {history.length > 0 && (
-              <div className="border-t border-slate-700 pt-3">
-                <div className="text-slate-500 mb-2">Historial de Sesiones</div>
+              <div className="bg-slate-800/50 rounded-xl p-3">
+                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-2">Historial de Sesiones</div>
                 <div className="space-y-1.5">
                   {history.slice(-5).reverse().map((h: { session_number: number; mood_score: number; anxiety_score: number }) => (
-                    <div key={h.session_number} className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">#{h.session_number}</span>
+                    <div key={h.session_number} className="flex items-center justify-between text-[11px] bg-slate-900/50 rounded-lg px-2.5 py-1.5">
+                      <span className="text-slate-400 font-mono">#{h.session_number}</span>
                       <div className="flex items-center space-x-3">
-                        <span className="text-slate-400">ánimo <span className="text-white font-medium">{h.mood_score}/10</span></span>
-                        {h.anxiety_score > 0 && <span className="text-slate-400">ansiedad <span className="text-white font-medium">{h.anxiety_score}/10</span></span>}
+                        <span className="text-slate-400">ánimo <span className="text-white font-medium font-mono">{h.mood_score}/10</span></span>
+                        {h.anxiety_score > 0 && <span className="text-slate-400">ansiedad <span className="text-white font-medium font-mono">{h.anxiety_score}/10</span></span>}
                       </div>
                     </div>
                   ))}
@@ -361,29 +407,56 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
             )}
 
             {curve.length > 1 && (
-              <div className="border-t border-slate-700 pt-3">
-                <div className="text-slate-500 mb-2">Curva de Progreso</div>
-                <div className="relative h-24">
-                  <svg viewBox="0 0 300 90" className="w-full h-full">
-                    <line x1="25" y1="5" x2="25" y2="80" stroke="#334155" strokeWidth="0.5" />
-                    <line x1="25" y1="80" x2="290" y2="80" stroke="#334155" strokeWidth="0.5" />
+              <div className="bg-slate-800/50 rounded-xl p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Curva de Progreso</div>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    ↑ {(curve[curve.length - 1]?.mood_score - curve[0]?.mood_score).toFixed(1)}
+                  </span>
+                </div>
+                <div className="relative h-28">
+                  <svg viewBox="0 0 320 100" className="w-full h-full">
+                    <defs>
+                      <linearGradient id="curveAreaGrad" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    {[0.25, 0.5, 0.75].map(ratio => (
+                      <line key={ratio} x1="30" x2="305" y1={85 - ratio * 70} y2={85 - ratio * 70} stroke="#1e293b" strokeDasharray="2 4" strokeWidth="0.5" />
+                    ))}
+
                     {[0, 5, 10].map(v => (
                       <g key={v}>
-                        <line x1="22" y1={80 - v * 7.5} x2="25" y2={80 - v * 7.5} stroke="#475569" strokeWidth="0.5" />
-                        <text x="18" y={83 - v * 7.5} textAnchor="end" className="fill-slate-600" style={{ fontSize: '7px' }}>{v}</text>
+                        <line x1="27" y1={85 - v * 7} x2="30" y2={85 - v * 7} stroke="#475569" strokeWidth="0.5" />
+                        <text x="24" y={88 - v * 7} textAnchor="end" className="fill-slate-600" style={{ fontSize: '7px', fontFamily: 'IBM Plex Mono' }}>{v}</text>
                       </g>
                     ))}
+
                     {curve.slice(-10).map((p, i, arr) => {
-                      const x = 30 + (i / Math.max(arr.length - 1, 1)) * 255;
-                      const y = 80 - p.mood_score * 7.5;
+                      const x = 35 + (i / Math.max(arr.length - 1, 1)) * 265;
+                      const y = 85 - p.mood_score * 7;
                       return i === 0 ? null : (
-                        <line key={i} x1={30 + ((i - 1) / Math.max(arr.length - 1, 1)) * 255} y1={80 - arr[i - 1].mood_score * 7.5} x2={x} y2={y} stroke="#22d3ee" strokeWidth="1.5" />
+                        <line key={i} x1={35 + ((i - 1) / Math.max(arr.length - 1, 1)) * 265} y1={85 - arr[i - 1].mood_score * 7} x2={x} y2={y} stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" />
                       );
                     })}
+
+                    {(() => {
+                      const pts = curve.slice(-10).map((p, i, arr) => ({
+                        x: 35 + (i / Math.max(arr.length - 1, 1)) * 265,
+                        y: 85 - p.mood_score * 7,
+                      }));
+                      if (pts.length < 2) return null;
+                      const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                      const areaD = `${pathD} L ${pts[pts.length - 1].x} 85 L ${pts[0].x} 85 Z`;
+                      return <path d={areaD} fill="url(#curveAreaGrad)" />;
+                    })()}
+
                     {curve.slice(-10).map((p, i, arr) => {
-                      const x = 30 + (i / Math.max(arr.length - 1, 1)) * 255;
-                      const y = 80 - p.mood_score * 7.5;
-                      return <circle key={i} cx={x} cy={y} r="2.5" fill="#22d3ee" />;
+                      const x = 35 + (i / Math.max(arr.length - 1, 1)) * 265;
+                      const y = 85 - p.mood_score * 7;
+                      return <circle key={i} cx={x} cy={y} r="3" fill="#06b6d4" stroke="#0c4a6e" strokeWidth="2" />;
                     })}
                   </svg>
                 </div>
@@ -391,15 +464,15 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
             )}
 
             {notes.length > 0 && (
-              <div className="border-t border-slate-700 pt-3">
-                <div className="text-slate-500 mb-2">Notas Clínicas</div>
+              <div className="bg-slate-800/50 rounded-xl p-3">
+                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-2">Notas Clínicas</div>
                 <div className="space-y-2">
                   {notes.map(n => (
-                    <div key={n.id} className="bg-slate-900/50 rounded-lg p-2">
+                    <div key={n.id} className="bg-slate-900/50 rounded-lg p-2.5 border-l-2 border-medical-600/50">
                       <p className="text-slate-300 text-[11px] leading-relaxed">{n.note}</p>
                       <div className="flex items-center justify-between mt-1.5">
                         <span className="text-[10px] text-slate-500">{n.therapist_name || 'Terapeuta'}</span>
-                        <span className="text-[10px] text-slate-600">{new Date(n.created_at).toLocaleDateString('es-MX')}</span>
+                        <span className="text-[10px] text-slate-600 font-mono">{new Date(n.created_at).toLocaleDateString('es-MX')}</span>
                       </div>
                     </div>
                   ))}
@@ -407,7 +480,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
               </div>
             )}
 
-            <button onClick={() => setSelectedRegion(null)} className="w-full mt-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-[11px] transition-colors">Cerrar</button>
+            <button onClick={() => setSelectedRegion(null)} className="w-full mt-2 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-[11px] font-medium transition-colors">Cerrar</button>
           </div>
         </div>
       )}
