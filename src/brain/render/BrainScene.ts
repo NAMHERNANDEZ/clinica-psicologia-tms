@@ -25,16 +25,112 @@ const REGIONS: RegionDef[] = [
   { id: 'wernicke', name: 'WRN', dir: [0.48, -0.35, 0.62], radius: 0.08, connections: ['broca'] },
 ];
 
-const HIDE = ['Nerve', 'Artery', 'LCR', 'Cartilage', 'Bone', 'fasciculus', 'radiation', 'tract', 'peduncle'];
+const HIDE_PATTERNS = [
+  'artery', 'sinus', 'vein', 'plexus', 'nerve', 'fasciculus', 'radiation',
+  'tract', 'peduncle', 'commissure', 'fornix', 'stria', 'optic',
+  'ventricle', 'nucleus', 'ganglion', 'chiasm', 'aqueduct',
+];
 
-const REGION_COLORS: Record<string, string> = {
-  Brain: '#8A95A5',
-  'Brain-Inner': '#9AA5B5',
-  'Temporal lobe': '#8A95A5',
-  Cerebellum: '#7A8595',
-  Nucleus: '#AAB5C5',
-  'White matter': '#C0CAD8',
-};
+function shouldHide(name: string): boolean {
+  const lower = name.toLowerCase();
+  return HIDE_PATTERNS.some(p => lower.includes(p));
+}
+
+function pickColor(name: string): string {
+  const n = name.toLowerCase();
+
+  if (n.includes('cerebellum') || n.includes('tonsil') || n.includes('flocculus') ||
+      n.includes('uvula') || n.includes('tuber') || n.includes('pyramis') ||
+      n.includes('nodule') || n.includes('lingula') || n.includes('folium') ||
+      n.includes('declive') || n.includes('culmen') || n.includes('lobule') ||
+      n.includes('quadrangular') || n.includes('biventral') || n.includes('semilunar')) {
+    return '#5A8A6A';
+  }
+
+  if (n.includes('pons') || n.includes('medulla') || n.includes('olive') || n.includes('pyramid')) {
+    return '#7A8A7A';
+  }
+
+  if (n.includes('midbrain') || n.includes('colliculus')) {
+    return '#8A7A7A';
+  }
+
+  if (n.includes('corpus callosum') || n.includes('septum')) {
+    return '#E0D8D0';
+  }
+
+  if (n.includes('hippocampus') || n.includes('amygdala')) {
+    return '#C8A880';
+  }
+
+  if (n.includes('thalamus') || n.includes('hypothalamus') || n.includes('mamillary') ||
+      n.includes('habenula') || n.includes('pineal') || n.includes('adenohypophysis') ||
+      n.includes('neurohypophysis')) {
+    return '#B89878';
+  }
+
+  if (n.includes('globus') || n.includes('putamen') || n.includes('caudate') ||
+      n.includes('subthalamic') || n.includes('nigra') || n.includes('accumbens') ||
+      n.includes('pulvinar')) {
+    return '#C0A090';
+  }
+
+  if (n.includes('basolateral') || n.includes('central nucleus') || n.includes('corticomedial')) {
+    return '#B89878';
+  }
+
+  if (n.includes('falx') || n.includes('tentorium')) {
+    return '#5A6A7A';
+  }
+
+  if (n.includes('choroid')) {
+    return '#A07060';
+  }
+
+  if (n.includes('white matter')) {
+    return '#D8D0C8';
+  }
+
+  if (n.includes('sulcus') || n.includes('fissure') || n.includes('lat_fis')) {
+    return '#5A6A7A';
+  }
+
+  if (n.includes('frontal') || n.includes('orbital') || n.includes('straight gyrus') || n.includes('olfactory')) {
+    if (n.includes('.l')) return '#C8A090';
+    return '#B89888';
+  }
+
+  if (n.includes('precentral') || n.includes('postcentral') || n.includes('central sulcus')) {
+    return '#C0A0A0';
+  }
+
+  if (n.includes('parietal') || n.includes('angular') || n.includes('supramarginal') || n.includes('precuneus')) {
+    return '#A0A8B8';
+  }
+
+  if (n.includes('temporal')) {
+    if (n.includes('.l')) return '#B8A090';
+    return '#A89888';
+  }
+
+  if (n.includes('occipital') || n.includes('cuneus') || n.includes('lingual')) {
+    return '#98A0B0';
+  }
+
+  if (n.includes('cingulate')) {
+    return '#C0B0A0';
+  }
+
+  if (n.includes('insula')) {
+    return '#B09888';
+  }
+
+  if (n.includes('pole')) {
+    return '#B0A098';
+  }
+
+  return '#9AA0A8';
+}
 
 export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
 
@@ -49,6 +145,7 @@ export class BrainScene {
   private brainSurfaceRadius = 1.0;
   private loadStatus: BrainLoadStatus = 'loading';
   private loadDetail = '';
+  private allMeshNames: string[] = [];
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -74,48 +171,54 @@ export class BrainScene {
         loader.load('/models/brain_nodraco.glb', resolve, undefined, reject);
       });
 
-      let count = 0;
+      let visibleCount = 0;
+      let hiddenCount = 0;
+      const meshNames: string[] = [];
+
       gltf.scene.traverse((child: any) => {
         if (!child.isMesh) return;
-        const name = (child.name || '').toLowerCase();
-        const hide = HIDE.some(k => name.includes(k.toLowerCase()));
-        let color = '#8A95A5';
-        for (const [key, val] of Object.entries(REGION_COLORS)) {
-          if (name.includes(key.toLowerCase())) { color = val; break; }
+        const name = child.name || 'unnamed';
+        meshNames.push(name);
+
+        if (shouldHide(name)) {
+          child.visible = false;
+          hiddenCount++;
+          return;
         }
+
+        const color = pickColor(name);
         child.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(color),
-          roughness: 0.85,
-          metalness: 0.01,
-          transparent: hide,
-          opacity: hide ? 0 : 1,
-          side: THREE.FrontSide,
+          roughness: 0.6,
+          metalness: 0.02,
+          side: THREE.DoubleSide,
         });
-        if (!hide) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-          this.brainMeshes.push(child);
-          count++;
-        }
+        child.castShadow = true;
+        child.receiveShadow = true;
+        this.brainMeshes.push(child);
+        visibleCount++;
       });
 
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
+
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 3.0 / maxDim;
       gltf.scene.scale.setScalar(scale);
       gltf.scene.position.sub(center.multiplyScalar(scale));
-      this.brainGroup.add(gltf.scene);
 
       const scaledBox = new THREE.Box3().setFromObject(gltf.scene);
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
 
+      this.allMeshNames = meshNames;
+      this.brainGroup.add(gltf.scene);
+
       this.loadStatus = 'glb_ok';
-      this.loadDetail = `${count} meshes, r=${this.brainSurfaceRadius.toFixed(2)}`;
+      this.loadDetail = `${visibleCount} visible, ${hiddenCount} hidden, r=${this.brainSurfaceRadius.toFixed(2)}`;
     } catch (err) {
-      console.error('[BrainScene] GLB failed:', err);
+      console.error('[BrainScene] GLB FAILED:', err);
       this.loadStatus = 'error';
       this.loadDetail = String(err);
     }
@@ -158,5 +261,7 @@ export class BrainScene {
   getRegionPosition(id: string) { return this.regions.get(id)?.mesh.position.clone(); }
   getLoadStatus() { return this.loadStatus; }
   getLoadDetail() { return this.loadDetail; }
+  getAllMeshNames() { return this.allMeshNames; }
+  getBrainMeshCount() { return this.brainMeshes.length; }
   dispose() { this.connectionLines.dispose(this.scene); }
 }
