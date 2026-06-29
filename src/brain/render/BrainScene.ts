@@ -27,8 +27,8 @@ const REGIONS: RegionDef[] = [
 
 const HIDE_PATTERNS = [
   'artery', 'sinus', 'vein', 'plexus', 'nerve', 'fasciculus', 'radiation',
-  'tract', 'peduncle', 'commissure', 'fornix', 'stria', 'optic',
-  'ventricle', 'nucleus', 'ganglion', 'chiasm', 'aqueduct',
+  'tract', 'peduncle', 'commissure', 'fornix', 'stria', 'optic chiasm',
+  'optic nerve', 'optic tract', 'aqueduct', 'ganglion',
 ];
 
 function shouldHide(name: string): boolean {
@@ -38,98 +38,103 @@ function shouldHide(name: string): boolean {
 
 function pickColor(name: string): string {
   const n = name.toLowerCase();
+  const isLeft = n.endsWith('.l');
 
+  // SULCI = dark (creates the folds look)
+  if (n.includes('sulcus') || n.includes('fissure') || n.includes('lat_fis')) {
+    return isLeft ? '#3A4555' : '#3D4858';
+  }
+
+  // CEREBELLUM
   if (n.includes('cerebellum') || n.includes('tonsil') || n.includes('flocculus') ||
       n.includes('uvula') || n.includes('tuber') || n.includes('pyramis') ||
       n.includes('nodule') || n.includes('lingula') || n.includes('folium') ||
       n.includes('declive') || n.includes('culmen') || n.includes('lobule') ||
       n.includes('quadrangular') || n.includes('biventral') || n.includes('semilunar')) {
-    return '#5A8A6A';
+    return isLeft ? '#6A9A7A' : '#6E9E7E';
   }
 
+  // BRAINSTEM
   if (n.includes('pons') || n.includes('medulla') || n.includes('olive') || n.includes('pyramid')) {
     return '#7A8A7A';
   }
-
   if (n.includes('midbrain') || n.includes('colliculus')) {
     return '#8A7A7A';
   }
 
+  // WHITE MATTER (visible from above = corpus callosum etc)
   if (n.includes('corpus callosum') || n.includes('septum')) {
-    return '#E0D8D0';
+    return '#E8E0D8';
+  }
+  if (n.includes('white matter')) {
+    return '#DDD5CD';
   }
 
+  // DEEP STRUCTURES
   if (n.includes('hippocampus') || n.includes('amygdala')) {
     return '#C8A880';
   }
-
   if (n.includes('thalamus') || n.includes('hypothalamus') || n.includes('mamillary') ||
-      n.includes('habenula') || n.includes('pineal') || n.includes('adenohypophysis') ||
-      n.includes('neurohypophysis')) {
+      n.includes('habenula') || n.includes('pineal')) {
     return '#B89878';
   }
-
   if (n.includes('globus') || n.includes('putamen') || n.includes('caudate') ||
       n.includes('subthalamic') || n.includes('nigra') || n.includes('accumbens') ||
       n.includes('pulvinar')) {
     return '#C0A090';
   }
 
-  if (n.includes('basolateral') || n.includes('central nucleus') || n.includes('corticomedial')) {
-    return '#B89878';
-  }
-
+  // MENINGES
   if (n.includes('falx') || n.includes('tentorium')) {
-    return '#5A6A7A';
+    return '#4A5A6A';
   }
-
   if (n.includes('choroid')) {
     return '#A07060';
   }
 
-  if (n.includes('white matter')) {
-    return '#D8D0C8';
-  }
-
-  if (n.includes('sulcus') || n.includes('fissure') || n.includes('lat_fis')) {
-    return '#5A6A7A';
-  }
-
-  if (n.includes('frontal') || n.includes('orbital') || n.includes('straight gyrus') || n.includes('olfactory')) {
-    if (n.includes('.l')) return '#C8A090';
-    return '#B89888';
-  }
-
-  if (n.includes('precentral') || n.includes('postcentral') || n.includes('central sulcus')) {
-    return '#C0A0A0';
-  }
-
-  if (n.includes('parietal') || n.includes('angular') || n.includes('supramarginal') || n.includes('precuneus')) {
-    return '#A0A8B8';
-  }
-
-  if (n.includes('temporal')) {
-    if (n.includes('.l')) return '#B8A090';
-    return '#A89888';
-  }
-
-  if (n.includes('occipital') || n.includes('cuneus') || n.includes('lingual')) {
-    return '#98A0B0';
-  }
-
+  // CINGULATE (visible from above along medial wall)
   if (n.includes('cingulate')) {
-    return '#C0B0A0';
+    return isLeft ? '#C0A898' : '#BCA494';
   }
 
+  // FRONTAL LOBE GYRI (pinkish-tan, the main cortex color)
+  if (n.includes('frontal') || n.includes('orbital') || n.includes('straight gyrus') ||
+      n.includes('olfactory') || n.includes('opercular') || n.includes('triangular')) {
+    return isLeft ? '#D4A88C' : '#D0A488';
+  }
+
+  // PRECENTRAL / POSTCENTRAL (motor/sensory strip)
+  if (n.includes('precentral') || n.includes('postcentral')) {
+    return isLeft ? '#C8A090' : '#C49C8C';
+  }
+
+  // PARIETAL
+  if (n.includes('parietal') || n.includes('angular') || n.includes('supramarginal') || n.includes('precuneus')) {
+    return isLeft ? '#B8A8B8' : '#B4A4B4';
+  }
+
+  // TEMPORAL
+  if (n.includes('temporal')) {
+    return isLeft ? '#C8A890' : '#C4A48C';
+  }
+
+  // OCCIPITAL
+  if (n.includes('occipital') || n.includes('cuneus') || n.includes('lingual')) {
+    return isLeft ? '#A0A8B8' : '#9CA4B4';
+  }
+
+  // INSULA
   if (n.includes('insula')) {
-    return '#B09888';
+    return isLeft ? '#B8A090' : '#B49C8C';
   }
 
+  // POLES
   if (n.includes('pole')) {
-    return '#B0A098';
+    return isLeft ? '#C0A898' : '#BCA494';
   }
 
-  return '#9AA0A8';
+  // DEFAULT: cortex gray matter
+  return isLeft ? '#CCA898' : '#C8A494';
 }
 
 export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
@@ -189,7 +194,7 @@ export class BrainScene {
         const color = pickColor(name);
         child.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(color),
-          roughness: 0.6,
+          roughness: 0.55,
           metalness: 0.02,
           side: THREE.DoubleSide,
         });
@@ -202,7 +207,6 @@ export class BrainScene {
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 3.0 / maxDim;
       gltf.scene.scale.setScalar(scale);
@@ -216,7 +220,7 @@ export class BrainScene {
       this.brainGroup.add(gltf.scene);
 
       this.loadStatus = 'glb_ok';
-      this.loadDetail = `${visibleCount} visible, ${hiddenCount} hidden, r=${this.brainSurfaceRadius.toFixed(2)}`;
+      this.loadDetail = `${visibleCount} vis, ${hiddenCount} hid, r=${this.brainSurfaceRadius.toFixed(2)}`;
     } catch (err) {
       console.error('[BrainScene] GLB FAILED:', err);
       this.loadStatus = 'error';
