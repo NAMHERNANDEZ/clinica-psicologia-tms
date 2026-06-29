@@ -2,13 +2,14 @@ import { useBrainState } from './useBrainState';
 import { BRAIN_REGIONS } from './brain-regions';
 import { BRAIN_ANIMATIONS } from './brain-animations';
 import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState } from '../../core/StateMapper';
+import { getRegionById } from './brain-regions';
 
 const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
 
 import { useState } from 'react';
 
 export default function BrainViewer({ patientId }: { patientId: number }) {
-  const { brainStates, patientState, loading, error } = useBrainState(patientId);
+  const { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, loading, error } = useBrainState(patientId);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   const getStateMap = () => {
@@ -18,6 +19,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
   };
 
   const stateMap = getStateMap();
+  const selectedRegionData = selectedRegion ? getRegionById(selectedRegion as never) : null;
 
   if (loading) {
     return (
@@ -40,7 +42,19 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
       <style>{KEYFRAME_CSS}</style>
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white">Brain Viewer</h3>
+        <div>
+          <h3 className="text-lg font-bold text-white">Brain Viewer</h3>
+          {patientName && (
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="text-xs text-cyan-400 font-medium">{patientName}</span>
+              {sessionNumber > 0 && (
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                  Sesión {sessionNumber}/{totalSessions}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <span className="text-xs font-medium text-slate-400 bg-slate-800 px-3 py-1 rounded-full">
           Estado: {patientState.replace(/_/g, ' ')}
         </span>
@@ -239,21 +253,101 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
         ))}
       </div>
 
-      {selectedRegion && (
-        <div className="mt-4 p-3 bg-slate-800 rounded-xl border border-cyan-500/30">
-          <div className="text-xs text-cyan-400 font-bold mb-1">
-            {BRAIN_REGION_LABELS[selectedRegion] || selectedRegion}
+      {selectedRegion && selectedRegionData && (
+        <div className="mt-4 p-4 bg-slate-800 rounded-xl border border-cyan-500/30 max-h-96 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm text-cyan-400 font-bold">{selectedRegionData.label}</div>
+              <div className="text-[10px] text-slate-500">{BRAIN_REGION_LABELS[selectedRegion] || selectedRegion}</div>
+            </div>
+            <button onClick={() => setSelectedRegion(null)} className="text-slate-500 hover:text-white text-lg leading-none">&times;</button>
           </div>
-          <div className="text-xs text-slate-400">
-            Actividad: {stateMap[selectedRegion]?.activity || 'idle'} — 
-            Intensidad: {((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="text-slate-500 mb-0.5">Función</div>
+              <div className="text-slate-300">{selectedRegionData.brainFunction}</div>
+            </div>
+
+            <div>
+              <div className="text-slate-500 mb-1">Indicaciones TMS</div>
+              <div className="flex flex-wrap gap-1">
+                {selectedRegionData.indications.map((ind: string) => (
+                  <span key={ind} className="bg-cyan-900/40 text-cyan-300 px-2 py-0.5 rounded-full text-[10px]">{ind}</span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-slate-500 mb-0.5">Frecuencia</div>
+              <div className="text-slate-300">{selectedRegionData.tmsFrequency}</div>
+            </div>
+
+            <div>
+              <div className="text-slate-500 mb-0.5">Nota clínica</div>
+              <div className="text-slate-400 italic text-[11px] leading-relaxed">{selectedRegionData.description}</div>
+            </div>
+
+            <div className="border-t border-slate-700 pt-3">
+              <div className="text-slate-500 mb-1">Estado Actual</div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Actividad: <span className="capitalize font-medium">{stateMap[selectedRegion]?.activity || 'idle'}</span></span>
+                <span className="text-slate-300">Intensidad: <span className="font-medium">{((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%</span></span>
+              </div>
+              <div className="w-full h-2 bg-slate-700 rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-cyan-500 rounded-full transition-all" style={{ width: `${(stateMap[selectedRegion]?.intensity || 0) * 100}%` }} />
+              </div>
+            </div>
+
+            {history.length > 0 && (
+              <div className="border-t border-slate-700 pt-3">
+                <div className="text-slate-500 mb-2">Historial de Sesiones</div>
+                <div className="space-y-1.5">
+                  {history.slice(-5).reverse().map((h: { session_number: number; mood_score: number; anxiety_score: number }) => (
+                    <div key={h.session_number} className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">#{h.session_number}</span>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-slate-400">ánimo <span className="text-white font-medium">{h.mood_score}/10</span></span>
+                        {h.anxiety_score > 0 && <span className="text-slate-400">ansiedad <span className="text-white font-medium">{h.anxiety_score}/10</span></span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {curve.length > 1 && (
+              <div className="border-t border-slate-700 pt-3">
+                <div className="text-slate-500 mb-2">Curva de Progreso</div>
+                <div className="relative h-24">
+                  <svg viewBox="0 0 300 90" className="w-full h-full">
+                    <line x1="25" y1="5" x2="25" y2="80" stroke="#334155" strokeWidth="0.5" />
+                    <line x1="25" y1="80" x2="290" y2="80" stroke="#334155" strokeWidth="0.5" />
+                    {[0, 5, 10].map(v => (
+                      <g key={v}>
+                        <line x1="22" y1={80 - v * 7.5} x2="25" y2={80 - v * 7.5} stroke="#475569" strokeWidth="0.5" />
+                        <text x="18" y={83 - v * 7.5} textAnchor="end" className="fill-slate-600" style={{ fontSize: '7px' }}>{v}</text>
+                      </g>
+                    ))}
+                    {curve.slice(-10).map((p, i, arr) => {
+                      const x = 30 + (i / Math.max(arr.length - 1, 1)) * 255;
+                      const y = 80 - p.mood_score * 7.5;
+                      return i === 0 ? null : (
+                        <line key={i} x1={30 + ((i - 1) / Math.max(arr.length - 1, 1)) * 255} y1={80 - arr[i - 1].mood_score * 7.5} x2={x} y2={y} stroke="#22d3ee" strokeWidth="1.5" />
+                      );
+                    })}
+                    {curve.slice(-10).map((p, i, arr) => {
+                      const x = 30 + (i / Math.max(arr.length - 1, 1)) * 255;
+                      const y = 80 - p.mood_score * 7.5;
+                      return <circle key={i} cx={x} cy={y} r="2.5" fill="#22d3ee" />;
+                    })}
+                  </svg>
+                </div>
+              </div>
+            )}
+
+            <button onClick={() => setSelectedRegion(null)} className="w-full mt-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-[11px] transition-colors">Cerrar</button>
           </div>
-          <button
-            onClick={() => setSelectedRegion(null)}
-            className="mt-2 text-[10px] text-slate-500 hover:text-white cursor-pointer"
-          >
-            Cerrar
-          </button>
         </div>
       )}
     </div>
