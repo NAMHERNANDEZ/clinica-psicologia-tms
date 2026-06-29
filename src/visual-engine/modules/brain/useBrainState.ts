@@ -15,6 +15,14 @@ export interface CurvePoint {
   overall_response: number;
 }
 
+export interface ClinicalNoteItem {
+  id: number;
+  note: string;
+  note_type: string;
+  created_at: string;
+  therapist_name: string;
+}
+
 interface UseBrainStateReturn {
   brainStates: BrainVisualState[];
   patientState: PatientState;
@@ -23,6 +31,7 @@ interface UseBrainStateReturn {
   totalSessions: number;
   history: SessionHistory[];
   curve: CurvePoint[];
+  notes: ClinicalNoteItem[];
   loading: boolean;
   error: string | null;
   refresh: () => void;
@@ -36,6 +45,7 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
   const [totalSessions, setTotalSessions] = useState(0);
   const [history, setHistory] = useState<SessionHistory[]>([]);
   const [curve, setCurve] = useState<CurvePoint[]>([]);
+  const [notes, setNotes] = useState<ClinicalNoteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,11 +58,12 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
       setTotalSessions(0);
       setHistory([]);
       setCurve([]);
+      setNotes([]);
       return;
     }
     try {
       setLoading(true);
-      const { cos, patients, tmsProfiles, tmsSessions, clinicalResponse } = await import('../../../lib/api');
+      const { cos, patients, tmsProfiles, tmsSessions, clinicalResponse, clinicalNotes } = await import('../../../lib/api');
 
       const [stateRes, patientRes] = await Promise.allSettled([
         cos.getNextAction(patientId) as Promise<{ data?: { current_state?: PatientState } }>,
@@ -67,9 +78,10 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
         setPatientName(patientRes.value.data?.name || '');
       }
 
-      const [profilesRes, curveRes] = await Promise.allSettled([
+      const [profilesRes, curveRes, notesRes] = await Promise.allSettled([
         tmsProfiles.listByPatient(patientId),
         clinicalResponse.getCurve(patientId),
+        clinicalNotes.listByPatient(patientId),
       ]);
 
       if (profilesRes.status === 'fulfilled') {
@@ -98,6 +110,11 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
         setHistory(historyMapped);
       }
 
+      if (notesRes.status === 'fulfilled') {
+        const notesData = (notesRes.value as { data?: ClinicalNoteItem[] }).data || [];
+        setNotes(notesData.slice(-5).reverse());
+      }
+
       setError(null);
     } catch {
       setPatientState('REGISTERED');
@@ -107,6 +124,7 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
       setTotalSessions(0);
       setHistory([]);
       setCurve([]);
+      setNotes([]);
       setError(null);
     } finally {
       setLoading(false);
@@ -115,5 +133,5 @@ export function useBrainState(patientId: number): UseBrainStateReturn {
 
   useEffect(() => { load(); }, [load]);
 
-  return { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, loading, error, refresh: load };
+  return { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, notes, loading, error, refresh: load };
 }
