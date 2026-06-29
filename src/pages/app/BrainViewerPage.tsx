@@ -23,16 +23,19 @@ export default function BrainViewerPage() {
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const [phase, setPhase] = useState<ProtocolPhase>('idle');
   const [mtPct, setMtPct] = useState(80);
-  const [loadStatus, setLoadStatus] = useState<string>('waiting');
+  const [debug, setDebug] = useState('waiting...');
 
   useEffect(() => {
     const timer = setInterval(() => {
       const r = brainRef.current?.getRenderer();
       if (r) {
-        setLoadStatus(`${r.getLoadStatus()} — ${r.getLoadDetail()}`);
-        if (r.getLoadStatus() !== 'loading') clearInterval(timer);
+        const status = r.getLoadStatus();
+        const detail = r.getLoadDetail();
+        const names = r.getAllMeshNames().slice(0, 15).join(', ');
+        setDebug(`STATUS: ${status} | ${detail} | MESHES: ${names}...`);
+        if (status !== 'loading') clearInterval(timer);
       }
-    }, 200);
+    }, 300);
     return () => clearInterval(timer);
   }, []);
 
@@ -65,96 +68,61 @@ export default function BrainViewerPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#080C12] overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0 }}>
+    <div className="fixed inset-0 z-50 bg-[#0A0E14] overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0 }}>
       <BrainCanvas ref={brainRef} />
-      <div className="absolute inset-0 z-20 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 p-4">
-          <div className="flex items-center gap-3">
-            <div className="text-xs font-mono text-[#AAB5C5]/60 tracking-wider">
-              TMS BRAIN VIEWER v1.0
-            </div>
-            <div className="flex-1" />
-            <div className={`text-xs font-mono px-2 py-0.5 rounded border ${
-              phase !== 'idle' && phase !== 'complete'
-                ? 'text-[#00FF88] border-[#00FF88]/30 bg-[#00FF88]/5'
-                : 'text-[#AAB5C5]/40 border-[#AAB5C5]/10'
-            }`}>
-              {phase.toUpperCase()}
-            </div>
-            <div className="text-[10px] font-mono text-[#AAB5C5]/40 tracking-wider">
-              {loadStatus}
-            </div>
-          </div>
+
+      {/* DEBUG PANEL — GRANDE, CENTRAL */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/90 border border-yellow-500 rounded-lg p-4 max-w-2xl pointer-events-none">
+        <div className="text-yellow-400 text-xs font-mono font-bold mb-1">DEBUG BRAIN VIEWER</div>
+        <div className="text-green-400 text-[10px] font-mono break-all">{debug}</div>
+      </div>
+
+      {/* CONTROLES */}
+      <div className="absolute bottom-4 left-4 z-30 pointer-events-auto bg-black/80 border border-[#AAB5C5]/20 rounded-lg p-3 space-y-2 w-64">
+        <div className="text-[10px] font-mono text-[#AAB5C5]/50 tracking-widest">REGIÓN</div>
+        <select value={selectedRegion} onChange={e => handleRegionClick(e.target.value)}
+          className="w-full bg-[#111820] border border-[#AAB5C5]/15 rounded px-2 py-1.5 text-xs text-white focus:outline-none">
+          {Object.entries(REGION_LABELS).map(([id, label]) => (
+            <option key={id} value={id}>{label}</option>
+          ))}
+        </select>
+
+        <div className="text-[10px] font-mono text-[#AAB5C5]/50 tracking-widest">PROTOCOLO</div>
+        <select value={selectedProtocol} onChange={e => setSelectedProtocol(Number(e.target.value))}
+          className="w-full bg-[#111820] border border-[#AAB5C5]/15 rounded px-2 py-1.5 text-xs text-white focus:outline-none">
+          {PROTOCOLS.map((p, i) => (
+            <option key={i} value={i}>{p.name}</option>
+          ))}
+        </select>
+
+        <div className="text-[10px] font-mono text-[#AAB5C5]/50 tracking-widest">% MT: {mtPct}</div>
+        <input type="range" min={10} max={150} value={mtPct} onChange={e => setMtPct(Number(e.target.value))}
+          className="w-full accent-[#3B7BB5]" />
+
+        <div className="flex gap-2">
+          <button onClick={handleRun}
+            className="flex-1 bg-green-900/40 border border-green-500/40 text-green-400 text-[10px] font-mono rounded py-1.5 hover:bg-green-800/40">
+            ▶ INICIAR
+          </button>
+          <button onClick={handleStop}
+            className="flex-1 bg-red-900/40 border border-red-500/40 text-red-400 text-[10px] font-mono rounded py-1.5 hover:bg-red-800/40">
+            ■ DETENER
+          </button>
         </div>
+      </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex gap-4">
-            <div className="pointer-events-auto bg-[#0A0F16]/90 backdrop-blur-md border border-[#AAB5C5]/10 rounded-lg p-3 space-y-3 max-w-xs">
-              <div className="text-[10px] font-mono text-[#AAB5C5]/40 tracking-widest uppercase">Región</div>
-              <select
-                value={selectedRegion}
-                onChange={e => handleRegionClick(e.target.value)}
-                className="w-full bg-[#111820] border border-[#AAB5C5]/15 rounded px-2 py-1.5 text-xs text-[#E0E8F0] focus:outline-none focus:border-[#3B7BB5]/50"
-              >
-                {Object.entries(REGION_LABELS).map(([id, label]) => (
-                  <option key={id} value={id}>{label}</option>
-                ))}
-              </select>
-
-              <div className="text-[10px] font-mono text-[#AAB5C5]/40 tracking-widest uppercase">Protocolo</div>
-              <select
-                value={selectedProtocol}
-                onChange={e => setSelectedProtocol(Number(e.target.value))}
-                className="w-full bg-[#111820] border border-[#AAB5C5]/15 rounded px-2 py-1.5 text-xs text-[#E0E8F0] focus:outline-none focus:border-[#3B7BB5]/50"
-              >
-                {PROTOCOLS.map((p, i) => (
-                  <option key={i} value={i}>{p.name} ({p.frequency_hz}Hz, {p.intensity_pct_mt}% MT)</option>
-                ))}
-              </select>
-
-              <div className="text-[10px] font-mono text-[#AAB5C5]/40 tracking-widest uppercase">Intensidad %MT</div>
-              <input
-                type="range"
-                min={10}
-                max={150}
-                value={mtPct}
-                onChange={e => setMtPct(Number(e.target.value))}
-                className="w-full accent-[#3B7BB5]"
-              />
-              <div className="text-[10px] font-mono text-[#E0E8F0] text-center">{mtPct}% MT</div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleRun}
-                  className="flex-1 bg-[#3B7BB5]/20 border border-[#3B7BB5]/40 text-[#8AB5E0] text-[10px] font-mono tracking-wider rounded py-1.5 hover:bg-[#3B7BB5]/30 transition-colors"
-                >
-                  ▶ INICIAR
-                </button>
-                <button
-                  onClick={handleStop}
-                  className="flex-1 bg-[#B53B3B]/20 border border-[#B53B3B]/40 text-[#E08A8A] text-[10px] font-mono tracking-wider rounded py-1.5 hover:bg-[#B53B3B]/30 transition-colors"
-                >
-                  ■ DETENER
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1" />
-
-            {overlay && (
-              <div className="pointer-events-auto bg-[#0A0F16]/90 backdrop-blur-md border border-[#AAB5C5]/10 rounded-lg p-3 max-w-xs">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] font-mono">
-                  <div className="text-[#AAB5C5]/40">Fase</div>
-                  <div className="text-[#E0E8F0]">{overlay.phase}</div>
-                  <div className="text-[#AAB5C5]/40">Pulso</div>
-                  <div className="text-[#E0E8F0]">{overlay.pulseCount}</div>
-                  <div className="text-[#AAB5C5]/40">Intensidad</div>
-                  <div className="text-[#E0E8F0]">{(overlay.coilIntensity * 100).toFixed(1)}%</div>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* FASE + STATUS */}
+      <div className="absolute top-4 right-4 z-30 bg-black/80 border border-[#AAB5C5]/20 rounded-lg p-3 w-48">
+        <div className="text-[10px] font-mono text-[#AAB5C5]/50 tracking-widest">FASE</div>
+        <div className={`text-sm font-mono font-bold ${phase !== 'idle' && phase !== 'complete' ? 'text-green-400' : 'text-[#AAB5C5]/60'}`}>
+          {phase.toUpperCase()}
         </div>
+        {overlay && (
+          <div className="mt-2 text-[10px] font-mono text-[#AAB5C5]/60 space-y-1">
+            <div>Pulso: {overlay.pulseCount}</div>
+            <div>Intensidad: {(overlay.coilIntensity * 100).toFixed(1)}%</div>
+          </div>
+        )}
       </div>
 
       {overlay && (
