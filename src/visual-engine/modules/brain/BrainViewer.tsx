@@ -5,8 +5,11 @@ import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState } fro
 
 const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
 
+import { useState } from 'react';
+
 export default function BrainViewer({ patientId }: { patientId: number }) {
   const { brainStates, patientState, loading, error } = useBrainState(patientId);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   const getStateMap = () => {
     const map: Record<string, BrainVisualState> = {};
@@ -154,8 +157,22 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                 ? BRAIN_ANIMATIONS.risk.name
                 : '';
 
+            const isSelected = selectedRegion === region.id;
+
             return (
-              <g key={region.id}>
+              <g key={region.id} onClick={() => setSelectedRegion(region.id)} style={{ cursor: 'pointer' }}>
+                {isSelected && (
+                  <ellipse
+                    cx={region.cx}
+                    cy={region.cy}
+                    rx={region.rx + 10}
+                    ry={region.ry + 10}
+                    fill="none"
+                    stroke="#22d3ee"
+                    strokeWidth="2"
+                    opacity="0.8"
+                  />
+                )}
                 {pulseActive && (
                   <ellipse
                     cx={region.cx}
@@ -177,8 +194,8 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                   cy={region.cy}
                   rx={region.rx + intensity * 3}
                   ry={region.ry + intensity * 3}
-                  fill={color}
-                  opacity={0.25 + intensity * 0.6}
+                  fill={isSelected ? '#22d3ee' : color}
+                  opacity={isSelected ? 0.5 : 0.25 + intensity * 0.6}
                   filter="url(#softGlow)"
                   style={animName ? {
                     animation: `${animName} ${BRAIN_ANIMATIONS[activity]?.duration || '2s'} ${BRAIN_ANIMATIONS[activity]?.timing || 'ease-in-out'} infinite`,
@@ -190,16 +207,16 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
                   cy={region.cy}
                   rx={region.rx * 0.5}
                   ry={region.ry * 0.5}
-                  fill={color}
-                  opacity={0.4 + intensity * 0.6}
+                  fill={isSelected ? '#22d3ee' : color}
+                  opacity={isSelected ? 0.7 : 0.4 + intensity * 0.6}
                 />
 
                 <text
                   x={region.cx}
                   y={region.cy + region.ry + 14}
                   textAnchor="middle"
-                  className="fill-slate-400"
-                  style={{ fontSize: '7px', fontFamily: 'system-ui' }}
+                  className={isSelected ? 'fill-cyan-400' : 'fill-slate-400'}
+                  style={{ fontSize: '7px', fontFamily: 'system-ui', fontWeight: isSelected ? 'bold' : 'normal' }}
                 >
                   {BRAIN_REGION_LABELS[region.id]}
                 </text>
@@ -221,6 +238,24 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
           </div>
         ))}
       </div>
+
+      {selectedRegion && (
+        <div className="mt-4 p-3 bg-slate-800 rounded-xl border border-cyan-500/30">
+          <div className="text-xs text-cyan-400 font-bold mb-1">
+            {BRAIN_REGION_LABELS[selectedRegion] || selectedRegion}
+          </div>
+          <div className="text-xs text-slate-400">
+            Actividad: {stateMap[selectedRegion]?.activity || 'idle'} — 
+            Intensidad: {((stateMap[selectedRegion]?.intensity || 0) * 100).toFixed(0)}%
+          </div>
+          <button
+            onClick={() => setSelectedRegion(null)}
+            className="mt-2 text-[10px] text-slate-500 hover:text-white cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
     </div>
   );
 }

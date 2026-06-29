@@ -92,6 +92,7 @@ function App() {
               <Route path="/terminos" element={<><Header /><main className="flex-grow"><Terms /></main><Footer /><WhatsAppButton /></>} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/brain" element={<BrainViewerPage />} />
 
               {/* Protected app routes with AppLayout */}
               <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
