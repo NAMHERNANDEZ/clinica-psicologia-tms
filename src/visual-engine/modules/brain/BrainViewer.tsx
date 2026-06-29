@@ -1,20 +1,41 @@
 import { useBrainState } from './useBrainState';
 import { BRAIN_REGIONS } from './brain-regions';
 import { BRAIN_ANIMATIONS } from './brain-animations';
-import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState } from '../../core/StateMapper';
+import { BRAIN_ACTIVITY_COLORS, BRAIN_REGION_LABELS, type BrainVisualState, type PatientState } from '../../core/StateMapper';
 import { getRegionById } from './brain-regions';
+import { mapStateToBrain } from '../../core/ClinicalRenderer';
 
 const KEYFRAME_CSS = Object.values(BRAIN_ANIMATIONS).map(a => a.keyframes).join('\n');
 
 import { useState } from 'react';
 
+const DEMO_STATES: { label: string; value: PatientState }[] = [
+  { label: 'Registrado', value: 'REGISTERED' },
+  { label: 'Evaluado', value: 'EVALUATED' },
+  { label: 'MT Medido', value: 'MT_MEASURED' },
+  { label: 'Protocolo', value: 'PROTOCOL_ASSIGNED' },
+  { label: 'En Tratamiento', value: 'IN_TREATMENT' },
+  { label: 'Observación', value: 'UNDER_OBSERVATION' },
+  { label: 'Alta', value: 'DISCHARGED' },
+];
+
 export default function BrainViewer({ patientId }: { patientId: number }) {
   const { brainStates, patientState, patientName, sessionNumber, totalSessions, history, curve, notes, loading, error } = useBrainState(patientId);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [demoState, setDemoState] = useState<PatientState | null>(null);
+
+  const activeState = demoState || patientState;
+
+  const getActiveBrainStates = (): BrainVisualState[] => {
+    if (demoState) return mapStateToBrain(demoState);
+    return brainStates;
+  };
+
+  const activeBrainStates = getActiveBrainStates();
 
   const getStateMap = () => {
     const map: Record<string, BrainVisualState> = {};
-    brainStates.forEach(bs => { map[bs.region] = bs; });
+    activeBrainStates.forEach(bs => { map[bs.region] = bs; });
     return map;
   };
 
@@ -55,9 +76,32 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
             </div>
           )}
         </div>
-        <span className="text-xs font-medium text-slate-400 bg-slate-800 px-3 py-1 rounded-full">
-          Estado: {patientState.replace(/_/g, ' ')}
-        </span>
+        <div className="flex items-center space-x-2">
+          {demoState && (
+            <button onClick={() => setDemoState(null)} className="text-[10px] text-amber-400 bg-amber-900/30 px-2 py-1 rounded-full hover:bg-amber-900/50">
+              Demo: {demoState.replace(/_/g, ' ')} ✕
+            </button>
+          )}
+          <span className="text-xs font-medium text-slate-400 bg-slate-800 px-3 py-1 rounded-full">
+            Estado: {activeState.replace(/_/g, ' ')}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {DEMO_STATES.map(s => (
+          <button
+            key={s.value}
+            onClick={() => setDemoState(demoState === s.value ? null : s.value)}
+            className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+              demoState === s.value
+                ? 'bg-cyan-600 text-white border-cyan-500'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
       <div className="relative" style={{ height: '380px' }}>
