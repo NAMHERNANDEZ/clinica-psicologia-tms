@@ -27,8 +27,8 @@ export class BrainRenderer {
   private connectome!: ConnectomeEngine;
   private animationId?: number;
   private canvas!: HTMLCanvasElement;
-  private angle = 0;
-  private targetAngle = 0;
+  private orbitAngle = 0;
+  private targetOrbitAngle = 0;
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
   private isDragging = false;
@@ -51,42 +51,36 @@ export class BrainRenderer {
 
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
-    console.log('[BrainRenderer] Canvas size:', w, 'x', h);
+    console.log('[BrainRenderer] Canvas:', w, 'x', h);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#0A0E14');
+    this.scene.background = new THREE.Color('#080C12');
 
-    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
-    this.camera.position.set(0, 6, 6);
+    this.camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 100);
+    this.camera.position.set(0, 9, 0.01);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.5;
+    this.renderer.toneMappingExposure = 1.8;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    const amb = new THREE.AmbientLight(0xFFFFFF, 1.5);
-    this.scene.add(amb);
-    const key = new THREE.DirectionalLight(0xFFFFFF, 1.2);
-    key.position.set(5, 8, 5);
-    const fill = new THREE.DirectionalLight(0xFFFFFF, 0.6);
-    fill.position.set(-5, 4, -3);
-    const back = new THREE.DirectionalLight(0xFFFFFF, 0.4);
-    back.position.set(0, 2, -6);
-    this.scene.add(key, fill, back);
-
-    const grid = new THREE.GridHelper(10, 20, 0x1A2A3A, 0x0D1520);
-    grid.position.y = -2;
-    this.scene.add(grid);
+    this.scene.add(new THREE.AmbientLight(0xFFFFFF, 1.8));
+    const key = new THREE.DirectionalLight(0xFFFFFF, 1.5);
+    key.position.set(2, 10, 3);
+    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.8);
+    fill.position.set(-4, 6, -2);
+    const rim = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+    rim.position.set(0, 3, -8);
+    this.scene.add(key, fill, rim);
 
     this.brainScene = new BrainScene(this.scene);
     await this.brainScene.init();
     this.connectome = new ConnectomeEngine();
 
-    console.log('[BrainRenderer] Brain meshes:', this.brainScene.getBrainMeshCount());
-    console.log('[BrainRenderer] Mesh names:', this.brainScene.getAllMeshNames().join(' | '));
+    console.log('[BrainRenderer] Meshes:', this.brainScene.getBrainMeshCount());
 
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     this.canvas.addEventListener('pointermove', this.onPointerMove);
@@ -125,15 +119,7 @@ export class BrainRenderer {
     this.lastMouseX = e.clientX;
     this.dragStartX = e.clientX;
     this.dragMoved = false;
-    const rect = this.canvas.getBoundingClientRect();
-    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const hits = this.raycaster.intersectObjects(this.getRegionMeshes(), false);
-    if (hits.length > 0) {
-      const id = (hits[0].object as any).userData?.regionId;
-      if (id) this.onRegionClick?.(id);
-    }
+    this.raycast(e);
   };
 
   private onPointerUp = () => { this.isDragging = false; };
@@ -141,25 +127,33 @@ export class BrainRenderer {
   private onPointerMove = (e: PointerEvent) => {
     if (this.isDragging) {
       const dx = e.clientX - this.lastMouseX;
-      this.targetAngle += dx * 0.005;
+      this.targetOrbitAngle += dx * 0.005;
       this.lastMouseX = e.clientX;
       if (Math.abs(e.clientX - this.dragStartX) > 20) this.dragMoved = true;
       this.canvas.style.cursor = 'grabbing';
       return;
     }
+    this.raycast(e);
+  };
+
+  private raycast(e: PointerEvent) {
     const rect = this.canvas.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const hits = this.raycaster.intersectObjects(this.getRegionMeshes(), false);
     this.canvas.style.cursor = hits.length > 0 ? 'pointer' : 'default';
-  };
+    if (hits.length > 0 && !this.isDragging) {
+      const id = (hits[0].object as any).userData?.regionId;
+      if (id) this.onRegionClick?.(id);
+    }
+  }
 
   private onWheel = (e: WheelEvent) => {
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);
     const dist = this.camera.position.length();
-    const newDist = Math.max(3, Math.min(15, dist + e.deltaY * 0.003 * dist));
+    const newDist = Math.max(4, Math.min(16, dist + e.deltaY * 0.005 * dist));
     this.camera.position.normalize().multiplyScalar(newDist);
     this.camera.lookAt(0, 0, 0);
   };
@@ -187,11 +181,11 @@ export class BrainRenderer {
       if (this.disposed) return;
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
-      this.angle += (this.targetAngle - this.angle) * 0.08;
+      this.orbitAngle += (this.targetOrbitAngle - this.orbitAngle) * 0.08;
       const dist = this.camera.position.length();
-      this.camera.position.x = Math.sin(this.angle) * dist * 0.15;
-      this.camera.position.z = Math.cos(this.angle) * dist * 0.15 + dist * 0.85;
-      this.camera.position.y = 6;
+      this.camera.position.x = Math.sin(this.orbitAngle) * 0.5;
+      this.camera.position.z = Math.cos(this.orbitAngle) * 0.5;
+      this.camera.position.y = 9;
       this.camera.lookAt(0, 0, 0);
       this.brainScene.update(delta);
       this.brainScene.updateConnections(delta, this.currentActivations, this.connectome.matrix);
