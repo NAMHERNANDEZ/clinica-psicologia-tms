@@ -4,6 +4,9 @@ import { HospitalOverlay } from '../../brain/render/HospitalOverlay';
 import type { OverlayState } from '../../brain/render/BrainRenderer';
 import type { ProtocolPhase } from '../../brain/simulation/ProtocolStateMachine';
 
+const BUILD_VERSION = 'v2.0-anatomical';
+const BUILD_TIME = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+
 const REGION_LABELS: Record<string, string> = {
   dlpfc_l: 'DLPFC-L', dlpfc_r: 'DLPFC-R', m1_l: 'M1-L', m1_r: 'M1-R',
   sma: 'SMA', acc: 'ACC', insula_l: 'INS-L', insula_r: 'INS-R',
@@ -71,9 +74,9 @@ export default function BrainViewerPage() {
     <div className="fixed inset-0 z-50 bg-[#0A0E14] overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0 }}>
       <BrainCanvas ref={brainRef} />
 
-      {/* DEBUG PANEL — GRANDE, CENTRAL */}
+      {/* DEBUG PANEL */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/90 border border-yellow-500 rounded-lg p-4 max-w-2xl pointer-events-none">
-        <div className="text-yellow-400 text-xs font-mono font-bold mb-1">DEBUG BRAIN VIEWER</div>
+        <div className="text-yellow-400 text-xs font-mono font-bold mb-1">BRAIN VIEWER {BUILD_VERSION} | {BUILD_TIME}</div>
         <div className="text-green-400 text-[10px] font-mono break-all">{debug}</div>
       </div>
 
