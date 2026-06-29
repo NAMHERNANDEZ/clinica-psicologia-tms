@@ -104,19 +104,49 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
         ))}
       </div>
 
-      <div className="relative" style={{ height: '380px' }}>
-        <svg viewBox="0 0 500 340" className="w-full h-full">
+      <div className="relative" style={{ height: '480px' }}>
+        <svg viewBox="-30 0 560 460" className="w-full h-full">
           <defs>
-            <radialGradient id="brainBg" cx="50%" cy="45%" r="55%">
-              <stop offset="0%" stopColor="#2a3545" />
-              <stop offset="60%" stopColor="#1e293b" />
-              <stop offset="100%" stopColor="#0f172a" />
-            </radialGradient>
-            <radialGradient id="brainSurface" cx="50%" cy="45%" r="50%">
-              <stop offset="0%" stopColor="#3a4a5a" />
-              <stop offset="100%" stopColor="#2a3545" />
+            {/* Brain volume gradient — 3D lighting from top-left */}
+            <radialGradient id="brainVolume" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stopColor="#475569" stopOpacity="0.9"/>
+              <stop offset="50%" stopColor="#334155" stopOpacity="0.95"/>
+              <stop offset="100%" stopColor="#1e293b" stopOpacity="1"/>
             </radialGradient>
 
+            {/* PET heatmaps per activity level */}
+            <radialGradient id="pet-idle">
+              <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.7"/>
+              <stop offset="50%" stopColor="#e2e8f0" stopOpacity="0.35"/>
+              <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="pet-low">
+              <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.8"/>
+              <stop offset="50%" stopColor="#93c5fd" stopOpacity="0.4"/>
+              <stop offset="100%" stopColor="#93c5fd" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="pet-active">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.9"/>
+              <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.5"/>
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="pet-stimulated">
+              <stop offset="0%" stopColor="#eab308" stopOpacity="0.95"/>
+              <stop offset="50%" stopColor="#eab308" stopOpacity="0.6"/>
+              <stop offset="100%" stopColor="#eab308" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="pet-high_response">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity="0.95"/>
+              <stop offset="50%" stopColor="#22c55e" stopOpacity="0.6"/>
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="pet-risk">
+              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.95"/>
+              <stop offset="50%" stopColor="#ef4444" stopOpacity="0.6"/>
+              <stop offset="100%" stopColor="#ef4444" stopOpacity="0"/>
+            </radialGradient>
+
+            {/* Fallback grad for any unknown level */}
             {Object.entries(BRAIN_ACTIVITY_COLORS).map(([level, color]) => (
               <radialGradient key={level} id={`grad-${level}`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor={color} stopOpacity="0.9" />
@@ -125,22 +155,19 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
               </radialGradient>
             ))}
 
-            <filter id="glow">
+            {/* Glow filters */}
+            <filter id="glow-subtle" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-intense" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
+              <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
-
-            <filter id="softGlow">
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-
             <filter id="innerShadow">
               <feOffset dx="0" dy="1" />
               <feGaussianBlur stdDeviation="1.5" />
@@ -149,172 +176,181 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
               <feBlend in="SourceGraphic" />
             </filter>
 
+            {/* Legend gradient */}
+            <linearGradient id="activityScale" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#e2e8f0"/>
+              <stop offset="20%" stopColor="#93c5fd"/>
+              <stop offset="40%" stopColor="#3b82f6"/>
+              <stop offset="60%" stopColor="#eab308"/>
+              <stop offset="80%" stopColor="#22c55e"/>
+              <stop offset="100%" stopColor="#ef4444"/>
+            </linearGradient>
+
             <clipPath id="brainClip">
               <path d="M250,30 C310,30 370,50 400,90 C425,125 435,160 430,195 C425,230 405,260 375,280 C345,298 310,310 275,315 C260,317 250,318 250,318 C250,318 240,317 225,315 C190,310 155,298 125,280 C95,260 75,230 70,195 C65,160 75,125 100,90 C130,50 190,30 250,30 Z" />
             </clipPath>
           </defs>
 
           <g clipPath="url(#brainClip)">
-            <ellipse cx="250" cy="175" rx="195" ry="150" fill="url(#brainBg)" />
+            {/* Brain base volume */}
+            <ellipse cx="250" cy="175" rx="195" ry="150" fill="url(#brainVolume)" />
 
-            {/* Left hemisphere surface */}
-            <path d="M248,35 C200,38 145,60 115,100 C85,140 72,180 75,210 C78,240 95,265 120,285 C148,305 185,315 225,318 C240,319 248,318 248,318 Z" fill="url(#brainSurface)" opacity="0.6" />
+            {/* Left hemisphere with 3D volume */}
+            <path d="M248,35 C200,38 145,60 115,100 C85,140 72,180 75,210 C78,240 95,265 120,285 C148,305 185,315 225,318 C240,319 248,318 248,318 Z" fill="url(#brainVolume)" stroke="#475569" strokeWidth="1.5" opacity="0.7" />
 
-            {/* Right hemisphere surface */}
-            <path d="M252,35 C300,38 355,60 385,100 C415,140 428,180 425,210 C422,240 405,265 380,285 C352,305 315,315 275,318 C260,319 252,318 252,318 Z" fill="url(#brainSurface)" opacity="0.6" />
+            {/* Right hemisphere with 3D volume */}
+            <path d="M252,35 C300,38 355,60 385,100 C415,140 428,180 425,210 C422,240 405,265 380,285 C352,305 315,315 275,318 C260,319 252,318 252,318 Z" fill="url(#brainVolume)" stroke="#475569" strokeWidth="1.5" opacity="0.7" />
 
             {/* Longitudinal fissure - deep central groove */}
             <path d="M250,32 C249,60 248,100 249,140 C250,180 251,220 250,260 C249,290 250,310 250,318" stroke="#0a0f14" strokeWidth="3" fill="none" />
             <path d="M250,32 C251,60 252,100 251,140 C250,180 249,220 250,260 C251,290 250,310 250,318" stroke="#151d28" strokeWidth="1.5" fill="none" />
 
-            {/* Central sulcus - left hemisphere */}
-            <path d="M195,60 C200,80 205,105 210,130 C215,155 218,175 220,195 C222,215 224,240 228,260" stroke="#151d28" strokeWidth="1.5" fill="none" opacity="0.7" />
+            {/* Central sulcus (Rolando) */}
+            <path d="M195,60 C200,80 205,105 210,130 C215,155 218,175 220,195 C222,215 224,240 228,260" stroke="#0f172a" strokeWidth="2.5" fill="none" opacity="0.7" />
+            <path d="M305,60 C300,80 295,105 290,130 C285,155 282,175 280,195 C278,215 276,240 272,260" stroke="#0f172a" strokeWidth="2.5" fill="none" opacity="0.7" />
 
-            {/* Central sulcus - right hemisphere */}
-            <path d="M305,60 C300,80 295,105 290,130 C285,155 282,175 280,195 C278,215 276,240 272,260" stroke="#151d28" strokeWidth="1.5" fill="none" opacity="0.7" />
+            {/* Lateral sulcus (Sylvian) */}
+            <path d="M80,220 Q130,215 180,225 Q210,235 235,245" stroke="#0f172a" strokeWidth="2" fill="none" opacity="0.6" />
+            <path d="M420,220 Q370,215 320,225 Q290,235 265,245" stroke="#0f172a" strokeWidth="2" fill="none" opacity="0.6" />
 
-            {/* Lateral sulcus (Sylvian) - left */}
-            <path d="M120,155 C140,150 165,148 190,152 C210,156 225,162 238,170" stroke="#151d28" strokeWidth="1.2" fill="none" opacity="0.6" />
+            {/* Superior frontal sulcus */}
+            <path d="M100,110 Q140,105 180,115 Q210,120 230,130" stroke="#1a2535" strokeWidth="1.2" fill="none" opacity="0.5" />
+            <path d="M400,110 Q360,105 320,115 Q290,120 270,130" stroke="#1a2535" strokeWidth="1.2" fill="none" opacity="0.5" />
 
-            {/* Lateral sulcus (Sylvian) - right */}
-            <path d="M380,155 C360,150 335,148 310,152 C290,156 275,162 262,170" stroke="#151d28" strokeWidth="1.2" fill="none" opacity="0.6" />
+            {/* Inferior frontal sulcus */}
+            <path d="M110,160 Q150,155 190,165 Q220,170 240,180" stroke="#1a2535" strokeWidth="1" fill="none" opacity="0.5" />
+            <path d="M390,160 Q350,155 310,165 Q280,170 260,180" stroke="#1a2535" strokeWidth="1" fill="none" opacity="0.5" />
 
-            {/* Superior frontal sulcus - left */}
-            <path d="M175,55 C180,75 183,100 185,125 C187,145 188,160 190,175" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
+            {/* Parieto-occipital sulcus */}
+            <path d="M120,280 Q160,275 200,285 Q225,290 240,300" stroke="#1a2535" strokeWidth="1.2" fill="none" opacity="0.5" />
+            <path d="M380,280 Q340,275 300,285 Q275,290 260,300" stroke="#1a2535" strokeWidth="1.2" fill="none" opacity="0.5" />
 
-            {/* Superior frontal sulcus - right */}
-            <path d="M325,55 C320,75 317,100 315,125 C313,145 312,160 310,175" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
+            {/* Calcarine sulcus */}
+            <path d="M180,340 Q220,345 250,350 Q280,345 320,340" stroke="#1a2535" strokeWidth="1" fill="none" opacity="0.4" />
 
-            {/* Inferior frontal sulcus - left */}
-            <path d="M140,110 C155,115 170,122 185,130 C200,138 210,145 220,152" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
+            {/* Secondary sulci */}
+            <g stroke="#334155" strokeWidth="0.6" fill="none" opacity="0.35">
+              <path d="M130,80 C145,85 160,92 172,100"/>
+              <path d="M370,80 C355,85 340,92 328,100"/>
+              <path d="M110,130 C125,128 142,127 158,130"/>
+              <path d="M390,130 C375,128 358,127 342,130"/>
+              <path d="M105,175 C120,170 138,167 155,168"/>
+              <path d="M395,175 C380,170 362,167 345,168"/>
+              <path d="M130,230 C145,225 162,222 178,225"/>
+              <path d="M370,230 C355,225 338,222 322,225"/>
+              <path d="M160,265 C172,258 185,252 198,250"/>
+              <path d="M340,265 C328,258 315,252 302,250"/>
+            </g>
 
-            {/* Inferior frontal sulcus - right */}
-            <path d="M360,110 C345,115 330,122 315,130 C300,138 290,145 280,152" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
-
-            {/* Parieto-occipital sulcus - left */}
-            <path d="M160,200 C170,215 178,230 185,248 C192,265 198,280 205,295" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
-
-            {/* Parieto-occipital sulcus - right */}
-            <path d="M340,200 C330,215 322,230 315,248 C308,265 302,280 295,295" stroke="#1a2535" strokeWidth="0.8" fill="none" opacity="0.5" />
-
-            {/* Calcarine sulcus - left */}
-            <path d="M210,270 C220,265 230,258 238,250 C244,244 247,238 248,230" stroke="#1a2535" strokeWidth="0.7" fill="none" opacity="0.4" />
-
-            {/* Calcarine sulcus - right */}
-            <path d="M290,270 C280,265 270,258 262,250 C256,244 253,238 252,230" stroke="#1a2535" strokeWidth="0.7" fill="none" opacity="0.4" />
-
-            {/* Additional gyri details - left hemisphere */}
-            <path d="M130,80 C145,85 160,92 172,100" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M110,130 C125,128 142,127 158,130" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M105,175 C120,170 138,167 155,168" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M130,230 C145,225 162,222 178,225" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M160,265 C172,258 185,252 198,250" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-
-            {/* Additional gyri details - right hemisphere */}
-            <path d="M370,80 C355,85 340,92 328,100" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M390,130 C375,128 358,127 342,130" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M395,175 C380,170 362,167 345,168" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M370,230 C355,225 338,222 322,225" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-            <path d="M340,265 C328,258 315,252 302,250" stroke="#1e2a3a" strokeWidth="0.6" fill="none" opacity="0.4" />
-
-            {/* Brain outline stroke */}
+            {/* Brain outline */}
             <path d="M250,30 C310,30 370,50 400,90 C425,125 435,160 430,195 C425,230 405,260 375,280 C345,298 310,310 275,315 C260,317 250,318 250,318 C250,318 240,317 225,315 C190,310 155,298 125,280 C95,260 75,230 70,195 C65,160 75,125 100,90 C130,50 190,30 250,30 Z" fill="none" stroke="#3a4a5a" strokeWidth="1.5" />
           </g>
 
-          {/* Brain regions */}
+          {/* Brain regions with PET heatmap + glow */}
           {BRAIN_REGIONS.map(region => {
             const bs = stateMap[region.id];
             const activity = bs?.activity || 'idle';
             const intensity = bs?.intensity || 0;
             const color = bs?.color || BRAIN_ACTIVITY_COLORS.idle;
-            const pulseActive = bs?.pulseActive || false;
-            const animName = activity === 'stimulated' || activity === 'high_response'
-              ? BRAIN_ANIMATIONS[activity]?.name
-              : activity === 'risk'
-                ? BRAIN_ANIMATIONS.risk.name
-                : '';
-
             const isSelected = selectedRegion === region.id;
+            const isStimulated = activity === 'stimulated' || activity === 'high_response';
+
+            const petId = `pet-${activity}`;
+            const fallbackId = `grad-${activity}`;
 
             return (
-              <g key={region.id} onClick={() => setSelectedRegion(region.id)} style={{ cursor: 'pointer' }}>
+              <g key={region.id} className="cursor-pointer" onClick={() => setSelectedRegion(region.id)}>
+                {/* Outer halo (diffuse glow) */}
+                <ellipse
+                  cx={region.cx}
+                  cy={region.cy}
+                  rx={region.rx * 1.4}
+                  ry={region.ry * 1.4}
+                  fill={`url(#${petId})`}
+                  opacity="0.3"
+                  filter={isStimulated ? "url(#glow-intense)" : "url(#glow-subtle)"}
+                />
+
+                {/* Main region with PET gradient */}
+                <ellipse
+                  cx={region.cx}
+                  cy={region.cy}
+                  rx={region.rx}
+                  ry={region.ry}
+                  fill={`url(#${petId})`}
+                  stroke={isSelected ? '#06b6d4' : BRAIN_ACTIVITY_COLORS[activity]}
+                  strokeWidth={isSelected ? 2.5 : 1.5}
+                  strokeOpacity={isSelected ? 1 : 0.6}
+                  className={`transition-all duration-300 hover:stroke-opacity-100 ${isStimulated ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`}
+                />
+
+                {/* Selection ring (dashed) */}
                 {isSelected && (
                   <ellipse
                     cx={region.cx}
                     cy={region.cy}
-                    rx={region.rx + 10}
-                    ry={region.ry + 10}
+                    rx={region.rx + 5}
+                    ry={region.ry + 5}
                     fill="none"
-                    stroke="#22d3ee"
+                    stroke="#06b6d4"
                     strokeWidth="2"
-                    opacity="0.8"
+                    strokeDasharray="4 2"
+                    className="animate-[pulse_1.5s_ease-in-out_infinite]"
                   />
                 )}
-                {pulseActive && (
-                  <ellipse
-                    cx={region.cx}
-                    cy={region.cy}
-                    rx={region.rx + 6}
-                    ry={region.ry + 6}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="1.5"
-                    opacity="0.5"
-                    style={{
-                      animation: `${BRAIN_ANIMATIONS.pulse_ring.name} ${BRAIN_ANIMATIONS.pulse_ring.duration} ${BRAIN_ANIMATIONS.pulse_ring.timing} infinite`,
-                    }}
-                  />
-                )}
-
-                <ellipse
-                  cx={region.cx}
-                  cy={region.cy}
-                  rx={region.rx + intensity * 3}
-                  ry={region.ry + intensity * 3}
-                  fill={`url(#grad-${activity})`}
-                  opacity={isSelected ? 0.8 : 0.6}
-                  filter="url(#glow)"
-                  className="cursor-pointer transition-all duration-300"
-                  style={animName ? {
-                    animation: `${animName} ${BRAIN_ANIMATIONS[activity]?.duration || '2s'} ${BRAIN_ANIMATIONS[activity]?.timing || 'ease-in-out'} infinite`,
-                  } : undefined}
-                />
-
-                <ellipse
-                  cx={region.cx}
-                  cy={region.cy}
-                  rx={region.rx * 0.5}
-                  ry={region.ry * 0.5}
-                  fill={isSelected ? '#22d3ee' : color}
-                  opacity={isSelected ? 0.9 : 0.5 + intensity * 0.5}
-                />
-
-                <text
-                  x={region.cx}
-                  y={region.cy + region.ry + 14}
-                  textAnchor="middle"
-                  className={isSelected ? 'fill-cyan-400' : 'fill-slate-400'}
-                  style={{ fontSize: '7px', fontFamily: 'system-ui', fontWeight: isSelected ? 'bold' : 'normal' }}
-                >
-                  {BRAIN_REGION_LABELS[region.id]}
-                </text>
               </g>
             );
           })}
 
-          <text x="250" y="335" textAnchor="middle" className="fill-slate-600" style={{ fontSize: '9px' }}>
+          {/* Orientation markers A/P/L/R */}
+          <g className="select-none pointer-events-none">
+            <text x="250" y="15" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '11px' }}>A</text>
+            <line x1="250" y1="19" x2="250" y2="28" stroke="#06b6d4" strokeWidth="1.5" opacity="0.6"/>
+            <text x="250" y="338" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '11px' }}>P</text>
+            <line x1="250" y1="323" x2="250" y2="332" stroke="#06b6d4" strokeWidth="1.5" opacity="0.6"/>
+            <text x="35" y="195" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '11px' }}>L</text>
+            <line x1="45" y1="190" x2="55" y2="190" stroke="#06b6d4" strokeWidth="1.5" opacity="0.6"/>
+            <text x="465" y="195" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '11px' }}>R</text>
+            <line x1="445" y1="190" x2="455" y2="190" stroke="#06b6d4" strokeWidth="1.5" opacity="0.6"/>
+          </g>
+
+          {/* Anatomical labels with guide lines */}
+          <g className="pointer-events-none">
+            {BRAIN_REGIONS.map(region => {
+              const bs = stateMap[region.id];
+              const activity = bs?.activity || 'idle';
+              const isSelected = selectedRegion === region.id;
+              const labelX = region.side === 'left' ? region.cx - region.rx - 55 : region.side === 'right' ? region.cx + region.rx + 55 : region.cx;
+              const labelY = region.cy;
+
+              return (
+                <g key={`label-${region.id}`} opacity={isSelected ? 1 : 0.55}>
+                  <line x1={region.cx} y1={region.cy} x2={labelX} y2={labelY} stroke={BRAIN_ACTIVITY_COLORS[activity]} strokeWidth="0.8" strokeDasharray="2 2" opacity="0.5" />
+                  <circle cx={region.cx} cy={region.cy} r="2" fill={BRAIN_ACTIVITY_COLORS[activity]} />
+                  <text x={labelX} y={labelY} textAnchor={region.side === 'left' ? 'end' : 'start'} style={{ fontSize: '8px', fontFamily: 'IBM Plex Mono' }} fill={BRAIN_ACTIVITY_COLORS[activity]} fontWeight={isSelected ? '600' : '400'}>
+                    {region.label}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Caption */}
+          <text x="250" y="355" textAnchor="middle" className="fill-slate-600" style={{ fontSize: '9px', fontFamily: 'IBM Plex Mono' }}>
             Vista Axial — Actividad Cerebral
           </text>
-        </svg>
-      </div>
 
-      <div className="flex items-center justify-center space-x-4 mt-4 text-xs">
-        {(['idle', 'low', 'active', 'stimulated', 'high_response', 'risk'] as const).map(level => (
-          <div key={level} className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BRAIN_ACTIVITY_COLORS[level] }} />
-            <span className="text-slate-400 capitalize">{level.replace(/_/g, ' ')}</span>
-          </div>
-        ))}
+          {/* Continuous activity legend */}
+          <g transform="translate(125, 385)">
+            <text x="125" y="0" textAnchor="middle" className="fill-slate-400 font-mono uppercase tracking-wider" style={{ fontSize: '8px' }}>Nivel de Actividad Neural</text>
+            <rect x="0" y="8" width="250" height="10" rx="5" fill="url(#activityScale)" />
+            <text x="0" y="32" className="fill-slate-500 font-mono" style={{ fontSize: '8px' }}>Idle</text>
+            <text x="62" y="32" className="fill-slate-500 font-mono" style={{ fontSize: '8px' }}>Baja</text>
+            <text x="120" y="32" className="fill-slate-500 font-mono" style={{ fontSize: '8px' }}>Activa</text>
+            <text x="185" y="32" className="fill-slate-500 font-mono" style={{ fontSize: '8px' }}>Estim.</text>
+            <text x="235" y="32" className="fill-red-400 font-mono" style={{ fontSize: '8px' }}>Riesgo</text>
+          </g>
+        </svg>
       </div>
 
       {selectedRegion && selectedRegionData && (
