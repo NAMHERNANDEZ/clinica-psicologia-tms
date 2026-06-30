@@ -20,7 +20,7 @@ const values = [
 ];
 
 export default function Home() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
   const [servicesVisible, setServicesVisible] = useState(false);
 
@@ -61,7 +61,7 @@ export default function Home() {
             <div className="inline-flex items-center space-x-2 px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-full mb-8">
               <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
               <span className="text-teal-300 text-sm font-medium">
-                {localStorage.getItem('language') === 'en' ? 'Evidence-Based Treatment' : 'Tratamiento Basado en Evidencia'}
+                {language === 'en' ? 'Evidence-Based Treatment' : 'Tratamiento Basado en Evidencia'}
               </span>
             </div>
 
@@ -99,15 +99,15 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-center gap-6 text-slate-400 text-sm">
               <div className="flex items-center space-x-2">
                 <Award className="w-5 h-5 text-teal-400" />
-                <span>{localStorage.getItem('language') === 'es' ? 'Medicina Basada en Evidencia' : 'Evidence-Based Medicine'}</span>
+                <span>{language === 'es' ? 'Medicina Basada en Evidencia' : 'Evidence-Based Medicine'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Shield className="w-5 h-5 text-teal-400" />
-                <span>{localStorage.getItem('language') === 'es' ? 'Confidencialidad Absoluta' : 'Absolute Confidentiality'}</span>
+                <span>{language === 'es' ? 'Confidencialidad Absoluta' : 'Absolute Confidentiality'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Users className="w-5 h-5 text-teal-400" />
-                <span>{localStorage.getItem('language') === 'es' ? 'Atención Personalizada' : 'Personalized Care'}</span>
+                <span>{language === 'es' ? 'Atención Personalizada' : 'Personalized Care'}</span>
               </div>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function Home() {
               servicesVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}>
               <span className="inline-block px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium mb-4">
-                {localStorage.getItem('language') === 'es' ? 'Servicios Especializados' : 'Specialized Services'}
+                {language === 'es' ? 'Servicios Especializados' : 'Specialized Services'}
               </span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-navy-900 mb-4">
                 {t('services.title')}
@@ -195,7 +195,7 @@ export default function Home() {
               <div className="inline-flex items-center space-x-2 px-4 py-2 bg-teal-100 rounded-full mb-6">
                 <Brain className="w-5 h-5 text-teal-600" />
                 <span className="text-teal-700 font-medium text-sm">
-                  {localStorage.getItem('language') === 'es' ? 'Tecnología Avanzada' : 'Advanced Technology'}
+                  {language === 'es' ? 'Tecnología Avanzada' : 'Advanced Technology'}
                 </span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-navy-900 mb-6">
@@ -264,7 +264,7 @@ export default function Home() {
                   <span className="text-white text-sm font-medium">EMT/TMS</span>
                 </div>
                 <div className="absolute bottom-8 right-8 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
-                  <span className="text-white text-sm font-medium">{localStorage.getItem('language') === 'es' ? 'No Invasivo' : 'Non-Invasive'}</span>
+                  <span className="text-white text-sm font-medium">{language === 'es' ? 'No Invasivo' : 'Non-Invasive'}</span>
                 </div>
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-block px-4 py-2 bg-navy-50 text-navy-700 rounded-full text-sm font-medium mb-4">
-              {localStorage.getItem('language') === 'es' ? 'Nuestros Valores' : 'Our Values'}
+              {language === 'es' ? 'Nuestros Valores' : 'Our Values'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-navy-900 mb-4">
               {t('about.values.title')}
@@ -358,10 +358,10 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-bold text-navy-900">
-                  {localStorage.getItem('language') === 'es' ? 'Atención en Xiutetelco y la región de Veracruz-Puebla' : 'Care in Xiutetelco and the Veracruz-Puebla region'}
+                  {language === 'es' ? 'Atención en Xiutetelco y la región de Veracruz-Puebla' : 'Care in Xiutetelco and the Veracruz-Puebla region'}
                 </h3>
                 <p className="text-slate-600 text-sm">
-                  {localStorage.getItem('language') === 'es' ? 'Consulta presencial y en línea' : 'In-person and online consultations'}
+                  {language === 'es' ? 'Consulta presencial y en línea' : 'In-person and online consultations'}
                 </p>
               </div>
             </div>
