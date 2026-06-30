@@ -7,21 +7,22 @@ interface RegionInfo {
   baArea: string;
   lobe: string;
   function: string;
+  conditions: string[];
 }
 
 const REGION_INFO: Record<string, RegionInfo> = {
-  dlpfc_l: { label: 'DLPFC Izq', functionColor: '#06b6d4', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Regulación emocional · Funciones ejecutivas' },
-  dlpfc_r: { label: 'DLPFC Der', functionColor: '#14b8a6', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Control inhibitorio · Ansiedad' },
-  m1_l: { label: 'M1 Izq', functionColor: '#ef4444', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor' },
-  m1_r: { label: 'M1 Der', functionColor: '#f97316', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor' },
-  sma: { label: 'SMA', functionColor: '#818cf8', baArea: 'BA 6', lobe: 'Frontal', function: 'Planificación motora · Secuencias' },
-  acc: { label: 'ACC', functionColor: '#8b5cf6', baArea: 'BA 24/32', lobe: 'Límbico', function: 'Monitoreo de conflicto · Dolor' },
-  insula_l: { label: 'Ínsula Izq', functionColor: '#a855f7', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Interocepción · Adicciones' },
-  insula_r: { label: 'Ínsula Der', functionColor: '#ec4899', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Conciencia corporal · Dolor visceral' },
-  broca: { label: 'Broca', functionColor: '#22c55e', baArea: 'BA 44/45', lobe: 'Frontal', function: 'Producción del lenguaje' },
-  wernicke: { label: 'Wernicke', functionColor: '#3b82f6', baArea: 'BA 22', lobe: 'Temporal', function: 'Comprensión del lenguaje' },
-  occipital: { label: 'Occipital', functionColor: '#a3e635', baArea: 'BA 17', lobe: 'Occipital', function: 'Corteza visual primaria · Migraña' },
-  temporal_l: { label: 'Temporal Izq', functionColor: '#c084fc', baArea: 'BA 41/42', lobe: 'Temporal', function: 'Procesamiento auditivo · Tinnitus' },
+  dlpfc_l: { label: 'DLPFC Izq', functionColor: '#06b6d4', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Regulación emocional · Funciones ejecutivas', conditions: ['Depresión', 'Tabaquismo', 'Esquizofrenia'] },
+  dlpfc_r: { label: 'DLPFC Der', functionColor: '#14b8a6', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Control inhibitorio · Ansiedad', conditions: ['Ansiedad', 'TEPT', 'Insomnio'] },
+  m1_l: { label: 'M1 Izq', functionColor: '#ef4444', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor', conditions: ['Dolor crónico', 'Fibromialgia', 'Dolor neuropático'] },
+  m1_r: { label: 'M1 Der', functionColor: '#f97316', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor', conditions: ['Dolor crónico', 'Hemiplejia'] },
+  sma: { label: 'SMA', functionColor: '#818cf8', baArea: 'BA 6', lobe: 'Frontal', function: 'Planificación motora · Secuencias', conditions: ['Parkinson', 'Distonía', 'Tourette'] },
+  acc: { label: 'ACC', functionColor: '#8b5cf6', baArea: 'BA 24/32', lobe: 'Límbico', function: 'Monitoreo de conflicto · Dolor', conditions: ['TOC', 'Dolor neuropático', 'Depresión resistente'] },
+  insula_l: { label: 'Ínsula Izq', functionColor: '#a855f7', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Interocepción · Adicciones', conditions: ['Adicciones', 'Dolor visceral', 'Ansiedad'] },
+  insula_r: { label: 'Ínsula Der', functionColor: '#ec4899', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Conciencia corporal · Dolor visceral', conditions: ['Dolor crónico', 'Fibromialgia', 'Migraña'] },
+  broca: { label: 'Broca', functionColor: '#22c55e', baArea: 'BA 44/45', lobe: 'Frontal', function: 'Producción del lenguaje', conditions: ['Afasia', 'Disartria', 'TEPT'] },
+  wernicke: { label: 'Wernicke', functionColor: '#3b82f6', baArea: 'BA 22', lobe: 'Temporal', function: 'Comprensión del lenguaje', conditions: ['Afasia', 'Comprensión', 'Demencia'] },
+  occipital: { label: 'Occipital', functionColor: '#a3e635', baArea: 'BA 17', lobe: 'Occipital', function: 'Corteza visual primaria · Migraña', conditions: ['Migraña', 'Cefalea', 'Aurora visual'] },
+  temporal_l: { label: 'Temporal Izq', functionColor: '#c084fc', baArea: 'BA 41/42', lobe: 'Temporal', function: 'Procesamiento auditivo · Tinnitus', conditions: ['Tinnitus', 'Epilepsia', 'Alzheimer'] },
 };
 
 export const CONDITION_TO_REGION: Record<string, string> = {
@@ -97,8 +98,8 @@ export class TMSRegionMarkers {
     }));
     group.add(particles);
 
-    const label = this.createLabel(info.label, info.baArea, info.lobe, info.functionColor);
-    label.position.set(0, 0.30, 0);
+    const label = this.createLabel(info.label, info.baArea, info.lobe, info.conditions, info.functionColor);
+    label.position.set(0, 0.32, 0);
     group.add(label);
 
     const line = new THREE.Line(
@@ -111,30 +112,30 @@ export class TMSRegionMarkers {
     this.markers.set(id, { group, halo, particles, label, line });
   }
 
-  private createLabel(text: string, baArea: string, lobe: string, color: string): THREE.Sprite {
+  private createLabel(text: string, baArea: string, lobe: string, conditions: string[], color: string): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    canvas.width = 800;
-    canvas.height = 280;
+    canvas.width = 900;
+    canvas.height = 380;
 
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 12;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(30, 140, 8, 0, Math.PI * 2);
+    ctx.arc(30, 100, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
     ctx.fillStyle = `${color}20`;
     ctx.beginPath();
-    ctx.arc(30, 140, 18, 0, Math.PI * 2);
+    ctx.arc(30, 100, 18, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 4;
-    const textGrad = ctx.createLinearGradient(0, 100, 0, 160);
+    const textGrad = ctx.createLinearGradient(0, 70, 0, 120);
     textGrad.addColorStop(0, '#ffffff');
     textGrad.addColorStop(0.6, color);
     textGrad.addColorStop(1, color);
@@ -142,20 +143,45 @@ export class TMSRegionMarkers {
     ctx.font = '600 52px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 56, 125);
+    ctx.fillText(text.toUpperCase(), 56, 92);
     ctx.restore();
 
     ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
-    ctx.font = '400 22px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.font = '400 20px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${baArea} · ${lobe}`, 56, 180);
+    ctx.fillText(`${baArea} · ${lobe}`, 56, 140);
+
+    ctx.strokeStyle = `${color}30`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(56, 170);
+    ctx.lineTo(400, 170);
+    ctx.stroke();
+
+    ctx.fillStyle = `${color}90`;
+    ctx.font = '500 16px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('INDICACIONES:', 56, 200);
+
+    ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
+    ctx.font = '400 18px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    conditions.forEach((condition, i) => {
+      const y = 240 + i * 32;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(64, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
+      ctx.fillText(condition, 78, y);
+    });
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(0.85, 0.30, 1);
+    sprite.scale.set(0.90, 0.38, 1);
     return sprite;
   }
 

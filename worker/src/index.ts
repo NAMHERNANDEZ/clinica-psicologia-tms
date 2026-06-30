@@ -127,6 +127,11 @@ export default {
       }
 
       if (path === '/api/setup' && method === 'POST') {
+        const origin = request.headers.get('Origin') || '';
+        const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+        if (!isLocal) {
+          return jsonError('Endpoint not available in production', 403, corsHeaders, requestId);
+        }
         return withCors(() => handleSetup(env, request, corsHeaders, requestId), corsHeaders, requestId);
       }
 
