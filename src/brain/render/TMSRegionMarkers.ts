@@ -97,12 +97,12 @@ export class TMSRegionMarkers {
     }));
     group.add(particles);
 
-    const label = this.createLabel(info.label, info.functionColor);
-    label.position.set(0, 0.28, 0);
+    const label = this.createLabel(info.label, info.baArea, info.lobe, info.functionColor);
+    label.position.set(0, 0.30, 0);
     group.add(label);
 
     const line = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.16, 0)]),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.18, 0)]),
       new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.4 })
     );
     group.add(line);
@@ -111,43 +111,99 @@ export class TMSRegionMarkers {
     this.markers.set(id, { group, halo, particles, label, line });
   }
 
-  private createLabel(text: string, color: string): THREE.Sprite {
+  private createLabel(text: string, baArea: string, lobe: string, color: string): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     canvas.width = 640;
-    canvas.height = 160;
+    canvas.height = 200;
 
-    const grad = ctx.createLinearGradient(0, 0, 0, 160);
-    grad.addColorStop(0, 'rgba(10, 15, 25, 0.95)');
-    grad.addColorStop(1, 'rgba(5, 10, 18, 0.98)');
+    const grad = ctx.createLinearGradient(0, 0, 0, 200);
+    grad.addColorStop(0, 'rgba(8, 14, 28, 0.82)');
+    grad.addColorStop(0.5, 'rgba(6, 10, 22, 0.75)');
+    grad.addColorStop(1, 'rgba(8, 14, 28, 0.80)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.roundRect(4, 4, 632, 152, 16);
+    ctx.roundRect(4, 4, 632, 192, 10);
     ctx.fill();
 
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(4, 4, 632, 152, 16);
+    ctx.roundRect(4, 4, 632, 192, 10);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.strokeStyle = `${color}30`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 620, 180, 7);
     ctx.stroke();
 
-    ctx.strokeStyle = `${color}44`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(10, 10, 620, 140, 12);
-    ctx.stroke();
-
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
     ctx.fillStyle = color;
-    ctx.font = '600 38px "Segoe UI", "Helvetica Neue", Arial, sans-serif';
-    ctx.textAlign = 'center';
+    ctx.beginPath();
+    ctx.arc(28, 90, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = `${color}18`;
+    ctx.beginPath();
+    ctx.arc(28, 90, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 3;
+    const textGrad = ctx.createLinearGradient(0, 60, 0, 100);
+    textGrad.addColorStop(0, '#e0f7fa');
+    textGrad.addColorStop(1, color);
+    ctx.fillStyle = textGrad;
+    ctx.font = '500 34px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 320, 80);
+    ctx.fillText(text.toUpperCase(), 48, 82);
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.font = '400 18px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${baArea} · ${lobe}`, 48, 120);
+
+    const cornerLen = 24;
+    ctx.strokeStyle = `${color}40`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(14, 24);
+    ctx.lineTo(14, 14);
+    ctx.lineTo(24, 14);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(626, 24);
+    ctx.lineTo(626, 14);
+    ctx.lineTo(616, 14);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(14, 176);
+    ctx.lineTo(14, 186);
+    ctx.lineTo(24, 186);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(626, 176);
+    ctx.lineTo(626, 186);
+    ctx.lineTo(616, 186);
+    ctx.stroke();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(0.7, 0.18, 1);
+    sprite.scale.set(0.75, 0.24, 1);
     return sprite;
   }
 
