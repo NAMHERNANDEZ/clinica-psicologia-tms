@@ -114,96 +114,48 @@ export class TMSRegionMarkers {
   private createLabel(text: string, baArea: string, lobe: string, color: string): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    canvas.width = 640;
-    canvas.height = 200;
-
-    const grad = ctx.createLinearGradient(0, 0, 0, 200);
-    grad.addColorStop(0, 'rgba(8, 14, 28, 0.82)');
-    grad.addColorStop(0.5, 'rgba(6, 10, 22, 0.75)');
-    grad.addColorStop(1, 'rgba(8, 14, 28, 0.80)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.roundRect(4, 4, 632, 192, 10);
-    ctx.fill();
+    canvas.width = 800;
+    canvas.height = 280;
 
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(4, 4, 632, 192, 10);
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.strokeStyle = `${color}30`;
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.roundRect(10, 10, 620, 180, 7);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 12;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(28, 90, 6, 0, Math.PI * 2);
+    ctx.arc(30, 140, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = `${color}18`;
+    ctx.fillStyle = `${color}20`;
     ctx.beginPath();
-    ctx.arc(28, 90, 12, 0, Math.PI * 2);
+    ctx.arc(30, 140, 18, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 3;
-    const textGrad = ctx.createLinearGradient(0, 60, 0, 100);
-    textGrad.addColorStop(0, '#e0f7fa');
+    ctx.shadowBlur = 4;
+    const textGrad = ctx.createLinearGradient(0, 100, 0, 160);
+    textGrad.addColorStop(0, '#ffffff');
+    textGrad.addColorStop(0.6, color);
     textGrad.addColorStop(1, color);
     ctx.fillStyle = textGrad;
-    ctx.font = '500 34px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.font = '600 52px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 48, 82);
+    ctx.fillText(text.toUpperCase(), 56, 125);
     ctx.restore();
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
-    ctx.font = '400 18px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
+    ctx.font = '400 22px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${baArea} · ${lobe}`, 48, 120);
-
-    const cornerLen = 24;
-    ctx.strokeStyle = `${color}40`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(14, 24);
-    ctx.lineTo(14, 14);
-    ctx.lineTo(24, 14);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(626, 24);
-    ctx.lineTo(626, 14);
-    ctx.lineTo(616, 14);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(14, 176);
-    ctx.lineTo(14, 186);
-    ctx.lineTo(24, 186);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(626, 176);
-    ctx.lineTo(626, 186);
-    ctx.lineTo(616, 186);
-    ctx.stroke();
+    ctx.fillText(`${baArea} · ${lobe}`, 56, 180);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(0.75, 0.24, 1);
+    sprite.scale.set(0.85, 0.30, 1);
     return sprite;
   }
 
