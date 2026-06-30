@@ -31,6 +31,7 @@ const AgendaPage = lazy(() => import('./pages/app/AgendaPage'));
 const TreatmentsPage = lazy(() => import('./pages/app/TreatmentsPage'));
 const TmsModulePage = lazy(() => import('./pages/app/TmsModulePage'));
 const BrainViewerPage = lazy(() => import('./pages/app/BrainViewerPage'));
+const TMSSessionPage = lazy(() => import('./pages/app/TMSSessionPage'));
 const DigitalTwinPage = lazy(() => import('./pages/app/DigitalTwinPage'));
 const SimulatorPage = lazy(() => import('./pages/app/SimulatorPage'));
 const ReportsPage = lazy(() => import('./pages/app/ReportsPage'));
@@ -106,6 +107,7 @@ function App() {
                 <Route path="tratamientos" element={<TreatmentsPage />} />
                 <Route path="tms" element={<TmsModulePage />} />
                 <Route path="tms/brain" element={<BrainViewerPage />} />
+                <Route path="tms/sesion" element={<TMSSessionPage />} />
                 <Route path="tms/twin" element={<DigitalTwinPage />} />
                 <Route path="tms/simulador" element={<SimulatorPage />} />
                 <Route path="reportes" element={<ReportsPage />} />
