@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Shield, Activity, Heart, Zap, CheckCircle, ArrowRight, MessageCircle, Award, Users } from 'lucide-react';
+import { Brain, Shield, Activity, Heart, Zap, CheckCircle, ArrowRight, MessageCircle, Award, Users, Clock, AlertTriangle, BarChart3, HelpCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const conditionsStrong = [
@@ -351,6 +351,222 @@ export default function TMS() {
                 <span>{t('hero.cta')}</span>
                 <ArrowRight className="w-5 h-5" />
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Más Información EMT/TMS */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-teal-50 rounded-full mb-6">
+              <HelpCircle className="w-5 h-5 text-teal-600" />
+              <span className="text-teal-700 font-medium text-sm">
+                {language === 'es' ? 'Más Información' : 'More Information'}
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-navy-900 mb-4">
+              {language === 'es' ? 'Todo lo que necesitas saber sobre EMT/TMS' : 'Everything you need to know about TMS'}
+            </h2>
+            <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+              {language === 'es'
+                ? 'Resolvemos tus dudas con información clara, respaldada por evidencia científica.'
+                : 'We answer your questions with clear information, backed by scientific evidence.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* ¿Qué es? */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-teal-600" />
+                </div>
+                <h3 className="text-xl font-bold text-navy-900">
+                  {language === 'es' ? '¿Qué es la EMT/TMS?' : 'What is TMS?'}
+                </h3>
+              </div>
+              <div className="space-y-4 text-slate-600">
+                <p>
+                  {language === 'es'
+                    ? 'La Estimulación Magnética Transcraneal (EMT/TMS) es una técnica de neuromodulación no invasiva aprobada por la FDA.'
+                    : 'Transcranial Magnetic Stimulation (TMS) is a non-invasive neuromodulation technique approved by the FDA.'}
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
+                    <span>{language === 'es' ? 'Usa pulsos magnéticos para estimular áreas específicas del cerebro' : 'Uses magnetic pulses to stimulate specific brain areas'}</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
+                    <span>{language === 'es' ? 'Sin cirugía, sin anestesia, sin dolor' : 'No surgery, no anesthesia, no pain'}</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
+                    <span>{language === 'es' ? 'Más de 1 millón de tratamientos realizados mundialmente' : 'Over 1 million treatments performed worldwide'}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* ¿Para qué sirve? */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-navy-100 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-navy-600" />
+                </div>
+                <h3 className="text-xl font-bold text-navy-900">
+                  {language === 'es' ? '¿Para qué sirve?' : 'What is it for?'}
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: language === 'es' ? 'Depresión mayor' : 'Major Depression', evidence: language === 'es' ? 'Alta evidencia' : 'High evidence' },
+                  { label: language === 'es' ? 'Ansiedad generalizada' : 'Generalized Anxiety', evidence: language === 'es' ? 'Alta evidencia' : 'High evidence' },
+                  { label: 'TOC', evidence: language === 'es' ? 'Alta evidencia' : 'High evidence' },
+                  { label: 'TEPT', evidence: language === 'es' ? 'Alta evidencia' : 'High evidence' },
+                  { label: language === 'es' ? 'Migraña crónica' : 'Chronic Migraine', evidence: language === 'es' ? 'Alta evidencia' : 'High evidence' },
+                  { label: 'Tinnitus', evidence: language === 'es' ? 'Evidencia moderada' : 'Moderate evidence' },
+                  { label: language === 'es' ? 'Dolor neuropático' : 'Neuropathic Pain', evidence: language === 'es' ? 'Evidencia moderada' : 'Moderate evidence' },
+                  { label: language === 'es' ? 'Tabaquismo' : 'Smoking Cessation', evidence: language === 'es' ? 'Evidencia moderada' : 'Moderate evidence' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-2">
+                    <span className="font-medium text-navy-900 text-sm">{item.label}</span>
+                    <span className="text-xs px-2 py-1 bg-teal-100 text-teal-700 rounded-full">{item.evidence}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ¿Es seguro? */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-bold text-navy-900">
+                  {language === 'es' ? '¿Es seguro?' : 'Is it safe?'}
+                </h3>
+              </div>
+              <div className="space-y-4 text-slate-600">
+                <p className="font-medium text-navy-900">
+                  {language === 'es' ? 'Sí, es un tratamiento seguro y aprobado por la FDA.' : 'Yes, it is a safe and FDA-approved treatment.'}
+                </p>
+                <div>
+                  <p className="font-medium text-sm text-navy-900 mb-2">
+                    {language === 'es' ? 'Efectos secundarios (leves y temporales):' : 'Side effects (mild and temporary):'}
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    <li className="flex items-start space-x-2">
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mt-2 flex-shrink-0" />
+                      <span>{language === 'es' ? 'Molestia leve en el cuero cabelludo' : 'Mild scalp discomfort'}</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mt-2 flex-shrink-0" />
+                      <span>{language === 'es' ? 'Cefalea transitoria' : 'Transient headache'}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-navy-900 mb-2">
+                    {language === 'es' ? 'Contraindicaciones:' : 'Contraindications:'}
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    <li className="flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>{language === 'es' ? 'Implantes metálicos en el cráneo' : 'Metal implants in the skull'}</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>{language === 'es' ? 'Marcapasos o dispositivos electrónicos' : 'Pacemakers or electronic devices'}</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>{language === 'es' ? 'Epilepsia no controlada' : 'Uncontrolled epilepsy'}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* ¿Cómo es el procedimiento? */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-navy-900">
+                  {language === 'es' ? '¿Cómo es el procedimiento?' : 'How does the procedure work?'}
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { step: '1', title: language === 'es' ? 'Evaluación inicial' : 'Initial evaluation', desc: language === 'es' ? 'Consulta de 30-45 min para evaluar tu caso y determinar si EMT/TMS es adecuado para ti.' : '30-45 min consultation to evaluate your case and determine if TMS is right for you.' },
+                  { step: '2', title: language === 'es' ? 'Sesiones de tratamiento' : 'Treatment sessions', desc: language === 'es' ? '20-30 min por sesión, de lunes a viernes, durante 4-6 semanas.' : '20-30 min per session, Monday through Friday, for 4-6 weeks.' },
+                  { step: '3', title: language === 'es' ? 'Resultados progresivos' : 'Progressive results', desc: language === 'es' ? 'Mejoría visible desde la 2ª-3ª semana de tratamiento.' : 'Visible improvement from the 2nd-3rd week of treatment.' },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-start space-x-4">
+                    <div className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      {item.step}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-navy-900">{item.title}</h4>
+                      <p className="text-sm text-slate-600">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Resultados */}
+          <div className="mt-12 bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-white mb-6">
+              {language === 'es' ? 'Resultados Comprobados' : 'Proven Results'}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <div className="text-4xl font-bold text-teal-400 mb-2">60-70%</div>
+                <p className="text-slate-300 text-sm">
+                  {language === 'es' ? 'de pacientes mejoran significativamente' : 'of patients improve significantly'}
+                </p>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-teal-400 mb-2">30-40%</div>
+                <p className="text-slate-300 text-sm">
+                  {language === 'es' ? 'alcanzan remisión completa' : 'achieve complete remission'}
+                </p>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-teal-400 mb-2">2-3</div>
+                <p className="text-slate-300 text-sm">
+                  {language === 'es' ? 'semanas para ver mejoría' : 'weeks to see improvement'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="mt-12">
+            <h3 className="text-2xl font-bold text-navy-900 mb-6 text-center">
+              {language === 'es' ? 'Preguntas Frecuentes' : 'Frequently Asked Questions'}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { q: language === 'es' ? '¿Duele el tratamiento?' : 'Does the treatment hurt?', a: language === 'es' ? 'No, solo se siente una leve presión o "click" en el cuero cabelludo. Es indoloro.' : 'No, you only feel mild pressure or a "click" on the scalp. It is painless.' },
+                { q: language === 'es' ? '¿Puedo manejar después de la sesión?' : 'Can I drive after the session?', a: language === 'es' ? 'Sí, puedes retomar tus actividades normales inmediatamente, incluyendo manejar.' : 'Yes, you can resume your normal activities immediately, including driving.' },
+                { q: language === 'es' ? '¿Cuánto dura cada sesión?' : 'How long does each session last?', a: language === 'es' ? 'Cada sesión dura entre 20-30 minutos. El total del tratamiento es de 4-6 semanas.' : 'Each session lasts 20-30 minutes. The total treatment is 4-6 weeks.' },
+                { q: language === 'es' ? '¿Cuándo empiezo a ver resultados?' : 'When do I start seeing results?', a: language === 'es' ? 'La mayoría de los pacientesNot found: LanguageContext.tsx' : 'Most patients start noticing improvements from the 2nd-3rd week.' },
+              ].map((item, i) => (
+                <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                  <h4 className="font-semibold text-navy-900 mb-2 flex items-start space-x-2">
+                    <HelpCircle className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
+                    <span>{item.q}</span>
+                  </h4>
+                  <p className="text-slate-600 text-sm ml-7">{item.a}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
