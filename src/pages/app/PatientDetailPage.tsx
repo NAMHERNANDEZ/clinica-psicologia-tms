@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Calendar, Activity, FileText, Clock, Brain } from 'lucide-react';
-import { patients, timeline as timelineApi, clinicalNotes, tmsProfiles, treatments, type Patient, type TimelineEvent, type ClinicalNote, type TmsProfile, type Treatment } from '../../lib/api';
+import { ArrowLeft, Phone, Mail, Calendar, Activity, FileText, Clock, Brain, Zap } from 'lucide-react';
+import { patients, timeline as timelineApi, clinicalNotes, tmsProfiles, tmsSessions, clinicalResponse, treatments, type Patient, type TimelineEvent, type ClinicalNote, type TmsProfile, type TmsSession, type ClinicalResponse as ClinicalResponseType, type Treatment } from '../../lib/api';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Timeline as TimelineComponent } from '../../components/ui/Misc';
+import { LineChart as LineChartViz } from '../../components/ui/Chart';
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,8 +15,10 @@ export default function PatientDetailPage() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [notes, setNotes] = useState<ClinicalNote[]>([]);
   const [profiles, setProfiles] = useState<TmsProfile[]>([]);
+  const [sessions, setSessions] = useState<TmsSession[]>([]);
+  const [responses, setResponses] = useState<ClinicalResponseType[]>([]);
   const [patientTreatments, setPatientTreatments] = useState<Treatment[]>([]);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'tms' | 'treatments'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'tms' | 'sessions' | 'treatments'>('timeline');
   const [loading, setLoading] = useState(true);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -26,17 +29,33 @@ export default function PatientDetailPage() {
 
   const load = async () => {
     try {
-      const [pRes, tRes, nRes, prRes, trRes] = await Promise.allSettled([
+      const [pRes, tRes, nRes, prRes, sRes, crRes, trRes] = await Promise.allSettled([
         patients.get(patientId),
         timelineApi.listByPatient(patientId),
         clinicalNotes.listByPatient(patientId),
         tmsProfiles.listByPatient(patientId),
+        tmsSessions.listByProfile(0),
+        clinicalResponse.listByPatient(patientId),
         treatments.list(),
       ]);
       if (pRes.status === 'fulfilled') setPatient(pRes.value.data);
       if (tRes.status === 'fulfilled') setTimeline(tRes.value.data || []);
       if (nRes.status === 'fulfilled') setNotes(nRes.value.data || []);
-      if (prRes.status === 'fulfilled') setProfiles(prRes.value.data || []);
+      if (prRes.status === 'fulfilled') {
+        const p = prRes.value.data || [];
+        setProfiles(p);
+        if (p.length > 0) {
+          const allSessions: TmsSession[] = [];
+          for (const profile of p) {
+            try {
+              const sRes = await tmsSessions.listByProfile(profile.id);
+              if (sRes.data) allSessions.push(...sRes.data);
+            } catch { /* skip */ }
+          }
+          setSessions(allSessions.sort((a, b) => a.session_number - b.session_number));
+        }
+      }
+      if (crRes.status === 'fulfilled') setResponses(crRes.value.data || []);
       if (trRes.status === 'fulfilled') {
         const allTreatments = trRes.value.data || [];
         setPatientTreatments(allTreatments.filter((t: Treatment) => t.patient_id === patientId));
@@ -70,6 +89,7 @@ export default function PatientDetailPage() {
     { key: 'timeline', label: 'Línea de Tiempo', icon: Clock },
     { key: 'notes', label: 'Notas Clínicas', icon: FileText },
     { key: 'tms', label: 'Perfiles TMS', icon: Brain },
+    { key: 'sessions', label: 'Sesiones', icon: Zap },
     { key: 'treatments', label: 'Tratamientos', icon: Activity },
   ] as const;
 
@@ -167,6 +187,56 @@ export default function PatientDetailPage() {
         </div>
       )}
 
+      {activeTab === 'sessions' && (
+        <div className="space-y-4">
+          {sessions.length === 0 ? (
+            <Card><CardBody><p className="text-center text-slate-400 py-8">Sin sesiones TMS registradas</p></CardBody></Card>
+          ) : (
+            <>
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="text-xs font-medium text-slate-500 mb-3">Curva de Respuesta Clínica</div>
+                {responses.length > 1 ? (
+                  <ProgressCurve responses={responses} />
+                ) : (
+                  <p className="text-center text-slate-400 text-xs py-4">Mínimo 2 sesiones para mostrar curva</p>
+                )}
+              </div>
+              {sessions.map(s => {
+                const resp = responses.find(r => r.tms_session_id === s.id);
+                return (
+                  <Card key={s.id}><CardBody>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-slate-400">#{s.session_number}</span>
+                        <Badge variant={s.status === 'completed' ? 'success' : s.status === 'in_progress' ? 'info' : s.status === 'cancelled' ? 'danger' : 'neutral'}>
+                          {s.status === 'completed' ? 'Completada' : s.status === 'in_progress' ? 'En curso' : s.status === 'scheduled' ? 'Programada' : s.status === 'no_show' ? 'No asistió' : 'Cancelada'}
+                        </Badge>
+                      </div>
+                      {s.completed_at && <span className="text-[10px] text-slate-400">{new Date(s.completed_at).toLocaleDateString('es-MX')}</span>}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-[10px]">
+                      <div><span className="text-slate-500">Frecuencia</span><div className="font-mono text-slate-900">{s.frequency_hz} Hz</div></div>
+                      <div><span className="text-slate-500">Intensidad</span><div className="font-mono text-slate-900">{s.intensity_pct_mt}% MT</div></div>
+                      <div><span className="text-slate-500">Pulsos</span><div className="font-mono text-slate-900">{s.pulses_delivered}</div></div>
+                      <div><span className="text-slate-500">Duración</span><div className="font-mono text-slate-900">{s.session_duration_min} min</div></div>
+                    </div>
+                    <div className="mt-1 text-[10px]"><span className="text-slate-500">Área: </span><span className="text-slate-700">{s.target_area}</span></div>
+                    {resp && (
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex gap-3 text-[10px]">
+                        <div><span className="text-slate-500">Ánimo: </span><span className="font-mono text-slate-900">{resp.mood_score}/10</span></div>
+                        {resp.energy_score != null && <div><span className="text-slate-500">Energía: </span><span className="font-mono text-slate-900">{resp.energy_score}/10</span></div>}
+                        {resp.anxiety_score != null && <div><span className="text-slate-500">Ansiedad: </span><span className="font-mono text-slate-900">{resp.anxiety_score}/10</span></div>}
+                        {resp.overall_response != null && <div><span className="text-slate-500">Global: </span><span className="font-mono text-slate-900">{resp.overall_response}/10</span></div>}
+                      </div>
+                    )}
+                  </CardBody></Card>
+                );
+              })}
+            </>
+          )}
+        </div>
+      )}
+
       {activeTab === 'treatments' && (
         <div className="space-y-4">
           {patientTreatments.length === 0 ? (
@@ -195,4 +265,13 @@ export default function PatientDetailPage() {
       )}
     </div>
   );
+}
+
+function ProgressCurve({ responses }: { responses: ClinicalResponseType[] }) {
+  const sorted = [...responses].sort((a, b) => a.id - b.id);
+  const series = [
+    { name: 'Ánimo', data: sorted.map(r => r.mood_score), color: '#0d9488' },
+    ...(sorted.some(r => r.overall_response != null) ? [{ name: 'Global', data: sorted.map(r => r.overall_response ?? 0), color: '#8b5cf6', dashed: true }] : []),
+  ];
+  return <LineChartViz series={series} />;
 }

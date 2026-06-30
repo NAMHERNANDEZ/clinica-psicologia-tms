@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide
 import { digitalTwin, patients, type Patient, type TwinPrediction } from '../../lib/api';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { SearchInput } from '../../components/ui/Misc';
+import { LineChart as LineChartViz } from '../../components/ui/Chart';
 
 interface PredictionData {
   predicted_mood: number;
@@ -159,28 +160,9 @@ export default function DigitalTwinPage() {
                   <CardHeader><h2 className="font-semibold text-slate-900">Curva de Predicciones</h2></CardHeader>
                   <CardBody>
                     <div className="relative h-48">
-                      <svg viewBox="0 0 600 180" className="w-full h-full">
-                        <line x1="40" y1="10" x2="40" y2="160" stroke="#e2e8f0" strokeWidth="1" />
-                        <line x1="40" y1="160" x2="580" y2="160" stroke="#e2e8f0" strokeWidth="1" />
-                        {[0, 2, 4, 6, 8, 10].map(v => (
-                          <g key={v}>
-                            <line x1="35" y1={160 - v * 15} x2="40" y2={160 - v * 15} stroke="#cbd5e1" strokeWidth="1" />
-                            <text x="30" y={164 - v * 15} textAnchor="end" className="text-[10px] fill-slate-400">{v}</text>
-                          </g>
-                        ))}
-                        {predictions.slice(-10).map((p, i, arr) => {
-                          const x = 50 + (i / Math.max(arr.length - 1, 1)) * 520;
-                          const y = 160 - p.predicted_mood * 15;
-                          return i === 0 ? null : (
-                            <line key={p.id} x1={50 + ((i - 1) / Math.max(arr.length - 1, 1)) * 520} y1={160 - arr[i - 1].predicted_mood * 15} x2={x} y2={y} stroke="#06b6d4" strokeWidth="2" />
-                          );
-                        })}
-                        {predictions.slice(-10).map((p, i, arr) => {
-                          const x = 50 + (i / Math.max(arr.length - 1, 1)) * 520;
-                          const y = 160 - p.predicted_mood * 15;
-                          return <circle key={p.id} cx={x} cy={y} r="4" fill="#06b6d4" />;
-                        })}
-                      </svg>
+                      <LineChartViz
+                        series={[{ name: 'Predicción', data: predictions.slice(-10).map(p => p.predicted_mood), color: '#06b6d4' }]}
+                      />
                     </div>
                   </CardBody>
                 </Card>

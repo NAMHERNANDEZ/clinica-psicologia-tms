@@ -1,6 +1,8 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { BrainScene } from './BrainScene';
 import { ConnectomeEngine } from '../simulation/ConnectomeEngine';
+import { CoordinateDebugger } from './CoordinateDebugger';
 import type { ProtocolPhase } from '../simulation/ProtocolStateMachine';
 
 interface WorkerStateUpdate {
@@ -22,20 +24,16 @@ export class BrainRenderer {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
+  private controls!: OrbitControls;
   private clock = new THREE.Clock();
   private brainScene!: BrainScene;
   private connectome!: ConnectomeEngine;
   private animationId?: number;
   private canvas!: HTMLCanvasElement;
-  private orbitAngle = 0;
-  private targetOrbitAngle = 0;
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
-  private isDragging = false;
-  private lastMouseX = 0;
-  private dragStartX = 0;
-  private dragMoved = false;
   private worker!: Worker;
+  private workerReady = false;
   private onProtocolPhaseChange?: (phase: ProtocolPhase) => void;
   private onOverlayUpdate?: (state: OverlayState) => void;
   private onRegionClick?: (regionId: string) => void;
@@ -44,6 +42,8 @@ export class BrainRenderer {
   private currentPulseCount = 0;
   private currentCoilIntensity = 0;
   private disposed = false;
+  private currentTargetRegion = 'dlpfc_l';
+  private coordDebugger: CoordinateDebugger;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -54,26 +54,40 @@ export class BrainRenderer {
     console.log('[BrainRenderer] Canvas:', w, 'x', h);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#080C12');
+    this.scene.background = new THREE.Color('#020617');
 
-    this.camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 100);
-    this.camera.position.set(0, 9, 0.01);
-    this.camera.lookAt(0, 0, 0);
+    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+    this.camera.position.set(0, 0, 5);
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.8;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    this.scene.add(new THREE.AmbientLight(0xFFFFFF, 1.8));
-    const key = new THREE.DirectionalLight(0xFFFFFF, 1.5);
-    key.position.set(2, 10, 3);
-    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.8);
-    fill.position.set(-4, 6, -2);
-    const rim = new THREE.DirectionalLight(0xFFFFFF, 0.5);
-    rim.position.set(0, 3, -8);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableRotate = true;
+    this.controls.minPolarAngle = 0;
+    this.controls.maxPolarAngle = Math.PI;
+    this.controls.minAzimuthAngle = -Infinity;
+    this.controls.maxAzimuthAngle = Infinity;
+    this.controls.enableZoom = true;
+    this.controls.minDistance = 2;
+    this.controls.maxDistance = 10;
+    this.controls.enablePan = true;
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
+    this.controls.rotateSpeed = 1.0;
+    this.controls.zoomSpeed = 1.0;
+
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const key = new THREE.DirectionalLight(0xffffff, 0.8);
+    key.position.set(5, 5, 5);
+    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.4);
+    fill.position.set(-5, 3, -3);
+    const rim = new THREE.DirectionalLight(0xffffff, 0.3);
+    rim.position.set(0, -3, -5);
     this.scene.add(key, fill, rim);
 
     this.brainScene = new BrainScene(this.scene);
@@ -82,27 +96,40 @@ export class BrainRenderer {
 
     console.log('[BrainRenderer] Meshes:', this.brainScene.getBrainMeshCount());
 
+    this.coordDebugger = new CoordinateDebugger(this.scene);
+    (window as any).__brainDebugger = {
+      enable: () => this.coordDebugger.enable(),
+      disable: () => this.coordDebugger.disable(),
+      moveMarker: (i: number, pos: [number, number, number]) => this.coordDebugger.moveMarker(i, pos),
+    };
+
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     this.canvas.addEventListener('pointermove', this.onPointerMove);
     this.canvas.addEventListener('pointerup', this.onPointerUp);
     this.canvas.addEventListener('pointerleave', this.onPointerUp);
-    this.canvas.addEventListener('wheel', this.onWheel, { passive: true });
+    this.canvas.addEventListener('click', this.onDebugClick);
     this.initWorker();
     window.addEventListener('resize', this.onResize);
   }
 
   private initWorker() {
-    const url = new URL('../simulation/brain.worker.ts', import.meta.url);
-    this.worker = new Worker(url, { type: 'module' });
-    this.worker.onmessage = (e: MessageEvent<WorkerStateUpdate>) => {
-      if (e.data.type === 'STATE_UPDATE' && !this.disposed) this.applyWorkerState(e.data);
-    };
-    this.worker.onerror = (err) => console.error('[BrainWorker]', err.message);
-    this.worker.postMessage({
-      type: 'INIT',
-      regions: this.brainScene.getRegionDefs().map(r => r.id),
-      connectomeData: this.connectome.matrix,
-    });
+    try {
+      const url = new URL('../simulation/brain.worker.ts', import.meta.url);
+      this.worker = new Worker(url, { type: 'module' });
+      this.worker.onmessage = (e: MessageEvent<WorkerStateUpdate>) => {
+        if (e.data.type === 'STATE_UPDATE' && !this.disposed) this.applyWorkerState(e.data);
+      };
+      this.worker.onerror = (err) => console.error('[BrainWorker]', err.message);
+      this.worker.postMessage({
+        type: 'INIT',
+        regions: this.brainScene.getRegionDefs().map(r => r.id),
+        connectomeData: this.connectome.matrix,
+      });
+      this.workerReady = true;
+    } catch (err) {
+      console.error('[BrainRenderer] Worker init failed:', err);
+      this.workerReady = false;
+    }
   }
 
   private getRegionMeshes(): THREE.Object3D[] {
@@ -115,24 +142,19 @@ export class BrainRenderer {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    this.isDragging = true;
-    this.lastMouseX = e.clientX;
-    this.dragStartX = e.clientX;
-    this.dragMoved = false;
     this.raycast(e);
   };
 
-  private onPointerUp = () => { this.isDragging = false; };
+  private onPointerUp = () => {};
+
+  private onDebugClick = (e: MouseEvent) => {
+    if (this.coordDebugger?.isActive()) {
+      const model = this.brainScene.getModel();
+      if (model) this.coordDebugger.handleClick(e, this.camera, this.renderer, model);
+    }
+  };
 
   private onPointerMove = (e: PointerEvent) => {
-    if (this.isDragging) {
-      const dx = e.clientX - this.lastMouseX;
-      this.targetOrbitAngle += dx * 0.005;
-      this.lastMouseX = e.clientX;
-      if (Math.abs(e.clientX - this.dragStartX) > 20) this.dragMoved = true;
-      this.canvas.style.cursor = 'grabbing';
-      return;
-    }
     this.raycast(e);
   };
 
@@ -143,20 +165,11 @@ export class BrainRenderer {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const hits = this.raycaster.intersectObjects(this.getRegionMeshes(), false);
     this.canvas.style.cursor = hits.length > 0 ? 'pointer' : 'default';
-    if (hits.length > 0 && !this.isDragging) {
+    if (hits.length > 0) {
       const id = (hits[0].object as any).userData?.regionId;
       if (id) this.onRegionClick?.(id);
     }
   }
-
-  private onWheel = (e: WheelEvent) => {
-    const dir = new THREE.Vector3();
-    this.camera.getWorldDirection(dir);
-    const dist = this.camera.position.length();
-    const newDist = Math.max(4, Math.min(16, dist + e.deltaY * 0.005 * dist));
-    this.camera.position.normalize().multiplyScalar(newDist);
-    this.camera.lookAt(0, 0, 0);
-  };
 
   private applyWorkerState(data: WorkerStateUpdate) {
     const { activations, protocol, connectome } = data;
@@ -166,7 +179,7 @@ export class BrainRenderer {
     for (const [id, val] of Object.entries(activations)) this.brainScene.setActivation(id, val);
     const coil = this.brainScene.getCoilField();
     if (protocol.coilIntensity > 0.01 && protocol.phase !== 'idle' && protocol.phase !== 'complete') {
-      const target = this.brainScene.getRegionPosition(protocol.targetRegion || 'dlpfc_l') || this.brainScene.getRegionPosition('dlpfc_l');
+      const target = this.brainScene.getRegionPosition(this.currentTargetRegion) || this.brainScene.getRegionPosition('dlpfc_l');
       if (target) coil.activate({ position: [target.x * 0.4, target.y * 0.4 + 2.0, target.z + 2.2], targetPosition: [target.x, target.y, target.z], intensity: protocol.coilIntensity });
     } else { coil.deactivate(); }
     if (this.currentProtocolPhase !== protocol.phase) { this.currentProtocolPhase = protocol.phase; this.onProtocolPhaseChange?.(protocol.phase); }
@@ -176,17 +189,14 @@ export class BrainRenderer {
 
   start() {
     this.clock.start();
-    this.worker.postMessage({ type: 'START_TICK', intervalMs: 16 });
+    if (this.workerReady) {
+      try { this.worker.postMessage({ type: 'START_TICK', intervalMs: 16 }); } catch {}
+    }
     const loop = () => {
       if (this.disposed) return;
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
-      this.orbitAngle += (this.targetOrbitAngle - this.orbitAngle) * 0.08;
-      const dist = this.camera.position.length();
-      this.camera.position.x = Math.sin(this.orbitAngle) * 0.5;
-      this.camera.position.z = Math.cos(this.orbitAngle) * 0.5;
-      this.camera.position.y = 9;
-      this.camera.lookAt(0, 0, 0);
+      this.controls.update();
       this.brainScene.update(delta);
       this.brainScene.updateConnections(delta, this.currentActivations, this.connectome.matrix);
       this.brainScene.getCoilField().update(delta);
@@ -198,15 +208,21 @@ export class BrainRenderer {
   stop() {
     this.disposed = true;
     if (this.animationId) cancelAnimationFrame(this.animationId);
-    this.worker.postMessage({ type: 'STOP_TICK' });
-    this.worker.terminate();
-    this.canvas.removeEventListener('pointerdown', this.onPointerDown);
-    this.canvas.removeEventListener('pointermove', this.onPointerMove);
-    this.canvas.removeEventListener('pointerup', this.onPointerUp);
-    this.canvas.removeEventListener('pointerleave', this.onPointerUp);
-    this.canvas.removeEventListener('wheel', this.onWheel);
+    if (this.workerReady && this.worker) {
+      try { this.worker.postMessage({ type: 'STOP_TICK' }); } catch {}
+      try { this.worker.terminate(); } catch {}
+    }
+    if (this.canvas) {
+      this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+      this.canvas.removeEventListener('pointermove', this.onPointerMove);
+      this.canvas.removeEventListener('pointerup', this.onPointerUp);
+      this.canvas.removeEventListener('pointerleave', this.onPointerUp);
+      this.canvas.removeEventListener('click', this.onDebugClick);
+    }
+    if (this.coordDebugger) this.coordDebugger.disable();
     window.removeEventListener('resize', this.onResize);
-    this.renderer.dispose();
+    this.controls?.dispose();
+    this.renderer?.dispose();
   }
 
   private onResize = () => {
@@ -220,17 +236,24 @@ export class BrainRenderer {
   };
 
   setRegionActivation(regionId: string, value: number) {
+    if (this.disposed || !this.workerReady) return;
     const idx = this.connectome.getIndex(regionId);
     if (idx >= 0) this.worker.postMessage({ type: 'SET_ACTIVATION', regionIdx: idx, value });
   }
 
   async runProtocol(config: { targetRegion: string; protocol: { name?: string; frequency_hz: number; intensity_pct_mt: number; duration_sec: number; total_pulses: number }; mtPct: number }) {
+    if (!this.workerReady) return;
+    this.currentTargetRegion = config.targetRegion;
     this.worker.postMessage({ type: 'STOP_PROTOCOL' });
     this.brainScene.getCoilField().deactivate();
     this.worker.postMessage({ type: 'START_PROTOCOL', config: { targetRegion: config.targetRegion, frequencyHz: config.protocol.frequency_hz, intensityPctMt: config.protocol.intensity_pct_mt, durationSec: config.protocol.duration_sec, totalPulses: config.protocol.total_pulses, mtPct: config.mtPct } });
   }
 
-  stopProtocol() { this.worker.postMessage({ type: 'STOP_PROTOCOL' }); this.brainScene.getCoilField().deactivate(); }
+  stopProtocol() {
+    if (!this.workerReady) return;
+    this.worker.postMessage({ type: 'STOP_PROTOCOL' });
+    this.brainScene.getCoilField().deactivate();
+  }
   onPhaseChange(cb: (phase: ProtocolPhase) => void) { this.onProtocolPhaseChange = cb; }
   onOverlay(cb: (state: OverlayState) => void) { this.onOverlayUpdate = cb; }
   onRegionSelected(cb: (regionId: string) => void) { this.onRegionClick = cb; }

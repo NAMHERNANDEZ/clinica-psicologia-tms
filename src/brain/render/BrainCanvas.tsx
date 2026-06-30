@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BrainRenderer, type OverlayState } from './BrainRenderer';
 import type { ProtocolPhase } from '../simulation/ProtocolStateMachine';
 
@@ -14,6 +14,7 @@ export interface BrainCanvasHandle {
 export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<BrainRenderer | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     getRenderer: () => engineRef.current,
@@ -25,15 +26,33 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
   }));
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const renderer = new BrainRenderer();
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    let disposed = false;
+    const renderer = new BrainRenderer();
     renderer.init(canvas).then(() => {
+      if (disposed) { renderer.stop(); return; }
       renderer.start();
       engineRef.current = renderer;
+    }).catch((err) => {
+      console.error('[BrainCanvas] Init failed:', err);
+      if (!disposed) setInitError(String(err?.message || err));
     });
-    return () => { renderer.stop(); engineRef.current = null; };
+    return () => {
+      disposed = true;
+      renderer.stop();
+      engineRef.current = null;
+    };
   }, []);
+
+  if (initError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+        <div className="text-red-400 text-sm mb-2">Error al inicializar el visor 3D</div>
+        <div className="text-slate-500 text-xs max-w-xs">{initError}</div>
+      </div>
+    );
+  }
 
   return (
     <canvas

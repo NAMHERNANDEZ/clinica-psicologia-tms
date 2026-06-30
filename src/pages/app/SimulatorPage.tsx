@@ -3,6 +3,7 @@ import { LineChart } from 'lucide-react';
 import { simulation, patients, tmsProtocols, type Patient, type TmsProtocol } from '../../lib/api';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { SearchInput } from '../../components/ui/Misc';
+import { LineChart as LineChartViz, type ChartSeries } from '../../components/ui/Chart';
 
 interface SimResult {
   predicted_curve: Array<{ session: number; overall: number }>;
@@ -58,41 +59,12 @@ export default function SimulatorPage() {
 
   const filtered = patientList.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
+  const toSeries = (curves: Array<{ name: string; data: Array<{ session: number; overall: number }>; color: string }>): ChartSeries[] =>
+    curves.map(c => ({ name: c.name, data: c.data.map(p => p.overall), color: c.color }));
+
   const renderCurve = (curves: Array<{ name: string; data: Array<{ session: number; overall: number }>; color: string }>) => (
     <div className="relative h-48">
-      <svg viewBox="0 0 600 180" className="w-full h-full">
-        <line x1="40" y1="10" x2="40" y2="160" stroke="#e2e8f0" strokeWidth="1" />
-        <line x1="40" y1="160" x2="580" y2="160" stroke="#e2e8f0" strokeWidth="1" />
-        {[0, 2, 4, 6, 8, 10].map(v => (
-          <g key={v}>
-            <line x1="35" y1={160 - v * 15} x2="40" y2={160 - v * 15} stroke="#cbd5e1" strokeWidth="1" />
-            <text x="30" y={164 - v * 15} textAnchor="end" className="text-[10px] fill-slate-400">{v}</text>
-          </g>
-        ))}
-        {curves.map(curve => (
-          <g key={curve.name}>
-            {curve.data.map((p, i) => i === 0 ? null : (
-              <line key={p.session}
-                x1={50 + ((i - 1) / Math.max(curve.data.length - 1, 1)) * 520}
-                y1={160 - curve.data[i - 1].overall * 15}
-                x2={50 + (i / Math.max(curve.data.length - 1, 1)) * 520}
-                y2={160 - p.overall * 15}
-                stroke={curve.color} strokeWidth="2" />
-            ))}
-            {curve.data.map((p, i) => (
-              <circle key={p.session} cx={50 + (i / Math.max(curve.data.length - 1, 1)) * 520} cy={160 - p.overall * 15} r="4" fill={curve.color} />
-            ))}
-          </g>
-        ))}
-      </svg>
-      <div className="absolute top-0 right-0 flex items-center space-x-4 text-xs">
-        {curves.map(c => (
-          <div key={c.name} className="flex items-center space-x-1">
-            <div className="w-3 h-0.5 rounded" style={{ backgroundColor: c.color }} />
-            <span className="text-slate-600">{c.name}</span>
-          </div>
-        ))}
-      </div>
+      <LineChartViz series={toSeries(curves)} />
     </div>
   );
 
