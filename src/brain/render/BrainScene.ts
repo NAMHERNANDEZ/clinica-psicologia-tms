@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RegionMesh } from './RegionMesh';
 import { VolumetricCoil } from './VolumetricCoil';
 import { ConnectionLines } from './ConnectionLines';
+import { ClinicalColors } from './MaterialLibrary';
 
 interface RegionDef {
   id: string;
@@ -13,129 +14,17 @@ interface RegionDef {
 }
 
 const REGIONS: RegionDef[] = [
-  { id: 'dlpfc_l', name: 'DLPFC-L', dir: [-0.55, 0.65, 0.50], radius: 0.10, connections: ['acc', 'insula_l', 'm1_l'] },
-  { id: 'dlpfc_r', name: 'DLPFC-R', dir: [0.55, 0.65, 0.50], radius: 0.10, connections: ['acc', 'insula_r', 'm1_r'] },
-  { id: 'm1_l', name: 'M1-L', dir: [-0.68, 0.12, 0.30], radius: 0.09, connections: ['dlpfc_l', 'sma'] },
-  { id: 'm1_r', name: 'M1-R', dir: [0.68, 0.12, 0.30], radius: 0.09, connections: ['dlpfc_r', 'sma'] },
-  { id: 'sma', name: 'SMA', dir: [0.0, 0.62, 0.12], radius: 0.08, connections: ['m1_l', 'm1_r', 'acc'] },
-  { id: 'acc', name: 'ACC', dir: [0.0, 0.42, -0.05], radius: 0.08, connections: ['dlpfc_l', 'dlpfc_r', 'insula_l', 'insula_r'] },
-  { id: 'insula_l', name: 'INS-L', dir: [-0.42, 0.02, 0.58], radius: 0.08, connections: ['acc', 'dlpfc_l'] },
-  { id: 'insula_r', name: 'INS-R', dir: [0.42, 0.02, 0.58], radius: 0.08, connections: ['acc', 'dlpfc_r'] },
-  { id: 'broca', name: 'BRC', dir: [-0.48, -0.35, 0.62], radius: 0.08, connections: ['wernicke'] },
-  { id: 'wernicke', name: 'WRN', dir: [0.48, -0.35, 0.62], radius: 0.08, connections: ['broca'] },
+  { id: 'dlpfc_l', name: 'DLPFC-L', dir: [-0.62, 0.69, 0.60], radius: 0.10, connections: ['acc', 'insula_l', 'm1_l'] },
+  { id: 'dlpfc_r', name: 'DLPFC-R', dir: [0.57, 0.65, 0.72], radius: 0.10, connections: ['acc', 'insula_r', 'm1_r'] },
+  { id: 'm1_l', name: 'M1-L', dir: [-0.65, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_l', 'sma'] },
+  { id: 'm1_r', name: 'M1-R', dir: [0.60, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_r', 'sma'] },
+  { id: 'sma', name: 'SMA', dir: [0.02, 0.85, -0.32], radius: 0.08, connections: ['m1_l', 'm1_r', 'acc'] },
+  { id: 'acc', name: 'ACC', dir: [0.02, 0.74, 0.18], radius: 0.08, connections: ['dlpfc_l', 'dlpfc_r', 'insula_l', 'insula_r'] },
+  { id: 'insula_l', name: 'INS-L', dir: [-0.32, 0.00, 0.29], radius: 0.08, connections: ['acc', 'dlpfc_l'] },
+  { id: 'insula_r', name: 'INS-R', dir: [0.30, 0.05, 0.28], radius: 0.08, connections: ['acc', 'dlpfc_r'] },
+  { id: 'broca', name: 'BRC', dir: [-0.47, -0.36, 0.64], radius: 0.08, connections: ['wernicke'] },
+  { id: 'wernicke', name: 'WRN', dir: [-0.55, -0.25, -0.45], radius: 0.08, connections: ['broca'] },
 ];
-
-const HIDE_PATTERNS = [
-  'artery', 'sinus', 'vein', 'plexus', 'nerve', 'fasciculus', 'radiation',
-  'tract', 'peduncle', 'commissure', 'fornix', 'stria', 'optic chiasm',
-  'optic nerve', 'optic tract', 'aqueduct', 'ganglion',
-];
-
-function shouldHide(name: string): boolean {
-  const lower = name.toLowerCase();
-  return HIDE_PATTERNS.some(p => lower.includes(p));
-}
-
-function pickColor(name: string): string {
-  const n = name.toLowerCase();
-  const isLeft = n.endsWith('.l');
-
-  // SULCI = dark (creates the folds look)
-  if (n.includes('sulcus') || n.includes('fissure') || n.includes('lat_fis')) {
-    return isLeft ? '#3A4555' : '#3D4858';
-  }
-
-  // CEREBELLUM
-  if (n.includes('cerebellum') || n.includes('tonsil') || n.includes('flocculus') ||
-      n.includes('uvula') || n.includes('tuber') || n.includes('pyramis') ||
-      n.includes('nodule') || n.includes('lingula') || n.includes('folium') ||
-      n.includes('declive') || n.includes('culmen') || n.includes('lobule') ||
-      n.includes('quadrangular') || n.includes('biventral') || n.includes('semilunar')) {
-    return isLeft ? '#6A9A7A' : '#6E9E7E';
-  }
-
-  // BRAINSTEM
-  if (n.includes('pons') || n.includes('medulla') || n.includes('olive') || n.includes('pyramid')) {
-    return '#7A8A7A';
-  }
-  if (n.includes('midbrain') || n.includes('colliculus')) {
-    return '#8A7A7A';
-  }
-
-  // WHITE MATTER (visible from above = corpus callosum etc)
-  if (n.includes('corpus callosum') || n.includes('septum')) {
-    return '#E8E0D8';
-  }
-  if (n.includes('white matter')) {
-    return '#DDD5CD';
-  }
-
-  // DEEP STRUCTURES
-  if (n.includes('hippocampus') || n.includes('amygdala')) {
-    return '#C8A880';
-  }
-  if (n.includes('thalamus') || n.includes('hypothalamus') || n.includes('mamillary') ||
-      n.includes('habenula') || n.includes('pineal')) {
-    return '#B89878';
-  }
-  if (n.includes('globus') || n.includes('putamen') || n.includes('caudate') ||
-      n.includes('subthalamic') || n.includes('nigra') || n.includes('accumbens') ||
-      n.includes('pulvinar')) {
-    return '#C0A090';
-  }
-
-  // MENINGES
-  if (n.includes('falx') || n.includes('tentorium')) {
-    return '#4A5A6A';
-  }
-  if (n.includes('choroid')) {
-    return '#A07060';
-  }
-
-  // CINGULATE (visible from above along medial wall)
-  if (n.includes('cingulate')) {
-    return isLeft ? '#C0A898' : '#BCA494';
-  }
-
-  // FRONTAL LOBE GYRI (pinkish-tan, the main cortex color)
-  if (n.includes('frontal') || n.includes('orbital') || n.includes('straight gyrus') ||
-      n.includes('olfactory') || n.includes('opercular') || n.includes('triangular')) {
-    return isLeft ? '#D4A88C' : '#D0A488';
-  }
-
-  // PRECENTRAL / POSTCENTRAL (motor/sensory strip)
-  if (n.includes('precentral') || n.includes('postcentral')) {
-    return isLeft ? '#C8A090' : '#C49C8C';
-  }
-
-  // PARIETAL
-  if (n.includes('parietal') || n.includes('angular') || n.includes('supramarginal') || n.includes('precuneus')) {
-    return isLeft ? '#B8A8B8' : '#B4A4B4';
-  }
-
-  // TEMPORAL
-  if (n.includes('temporal')) {
-    return isLeft ? '#C8A890' : '#C4A48C';
-  }
-
-  // OCCIPITAL
-  if (n.includes('occipital') || n.includes('cuneus') || n.includes('lingual')) {
-    return isLeft ? '#A0A8B8' : '#9CA4B4';
-  }
-
-  // INSULA
-  if (n.includes('insula')) {
-    return isLeft ? '#B8A090' : '#B49C8C';
-  }
-
-  // POLES
-  if (n.includes('pole')) {
-    return isLeft ? '#C0A898' : '#BCA494';
-  }
-
-  // DEFAULT: cortex gray matter
-  return isLeft ? '#CCA898' : '#C8A494';
-}
 
 export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
 
@@ -173,35 +62,27 @@ export class BrainScene {
     try {
       const loader = new GLTFLoader();
       const gltf = await new Promise<any>((resolve, reject) => {
-        loader.load('/models/brain_nodraco.glb', resolve, undefined, reject);
+        loader.load('/models/brain_lowpoly.glb', resolve, undefined, reject);
       });
 
-      let visibleCount = 0;
-      let hiddenCount = 0;
-      const meshNames: string[] = [];
+      const brainMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(ClinicalColors.brainBase),
+        roughness: 0.55,
+        metalness: 0.02,
+        side: THREE.DoubleSide,
+        flatShading: true,
+      });
 
       gltf.scene.traverse((child: any) => {
         if (!child.isMesh) return;
-        const name = child.name || 'unnamed';
-        meshNames.push(name);
-
-        if (shouldHide(name)) {
-          child.visible = false;
-          hiddenCount++;
-          return;
+        if (child.geometry && !child.geometry.attributes.normal) {
+          child.geometry.computeVertexNormals();
         }
-
-        const color = pickColor(name);
-        child.material = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(color),
-          roughness: 0.55,
-          metalness: 0.02,
-          side: THREE.DoubleSide,
-        });
+        child.material = brainMat;
         child.castShadow = true;
         child.receiveShadow = true;
         this.brainMeshes.push(child);
-        visibleCount++;
+        this.allMeshNames.push(child.name || 'brain');
       });
 
       const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -216,11 +97,10 @@ export class BrainScene {
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       this.brainSurfaceRadius = Math.max(scaledSize.x, scaledSize.y, scaledSize.z) / 2.0;
 
-      this.allMeshNames = meshNames;
       this.brainGroup.add(gltf.scene);
 
       this.loadStatus = 'glb_ok';
-      this.loadDetail = `${visibleCount} vis, ${hiddenCount} hid, r=${this.brainSurfaceRadius.toFixed(2)}`;
+      this.loadDetail = `${this.brainMeshes.length} meshes, r=${this.brainSurfaceRadius.toFixed(2)}`;
     } catch (err) {
       console.error('[BrainScene] GLB FAILED:', err);
       this.loadStatus = 'error';
@@ -267,5 +147,24 @@ export class BrainScene {
   getLoadDetail() { return this.loadDetail; }
   getAllMeshNames() { return this.allMeshNames; }
   getBrainMeshCount() { return this.brainMeshes.length; }
-  dispose() { this.connectionLines.dispose(this.scene); }
+  getModel() { return this.brainGroup.children[0] || null; }
+  dispose() {
+    this.connectionLines.dispose(this.scene);
+    this.regions.forEach(r => {
+      r.meshes.forEach(m => {
+        this.scene.remove(m);
+        m.geometry?.dispose();
+        (m.material as THREE.Material)?.dispose();
+      });
+    });
+    this.regions.clear();
+    this.brainGroup.traverse((child: any) => {
+      if (child.isMesh) {
+        child.geometry?.dispose();
+        (child.material as THREE.Material)?.dispose();
+      }
+    });
+    this.scene.remove(this.brainGroup);
+    this.scene.remove(this.coilField.object3D);
+  }
 }
