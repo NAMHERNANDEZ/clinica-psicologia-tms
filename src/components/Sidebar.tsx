@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Home, Users, Calendar, Stethoscope, Brain, LineChart,
   ClipboardList, Settings, ChevronLeft, ChevronRight, Activity,
-  Eye, Monitor, MonitorSpeaker
+  Eye, Monitor, MonitorSpeaker, Zap
 } from 'lucide-react';
 
 type NavItem = { path: string; label: string; icon: React.ElementType };
@@ -20,6 +20,7 @@ const navByRole: Record<string, NavSection[]> = {
     { label: 'TMS', items: [
       { path: '/app/tms', label: 'Módulo TMS', icon: Brain },
       { path: '/app/tms/brain', label: 'Brain Viewer', icon: Activity },
+      { path: '/app/tms/sesion', label: 'Sesión TMS', icon: Zap },
       { path: '/app/tms/simulador', label: 'Simulador', icon: LineChart },
     ]},
     { label: 'Visual Engine', items: [
@@ -42,6 +43,7 @@ const navByRole: Record<string, NavSection[]> = {
     { label: 'TMS', items: [
       { path: '/app/tms', label: 'Módulo TMS', icon: Brain },
       { path: '/app/tms/brain', label: 'Brain Viewer', icon: Activity },
+      { path: '/app/tms/sesion', label: 'Sesión TMS', icon: Zap },
       { path: '/app/tms/simulador', label: 'Simulador', icon: LineChart },
     ]},
     { label: 'Visual Engine', items: [
