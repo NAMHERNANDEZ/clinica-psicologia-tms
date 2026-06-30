@@ -103,7 +103,7 @@ export class TMSRegionMarkers {
     group.add(label);
 
     const line = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.18, 0)]),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.22, 0)]),
       new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.4 })
     );
     group.add(line);
@@ -115,73 +115,75 @@ export class TMSRegionMarkers {
   private createLabel(text: string, baArea: string, lobe: string, conditions: string[], color: string): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    canvas.width = 900;
-    canvas.height = 380;
+    canvas.width = 1200;
+    canvas.height = 560;
 
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 16;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(30, 100, 8, 0, Math.PI * 2);
+    ctx.arc(40, 100, 10, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = `${color}20`;
+    ctx.fillStyle = `${color}15`;
     ctx.beginPath();
-    ctx.arc(30, 100, 18, 0, Math.PI * 2);
+    ctx.arc(40, 100, 22, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
-    const textGrad = ctx.createLinearGradient(0, 70, 0, 120);
+    ctx.shadowBlur = 6;
+    const textGrad = ctx.createLinearGradient(0, 60, 0, 130);
     textGrad.addColorStop(0, '#ffffff');
-    textGrad.addColorStop(0.6, color);
+    textGrad.addColorStop(0.5, '#e0f7fa');
     textGrad.addColorStop(1, color);
     ctx.fillStyle = textGrad;
-    ctx.font = '600 52px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.font = '700 72px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 56, 92);
+    ctx.fillText(text.toUpperCase(), 65, 95);
     ctx.restore();
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
-    ctx.font = '400 20px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.font = '400 30px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${baArea} · ${lobe}`, 56, 140);
+    ctx.fillText(`${baArea}  ·  ${lobe}`, 65, 160);
 
-    ctx.strokeStyle = `${color}30`;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = `${color}40`;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(56, 170);
-    ctx.lineTo(400, 170);
+    ctx.moveTo(65, 200);
+    ctx.lineTo(600, 200);
     ctx.stroke();
 
-    ctx.fillStyle = `${color}90`;
-    ctx.font = '500 16px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.fillStyle = `${color}`;
+    ctx.font = '600 26px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('INDICACIONES:', 56, 200);
+    ctx.fillText('INDICACIONES:', 65, 245);
 
-    ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
-    ctx.font = '400 18px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     conditions.forEach((condition, i) => {
-      const y = 240 + i * 32;
+      const y = 305 + i * 50;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(64, y, 3, 0, Math.PI * 2);
+      ctx.arc(80, y, 5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
-      ctx.fillText(condition, 78, y);
+
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
+      ctx.font = '500 28px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(condition, 100, y);
     });
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(0.90, 0.38, 1);
+    sprite.scale.set(1.2, 0.56, 1);
     return sprite;
   }
 
