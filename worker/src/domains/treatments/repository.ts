@@ -1,4 +1,5 @@
 import type { Env } from '../../types';
+import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export interface Treatment {
   id: number;
@@ -78,15 +79,7 @@ export async function createTreatment(env: Env, clinicId: number, data: {
 }
 
 export async function updateTreatment(env: Env, clinicId: number, id: number, data: Partial<Treatment>): Promise<boolean> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'clinic_id' && key !== 'created_at' && key !== 'updated_at') {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
+  const { fields, values } = sanitizeUpdateFields('treatments', data as Record<string, unknown>);
 
   if (fields.length === 0) return false;
   fields.push('updated_at = datetime("now")');

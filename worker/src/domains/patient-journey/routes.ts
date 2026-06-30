@@ -28,7 +28,7 @@ export async function handleGetPatientJourney(
     return json({ success: true, data: journey, requestId: crypto.randomUUID() }, 200, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, err.message?.includes('no encontrado') ? 404 : 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }
 
@@ -49,7 +49,7 @@ export async function handleStartTreatment(
     return json({ success: true, data: result, requestId: crypto.randomUUID() }, 201, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, err.message?.includes('no encontrado') ? 404 : 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }
 
@@ -70,7 +70,7 @@ export async function handleCompleteSession(
     return json({ success: true, data: result, requestId: crypto.randomUUID() }, 200, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, err.message?.includes('no encontrada') ? 404 : 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }
 
@@ -85,7 +85,7 @@ export async function handleGetReceptionView(
     return json({ success: true, data: result, requestId: crypto.randomUUID() }, 200, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }
 
@@ -108,7 +108,7 @@ export async function handleGetTherapistView(
     return json({ success: true, data: result, requestId: crypto.randomUUID() }, 200, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }
 
@@ -142,6 +142,6 @@ export async function handleDischargePatient(
     return json({ success: true, data: result, requestId: crypto.randomUUID() }, 200, corsHeaders);
   } catch (err: any) {
     console.error('Handler error:', err);
-    return json({ success: false, error: err.message || 'Internal error', requestId: crypto.randomUUID() }, err.message?.includes('no encontrado') ? 404 : 500, corsHeaders);
+    return json({ success: false, error: 'Internal error', requestId: crypto.randomUUID() }, 500, corsHeaders);
   }
 }

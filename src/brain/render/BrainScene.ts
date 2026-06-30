@@ -158,6 +158,7 @@ export class BrainScene {
   getRegionDefs() { return this.regionDefs; }
   getCoilField() { return this.coilField; }
   getTmsMarkers() { return this.tmsMarkers; }
+  setSelectedRegion(id: string | null) { this.tmsMarkers?.setSelected(id); }
   getRegionPosition(id: string) { return this.regions.get(id)?.mesh.position.clone(); }
   getLoadStatus() { return this.loadStatus; }
   getLoadDetail() { return this.loadDetail; }

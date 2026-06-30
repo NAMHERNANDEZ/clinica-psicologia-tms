@@ -1,4 +1,4 @@
-import type { Env } from '../../types';
+import type { Env, User } from '../../types';
 
 function jsonSuccess(data: unknown, corsHeaders: Record<string, string>, requestId: string): Response {
   return new Response(JSON.stringify({ success: true, data, requestId }), {
@@ -14,16 +14,12 @@ function jsonError(error: string, status: number, corsHeaders: Record<string, st
   });
 }
 
-export async function handleCosToday(env: Env, request: Request, corsHeaders: Record<string, string>, requestId: string) {
+export async function handleCosToday(env: Env, request: Request, user: User, corsHeaders: Record<string, string>, requestId: string) {
   try {
     const url = new URL(request.url);
     const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
 
-    const clinicResult = await env.DB.prepare(
-      `SELECT c.id, c.name FROM users u JOIN clinics c ON u.clinic_id = c.id WHERE u.id = ?`
-    ).bind(1).first();
-
-    const clinicId = clinicResult?.id || 1;
+    const clinicId = user.clinic_id;
 
     const appointmentsResult = await env.DB.prepare(
       `SELECT a.*, p.name as patient_name, t.name as therapist_name
@@ -53,28 +49,30 @@ export async function handleCosToday(env: Env, request: Request, corsHeaders: Re
       urgent_alerts: 0,
     }, corsHeaders, requestId);
   } catch (err) {
-    return jsonError(`COS today error: ${err}`, 500, corsHeaders, requestId);
+    return jsonError('Error obteniendo datos del día', 500, corsHeaders, requestId);
   }
 }
 
-export async function handleCosNextAction(env: Env, request: Request, corsHeaders: Record<string, string>, requestId: string) {
+export async function handleCosNextAction(env: Env, request: Request, user: User, corsHeaders: Record<string, string>, requestId: string) {
   try {
     const url = new URL(request.url);
     const patientId = Number(url.searchParams.get('id'));
 
     if (!patientId) return jsonError('patient_id required', 400, corsHeaders, requestId);
 
-    const patient = await env.DB.prepare(`SELECT * FROM patients WHERE id = ?`).bind(patientId).first() as Record<string, unknown> | null;
+    const patient = await env.DB.prepare(
+      `SELECT * FROM patients WHERE id = ? AND clinic_id = ?`
+    ).bind(patientId, user.clinic_id).first() as Record<string, unknown> | null;
     if (!patient) return jsonError('Patient not found', 404, corsHeaders, requestId);
 
     const profiles = await env.DB.prepare(
-      `SELECT * FROM tms_profiles WHERE patient_id = ? ORDER BY id DESC`
-    ).bind(patientId).all();
+      `SELECT * FROM tms_profiles WHERE patient_id = ? AND clinic_id = ? ORDER BY id DESC`
+    ).bind(patientId, user.clinic_id).all();
     const activeProfiles = (profiles.results || []).filter((p: Record<string, unknown>) => p.status === 'active');
 
     const thresholds = await env.DB.prepare(
-      `SELECT * FROM motor_thresholds WHERE patient_id = ? ORDER BY id DESC`
-    ).bind(patientId).all();
+      `SELECT * FROM motor_thresholds WHERE patient_id = ? AND clinic_id = ?`
+    ).bind(patientId, user.clinic_id).all();
 
     let state = 'REGISTERED';
     if (activeProfiles.length > 0) state = 'IN_TREATMENT';
@@ -108,22 +106,26 @@ export async function handleCosNextAction(env: Env, request: Request, corsHeader
       blocking_reasons: [],
     }, corsHeaders, requestId);
   } catch (err) {
-    return jsonError(`COS next-action error: ${err}`, 500, corsHeaders, requestId);
+    return jsonError('Error obteniendo siguiente acción', 500, corsHeaders, requestId);
   }
 }
 
-export async function handleCosPatientStates(env: Env, request: Request, corsHeaders: Record<string, string>, requestId: string) {
+export async function handleCosPatientStates(env: Env, request: Request, user: User, corsHeaders: Record<string, string>, requestId: string) {
   try {
-    const patientsResult = await env.DB.prepare(`SELECT id, name, status FROM patients`).all();
+    const clinicId = user.clinic_id;
+
+    const patientsResult = await env.DB.prepare(
+      `SELECT id, name, status FROM patients WHERE clinic_id = ?`
+    ).bind(clinicId).all();
     const patients = (patientsResult.results || []) as { id: number; name: string; status: string }[];
 
     const states = await Promise.all(patients.map(async (p) => {
       const profiles = await env.DB.prepare(
-        `SELECT status FROM tms_profiles WHERE patient_id = ?`
-      ).bind(p.id).all();
+        `SELECT status FROM tms_profiles WHERE patient_id = ? AND clinic_id = ?`
+      ).bind(p.id, clinicId).all();
       const thresholds = await env.DB.prepare(
-        `SELECT id FROM motor_thresholds WHERE patient_id = ?`
-      ).bind(p.id).all();
+        `SELECT id FROM motor_thresholds WHERE patient_id = ? AND clinic_id = ?`
+      ).bind(p.id, clinicId).all();
 
       let state = 'REGISTERED';
       const profileStatuses = (profiles.results || []).map((pr: Record<string, unknown>) => pr.status);
@@ -158,24 +160,28 @@ export async function handleCosPatientStates(env: Env, request: Request, corsHea
       needs_attention: states.filter(s => ['REGISTERED', 'EVALUATED', 'MT_MEASURED'].includes(s.clinical_state)).length,
     }, corsHeaders, requestId);
   } catch (err) {
-    return jsonError(`COS states error: ${err}`, 500, corsHeaders, requestId);
+    return jsonError('Error obteniendo estados de pacientes', 500, corsHeaders, requestId);
   }
 }
 
-export async function handleCosTasks(env: Env, request: Request, corsHeaders: Record<string, string>, requestId: string) {
+export async function handleCosTasks(env: Env, request: Request, user: User, corsHeaders: Record<string, string>, requestId: string) {
   try {
-    const patientsResult = await env.DB.prepare(`SELECT id, name, status FROM patients`).all();
+    const clinicId = user.clinic_id;
+
+    const patientsResult = await env.DB.prepare(
+      `SELECT id, name, status FROM patients WHERE clinic_id = ?`
+    ).bind(clinicId).all();
     const patients = (patientsResult.results || []) as { id: number; name: string; status: string }[];
     const tasks: Array<{ id: string; type: string; patient_id: number; patient_name: string; priority: string; title: string; description: string }> = [];
 
     for (const p of patients) {
       const profiles = await env.DB.prepare(
-        `SELECT id, status FROM tms_profiles WHERE patient_id = ?`
-      ).bind(p.id).all();
+        `SELECT id, status FROM tms_profiles WHERE patient_id = ? AND clinic_id = ?`
+      ).bind(p.id, clinicId).all();
       const activeProfiles = (profiles.results || []).filter((pr: Record<string, unknown>) => pr.status === 'active');
       const thresholds = await env.DB.prepare(
-        `SELECT id FROM motor_thresholds WHERE patient_id = ?`
-      ).bind(p.id).all();
+        `SELECT id FROM motor_thresholds WHERE patient_id = ? AND clinic_id = ?`
+      ).bind(p.id, clinicId).all();
 
       let state = 'REGISTERED';
       const profileStatuses = (profiles.results || []).map((pr: Record<string, unknown>) => pr.status);
@@ -212,20 +218,24 @@ export async function handleCosTasks(env: Env, request: Request, corsHeaders: Re
       },
     }, corsHeaders, requestId);
   } catch (err) {
-    return jsonError(`COS tasks error: ${err}`, 500, corsHeaders, requestId);
+    return jsonError('Error obteniendo tareas', 500, corsHeaders, requestId);
   }
 }
 
-export async function handleCosAlerts(env: Env, request: Request, corsHeaders: Record<string, string>, requestId: string) {
+export async function handleCosAlerts(env: Env, request: Request, user: User, corsHeaders: Record<string, string>, requestId: string) {
   try {
-    const patientsResult = await env.DB.prepare(`SELECT id, name FROM patients`).all();
+    const clinicId = user.clinic_id;
+
+    const patientsResult = await env.DB.prepare(
+      `SELECT id, name FROM patients WHERE clinic_id = ?`
+    ).bind(clinicId).all();
     const patients = (patientsResult.results || []) as { id: number; name: string }[];
     const alerts: Array<{ id: string; severity: string; type: string; title: string; message: string; patient_id: number; patient_name: string }> = [];
 
     for (const p of patients) {
       const effects = await env.DB.prepare(
-        `SELECT * FROM adverse_effects WHERE patient_id = ? AND severity = 'severe' AND resolved = 0`
-      ).bind(p.id).all();
+        `SELECT * FROM adverse_effects WHERE patient_id = ? AND clinic_id = ? AND severity = 'severe' AND resolved = 0`
+      ).bind(p.id, clinicId).all();
 
       if ((effects.results || []).length > 0) {
         alerts.push({
@@ -242,8 +252,8 @@ export async function handleCosAlerts(env: Env, request: Request, corsHeaders: R
       const sessions = await env.DB.prepare(
         `SELECT ts.* FROM tms_sessions ts
          JOIN tms_profiles tp ON ts.profile_id = tp.id
-         WHERE tp.patient_id = ? AND ts.status = 'no_show'`
-      ).bind(p.id).all();
+         WHERE tp.patient_id = ? AND tp.clinic_id = ? AND ts.status = 'no_show'`
+      ).bind(p.id, clinicId).all();
 
       if ((sessions.results || []).length >= 2) {
         alerts.push({
@@ -268,6 +278,6 @@ export async function handleCosAlerts(env: Env, request: Request, corsHeaders: R
       },
     }, corsHeaders, requestId);
   } catch (err) {
-    return jsonError(`COS alerts error: ${err}`, 500, corsHeaders, requestId);
+    return jsonError('Error obteniendo alertas', 500, corsHeaders, requestId);
   }
 }

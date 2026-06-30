@@ -7,6 +7,7 @@ export interface Env {
   JWT_SECRET: string;
   REFRESH_SECRET: string;
   ALLOWED_ORIGINS: string;
+  SETUP_TOKEN: string;
 }
 
 export interface Clinic {

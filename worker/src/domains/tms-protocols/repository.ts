@@ -1,5 +1,6 @@
 import type { Env } from '../../types';
 import type { TmsProtocolInput, StimulationType, EvidenceLevel } from './validators';
+import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export interface TmsProtocol {
   id: number;
@@ -65,15 +66,7 @@ export async function create(env: Env, clinicId: number, data: TmsProtocolInput)
 }
 
 export async function update(env: Env, id: number, data: Partial<TmsProtocolInput>): Promise<boolean> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
+  const { fields, values } = sanitizeUpdateFields('tms_protocols', data as Record<string, unknown>);
 
   if (fields.length === 0) return false;
   values.push(id);

@@ -39,39 +39,44 @@ export function PhaseIndicator({ overlay, isSimulating, elapsed }: PhaseIndicato
   const progress = phaseIdx >= 0 ? ((phaseIdx + 1) / PHASE_ORDER.length) * 100 : phase === 'complete' ? 100 : 0;
 
   return (
-    <div className="absolute top-3 left-3 right-3 z-10 pointer-events-none">
-      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-xl p-3 max-w-md shadow-xl shadow-black/40">
+    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+      <div
+        className="bg-[#0d1117]/85 backdrop-blur-xl border border-slate-700/30 rounded-2xl px-5 py-3 shadow-2xl shadow-black/50"
+        style={{
+          boxShadow: `0 0 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
+        }}
+      >
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: PHASE_COLORS[phase] }} />
-          <span className="text-[11px] font-mono font-semibold uppercase tracking-wider" style={{ color: PHASE_COLORS[phase] }}>
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PHASE_COLORS[phase] }} />
+          <span className="text-[9px] font-mono font-medium uppercase tracking-widest" style={{ color: PHASE_COLORS[phase] }}>
             {PHASE_LABELS[phase]}
           </span>
           {phase !== 'idle' && phase !== 'complete' && (
-            <span className="ml-auto text-[10px] text-slate-400 font-mono">{formatTime(elapsed)}</span>
+            <span className="ml-auto text-[8px] text-slate-500 font-mono">{formatTime(elapsed)}</span>
           )}
         </div>
 
-        <div className="flex gap-1 mb-2">
+        <div className="flex gap-0.5 mb-2">
           {PHASE_ORDER.map((p, i) => {
             const isActive = p === phase;
             const isPast = phaseIdx >= 0 && i < phaseIdx;
             return (
-              <div key={p} className="flex-1 h-1 rounded-full transition-all duration-300"
+              <div key={p} className="flex-1 h-[2px] rounded-full transition-all duration-300"
                 style={{
                   backgroundColor: isActive ? PHASE_COLORS[p] : isPast ? PHASE_COLORS[p] + '80' : '#1e293b',
-                  boxShadow: isActive ? `0 0 8px ${PHASE_COLORS[p]}40` : 'none',
+                  boxShadow: isActive ? `0 0 6px ${PHASE_COLORS[p]}30` : 'none',
                 }} />
             );
           })}
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px]">
-          <div className="text-slate-500">Pulsos</div>
-          <div className="text-white font-mono text-right">{pulseCount.toLocaleString()}</div>
-          <div className="text-slate-500">Intensidad bobina</div>
-          <div className="text-white font-mono text-right">{(coilIntensity * 100).toFixed(1)}%</div>
-          <div className="text-slate-500">Progreso</div>
-          <div className="text-white font-mono text-right">{progress.toFixed(0)}%</div>
+        <div className="grid grid-cols-3 gap-x-6 gap-y-0 text-[8px]">
+          <div className="text-slate-500 font-medium">Pulsos</div>
+          <div className="text-slate-500 font-medium text-center">Bobina</div>
+          <div className="text-slate-500 font-medium text-right">Progreso</div>
+          <div className="text-slate-300 font-mono">{pulseCount.toLocaleString()}</div>
+          <div className="text-slate-300 font-mono text-center">{(coilIntensity * 100).toFixed(1)}%</div>
+          <div className="text-slate-300 font-mono text-right">{progress.toFixed(0)}%</div>
         </div>
       </div>
     </div>

@@ -56,7 +56,7 @@ export async function handleRecordMeasurement(
     return json({ success: true, data: measurement }, 201, corsHeaders);
   } catch (err) {
     console.error('Handler error:', err);
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = 'Error de validación';
     return json({ success: false, error: message }, 400, corsHeaders);
   }
 }
