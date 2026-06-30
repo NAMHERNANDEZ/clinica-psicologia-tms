@@ -1,4 +1,5 @@
 import type { Env, Patient } from '../../types';
+import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export async function findPatients(env: Env, clinicId: number, search?: string): Promise<Patient[]> {
   let query = "SELECT id, clinic_id, name, phone, email, birthdate, status, created_at FROM patients WHERE clinic_id = ?";
@@ -30,15 +31,7 @@ export async function createPatient(env: Env, clinicId: number, data: { name: st
 }
 
 export async function updatePatient(env: Env, clinicId: number, id: number, data: Partial<Patient>): Promise<boolean> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'clinic_id' && key !== 'created_at') {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
+  const { fields, values } = sanitizeUpdateFields('patients', data as Record<string, unknown>);
 
   if (fields.length === 0) return false;
   values.push(id, clinicId);

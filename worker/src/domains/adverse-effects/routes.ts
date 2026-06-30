@@ -41,8 +41,7 @@ export async function handleRecordEffect(
     return json({ success: true, data: effect }, 201, corsHeaders);
   } catch (err) {
     console.error('Handler error:', err);
-    const message = err instanceof Error ? err.message : 'Internal error';
-    return json({ success: false, error: message }, 400, corsHeaders);
+    return json({ success: false, error: 'Internal error' }, 400, corsHeaders);
   }
 }
 
@@ -64,8 +63,7 @@ export async function handleResolveEffect(
     return json({ success: true, data: null }, 200, corsHeaders);
   } catch (err) {
     console.error('Handler error:', err);
-    const message = err instanceof Error ? err.message : 'Internal error';
-    return json({ success: false, error: message }, 400, corsHeaders);
+    return json({ success: false, error: 'Internal error' }, 400, corsHeaders);
   }
 }
 

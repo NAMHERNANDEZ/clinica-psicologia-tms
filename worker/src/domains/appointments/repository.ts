@@ -1,4 +1,5 @@
 import type { Env, Appointment } from '../../types';
+import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export async function findAppointments(env: Env, clinicId: number, filters: { date?: string; therapist_id?: number; patient_id?: number }): Promise<Appointment[]> {
   let query = "SELECT * FROM appointments WHERE clinic_id = ?";
@@ -40,15 +41,7 @@ export async function createAppointment(env: Env, clinicId: number, data: {
 }
 
 export async function updateAppointment(env: Env, clinicId: number, id: number, data: Partial<Appointment>): Promise<boolean> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'clinic_id' && key !== 'created_at') {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
+  const { fields, values } = sanitizeUpdateFields('appointments', data as Record<string, unknown>);
 
   if (fields.length === 0) return false;
   fields.push("updated_at = datetime('now')");

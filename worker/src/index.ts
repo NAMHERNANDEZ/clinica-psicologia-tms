@@ -28,7 +28,6 @@ import { handleSimulateProtocol, handleCompareProtocols, handleGetComparisonHist
 import { handleGenerateReport, handleGetTreatmentSummary, handleExportCSV, handleGetReportHistory } from './domains/reports/routes';
 import { handleGetPatientJourney, handleStartTreatment, handleCompleteSession as handleJourneyCompleteSession, handleGetReceptionView, handleGetTherapistView, handleDischargePatient } from './domains/patient-journey/routes';
 import { handleCosToday, handleCosNextAction, handleCosPatientStates, handleCosTasks, handleCosAlerts } from './domains/cos/routes';
-import { handleSetup } from './domains/setup/routes';
 import { generateReminders } from './domains/reminders/service';
 import { generateWhatsAppUrl, renderAppointmentReminder } from './lib/whatsapp';
 
@@ -64,6 +63,16 @@ async function withCors(fn: () => Promise<Response>, corsHeaders: Record<string,
     console.error(`[${requestId}] Handler error:`, err);
     return jsonError('Internal error', 500, corsHeaders, requestId);
   }
+}
+
+function securityHeaders(): Record<string, string> {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  };
 }
 
 async function handleHealth(env: Env, corsHeaders: Record<string, string>, requestId: string): Promise<Response> {
@@ -102,7 +111,7 @@ async function handleWhatsAppPreview(env: Env, request: Request, corsHeaders: Re
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const requestId = generateRequestId();
-    const corsHeaders = getCorsHeaders(env, request.headers.get('Origin'));
+    const corsHeaders = { ...getCorsHeaders(env, request.headers.get('Origin')), ...securityHeaders() };
 
     try {
       if (request.method === 'OPTIONS') {
@@ -122,19 +131,6 @@ export default {
         return handleHealth(env, corsHeaders, requestId);
       }
 
-      if (path === '/api/whatsapp/preview' && method === 'POST') {
-        return withCors(() => handleWhatsAppPreview(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      }
-
-      if (path === '/api/setup' && method === 'POST') {
-        const origin = request.headers.get('Origin') || '';
-        const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
-        if (!isLocal) {
-          return jsonError('Endpoint not available in production', 403, corsHeaders, requestId);
-        }
-        return withCors(() => handleSetup(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      }
-
       const { allowed, remaining } = await checkRateLimit(env, ip, path);
       if (!allowed) {
         return jsonError('Rate limit exceeded', 429, { ...corsHeaders, ...rateLimitHeaders(remaining) }, requestId);
@@ -152,6 +148,10 @@ export default {
         Object.entries(corsHeaders).forEach(([k, v]) => authError.headers.set(k, v));
         authError.headers.set('X-Request-Id', requestId);
         return authError;
+      }
+
+      if (path === '/api/whatsapp/preview' && method === 'POST') {
+        return withCors(() => handleWhatsAppPreview(env, request, corsHeaders, requestId), corsHeaders, requestId);
       }
 
       // PATIENTS
@@ -305,12 +305,12 @@ export default {
       if (path.match(/^\/api\/journey\/patient\/\d+$/) && method === 'GET') return withCors(() => handleGetPatientJourney(env, request, user!, corsHeaders), corsHeaders, requestId);
       if (path.match(/^\/api\/journey\/discharge\/\d+$/) && method === 'POST') return withCors(() => handleDischargePatient(env, request, user!, corsHeaders), corsHeaders, requestId);
 
-      // COS-L: CLINICAL OPERATING SYSTEM LAYER
-      if (path === '/api/cos/today' && method === 'GET') return withCors(() => handleCosToday(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      if (path === '/api/cos/next-action' && method === 'GET') return withCors(() => handleCosNextAction(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      if (path === '/api/cos/patient-states' && method === 'GET') return withCors(() => handleCosPatientStates(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      if (path === '/api/cos/tasks' && method === 'GET') return withCors(() => handleCosTasks(env, request, corsHeaders, requestId), corsHeaders, requestId);
-      if (path === '/api/cos/alerts' && method === 'GET') return withCors(() => handleCosAlerts(env, request, corsHeaders, requestId), corsHeaders, requestId);
+      // COS-L: CLINICAL OPERATING SYSTEM LAYER (require auth + admin role)
+      if (path === '/api/cos/today' && method === 'GET') return withCors(() => handleCosToday(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path === '/api/cos/next-action' && method === 'GET') return withCors(() => handleCosNextAction(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path === '/api/cos/patient-states' && method === 'GET') return withCors(() => handleCosPatientStates(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path === '/api/cos/tasks' && method === 'GET') return withCors(() => handleCosTasks(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path === '/api/cos/alerts' && method === 'GET') return withCors(() => handleCosAlerts(env, request, user!, corsHeaders), corsHeaders, requestId);
 
       return jsonError('Not found', 404, corsHeaders, requestId);
     } catch (err) {

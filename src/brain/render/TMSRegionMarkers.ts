@@ -45,7 +45,9 @@ interface MarkerObjects {
   group: THREE.Group;
   halo: THREE.Mesh;
   particles: THREE.Points;
-  label: THREE.Sprite;
+  labelCompact: THREE.Sprite;
+  labelExpanded: THREE.Sprite;
+  activeLabel: THREE.Sprite;
   line: THREE.Line;
 }
 
@@ -54,6 +56,7 @@ export class TMSRegionMarkers {
   private scene: THREE.Scene;
   private regionMeshes: Map<string, RegionMesh>;
   private activationLevels: Map<string, number> = new Map();
+  private selectedRegion: string | null = null;
   private time = 0;
 
   constructor(scene: THREE.Scene, regionMeshes: Map<string, RegionMesh>) {
@@ -98,92 +101,147 @@ export class TMSRegionMarkers {
     }));
     group.add(particles);
 
-    const label = this.createLabel(info.label, info.baArea, info.lobe, info.conditions, info.functionColor);
-    label.position.set(0, 0.32, 0);
-    group.add(label);
+    const labelCompact = this.createCompactLabel(info.label, info.baArea, info.lobe, info.functionColor);
+    labelCompact.position.set(0, 0.28, 0);
+    group.add(labelCompact);
+
+    const labelExpanded = this.createExpandedLabel(info.label, info.baArea, info.lobe, info.conditions, info.functionColor);
+    labelExpanded.position.set(0, 0.28, 0);
+    labelExpanded.visible = false;
+    group.add(labelExpanded);
 
     const line = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.22, 0)]),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.08, 0), new THREE.Vector3(0, 0.18, 0)]),
       new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.4 })
     );
     group.add(line);
 
     this.scene.add(group);
-    this.markers.set(id, { group, halo, particles, label, line });
+    this.markers.set(id, { group, halo, particles, labelCompact, labelExpanded, activeLabel: labelCompact, line });
   }
 
-  private createLabel(text: string, baArea: string, lobe: string, conditions: string[], color: string): THREE.Sprite {
+  private createCompactLabel(text: string, baArea: string, lobe: string, color: string): THREE.Sprite {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = 900;
+    canvas.height = 260;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(40, 130, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = `${color}20`;
+    ctx.beginPath();
+    ctx.arc(40, 130, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 76px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text.toUpperCase(), 68, 120);
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
+    ctx.font = '600 32px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${baArea}  ·  ${lobe}`, 68, 185);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
+    sprite.scale.set(1.0, 0.29, 1);
+    return sprite;
+  }
+
+  private createExpandedLabel(text: string, baArea: string, lobe: string, conditions: string[], color: string): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     canvas.width = 1200;
-    canvas.height = 560;
+    canvas.height = 740;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 16;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(40, 100, 10, 0, Math.PI * 2);
+    ctx.arc(45, 100, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = `${color}15`;
+    ctx.fillStyle = `${color}20`;
     ctx.beginPath();
-    ctx.arc(40, 100, 22, 0, Math.PI * 2);
+    ctx.arc(45, 100, 26, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
-    const textGrad = ctx.createLinearGradient(0, 60, 0, 130);
-    textGrad.addColorStop(0, '#ffffff');
-    textGrad.addColorStop(0.5, '#e0f7fa');
-    textGrad.addColorStop(1, color);
-    ctx.fillStyle = textGrad;
-    ctx.font = '700 72px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 82px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 65, 95);
+    ctx.fillText(text.toUpperCase(), 75, 95);
     ctx.restore();
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
-    ctx.font = '400 30px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = '500 34px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${baArea}  ·  ${lobe}`, 65, 160);
+    ctx.fillText(`${baArea}  ·  ${lobe}`, 75, 160);
 
-    ctx.strokeStyle = `${color}40`;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.20)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(65, 200);
-    ctx.lineTo(600, 200);
+    ctx.moveTo(75, 200);
+    ctx.lineTo(700, 200);
     ctx.stroke();
 
-    ctx.fillStyle = `${color}`;
-    ctx.font = '600 26px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
+    ctx.font = 'bold 28px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('INDICACIONES:', 65, 245);
+    ctx.fillText('INDICACIONES', 75, 250);
 
     conditions.forEach((condition, i) => {
-      const y = 305 + i * 50;
-      ctx.fillStyle = color;
+      const y = 320 + i * 72;
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
       ctx.beginPath();
-      ctx.arc(80, y, 5, 0, Math.PI * 2);
+      ctx.roundRect(70, y - 20, 1060, 52, 10);
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
-      ctx.font = '500 28px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+      ctx.beginPath();
+      ctx.arc(95, y + 6, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.font = '600 42px "IBM Plex Mono", "SF Mono", Consolas, monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(condition, 100, y);
+      ctx.fillText(condition, 120, y + 6);
     });
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(1.2, 0.56, 1);
+    sprite.scale.set(1.3, 0.81, 1);
     return sprite;
   }
 
@@ -194,6 +252,19 @@ export class TMSRegionMarkers {
       const activation = this.activationLevels.get(id) || 0;
       const info = REGION_INFO[id];
       if (!info) continue;
+
+      const isSelected = this.selectedRegion === id;
+      const isExpanded = isSelected || activation > 0.3;
+
+      if (isExpanded && marker.activeLabel !== marker.labelExpanded) {
+        marker.labelCompact.visible = false;
+        marker.labelExpanded.visible = true;
+        marker.activeLabel = marker.labelExpanded;
+      } else if (!isExpanded && marker.activeLabel !== marker.labelCompact) {
+        marker.labelExpanded.visible = false;
+        marker.labelCompact.visible = true;
+        marker.activeLabel = marker.labelCompact;
+      }
 
       const phaseOffset = id.charCodeAt(0) * 0.1;
       const basePulse = Math.sin(this.time * 2 + phaseOffset) * 0.04;
@@ -226,6 +297,10 @@ export class TMSRegionMarkers {
     this.activationLevels.set(regionId, Math.max(0, Math.min(1, value)));
   }
 
+  setSelected(regionId: string | null) {
+    this.selectedRegion = regionId;
+  }
+
   getActivations(): Map<string, number> {
     return this.activationLevels;
   }
@@ -241,8 +316,10 @@ export class TMSRegionMarkers {
       (marker.halo.material as THREE.Material).dispose();
       marker.particles.geometry.dispose();
       (marker.particles.material as THREE.Material).dispose();
-      marker.label.material.map?.dispose();
-      marker.label.material.dispose();
+      marker.labelCompact.material.map?.dispose();
+      marker.labelCompact.material.dispose();
+      marker.labelExpanded.material.map?.dispose();
+      marker.labelExpanded.material.dispose();
       marker.line.geometry.dispose();
       (marker.line.material as THREE.Material).dispose();
     }

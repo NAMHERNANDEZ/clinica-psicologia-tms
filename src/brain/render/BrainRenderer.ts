@@ -217,7 +217,13 @@ export class BrainRenderer {
     this.canvas.style.cursor = hits.length > 0 ? 'pointer' : 'default';
     if (hits.length > 0) {
       const id = (hits[0].object as any).userData?.regionId;
-      if (id) this.onRegionClick?.(id);
+      if (id) {
+        this.currentTargetRegion = id;
+        this.brainScene.setSelectedRegion(id);
+        this.onRegionClick?.(id);
+      }
+    } else {
+      this.brainScene.setSelectedRegion(null);
     }
   }
 

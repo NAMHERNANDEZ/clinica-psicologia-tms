@@ -20,7 +20,7 @@ export class VolumetricCoil {
     this.coilMesh = new THREE.Group();
 
     const coilMat = new THREE.MeshStandardMaterial({
-      color: '#7A8A9A',
+      color: '#00e5ff',
       roughness: 0.45,
       metalness: 0.35,
     });
@@ -34,7 +34,7 @@ export class VolumetricCoil {
     loop2.rotation.x = Math.PI / 2;
 
     const handleMat = new THREE.MeshStandardMaterial({
-      color: '#5A6A7A',
+      color: '#00b8d4',
       roughness: 0.6,
       metalness: 0.3,
     });
@@ -42,7 +42,7 @@ export class VolumetricCoil {
     handle.position.y = 0.22;
 
     const casingMat = new THREE.MeshStandardMaterial({
-      color: '#4A5A6A',
+      color: '#0097a7',
       roughness: 0.5,
       metalness: 0.2,
     });
@@ -55,7 +55,7 @@ export class VolumetricCoil {
 
     const fieldGeo = new THREE.SphereGeometry(0.12, 16, 16);
     const fieldMat = new THREE.MeshBasicMaterial({
-      color: '#2E7D8A',
+      color: '#00e5ff',
       transparent: true,
       opacity: 0,
       depthWrite: false,

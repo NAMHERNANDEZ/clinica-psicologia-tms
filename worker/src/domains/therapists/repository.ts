@@ -1,4 +1,5 @@
 import type { Env, Therapist } from '../../types';
+import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export async function findTherapists(env: Env, clinicId: number): Promise<Therapist[]> {
   const result = await env.DB.prepare(
@@ -22,15 +23,7 @@ export async function createTherapist(env: Env, clinicId: number, data: { name: 
 }
 
 export async function updateTherapist(env: Env, clinicId: number, id: number, data: Partial<Therapist>): Promise<boolean> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'clinic_id' && key !== 'created_at') {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
+  const { fields, values } = sanitizeUpdateFields('therapists', data as Record<string, unknown>);
 
   if (fields.length === 0) return false;
   values.push(id, clinicId);
