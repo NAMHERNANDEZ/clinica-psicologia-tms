@@ -22,7 +22,7 @@ import { handleGetPatientProfiles, handleGetClinicProfiles, handleGetProfile, ha
 import { handleGetProfileSessions, handleCreateSession as handleCreateTmsSession, handleCompleteSession as handleCompleteTmsSession, handleUpdateSession as handleUpdateTmsSessionStatus } from './domains/tms-sessions/routes';
 import { handleGetPatientResponses, handleGetSessionResponse, handleRecordResponse, handleGetProgressCurve } from './domains/clinical-response/routes';
 import { handleGetPatientEffects, handleRecordEffect, handleResolveEffect, handleGetEffectStats } from './domains/adverse-effects/routes';
-import { handleGetPatientDashboard, handleAnalyzeResponse, handleSuggestAdjustment, handleGetProtocolEfficiency, handleGetTmsDashboard } from './domains/tms-engine/routes';
+import { handleGetPatientDashboard, handleAnalyzeResponse, handleSuggestAdjustment, handleGetProtocolEfficiency, handleGetTmsDashboard, handleCreateAssessment, handleGetAssessmentsByPatient, handleGetAssessmentsByType } from './domains/tms-engine/routes';
 import { handlePredictResponse, handleGetPatientPredictions, handleGetPredictionHistory, handleEvaluateConfidence } from './domains/digital-twin/routes';
 import { handleSimulateProtocol, handleCompareProtocols, handleGetComparisonHistory, handleGetSimulationDashboard, handleGetBrainState } from './domains/simulation/routes';
 import { handleGenerateReport, handleGetTreatmentSummary, handleExportCSV, handleGetReportHistory } from './domains/reports/routes';
@@ -226,6 +226,11 @@ export default {
       if (path.match(/^\/api\/tms\/engine\/patient\/\d+$/) && method === 'GET') return withCors(() => handleGetPatientDashboard(env, request, user!, corsHeaders), corsHeaders, requestId);
       if (path.match(/^\/api\/tms\/engine\/analyze\/\d+$/) && method === 'GET') return withCors(() => handleAnalyzeResponse(env, request, user!, corsHeaders), corsHeaders, requestId);
       if (path.match(/^\/api\/tms\/engine\/adjust\/\d+$/) && method === 'GET') return withCors(() => handleSuggestAdjustment(env, request, user!, corsHeaders), corsHeaders, requestId);
+
+      // FASE 5: CLINICAL ASSESSMENTS (escalas validadas)
+      if (path === '/api/assessments' && method === 'POST') return withCors(() => handleCreateAssessment(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path.match(/^\/api\/assessments\/patient\/\d+$/) && method === 'GET') return withCors(() => handleGetAssessmentsByPatient(env, request, user!, corsHeaders), corsHeaders, requestId);
+      if (path.match(/^\/api\/assessments\/patient\/\d+\/\w+$/) && method === 'GET') return withCors(() => handleGetAssessmentsByType(env, request, user!, corsHeaders), corsHeaders, requestId);
 
       // FASE 5: TMS PROTOCOLS
       if (path === '/api/tms/protocols' && method === 'GET') return withCors(() => handleGetProtocols(env, request, user!, corsHeaders), corsHeaders, requestId);

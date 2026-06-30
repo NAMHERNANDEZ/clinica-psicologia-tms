@@ -28,7 +28,7 @@ export function RealTimeMonitor({ activations, elapsed, pulseCount, coilIntensit
   const sorted = Object.entries(activations).sort(([, a], [, b]) => b - a);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-3">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-3 shadow-lg shadow-black/20">
       <div className="flex items-center justify-between">
         <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Monitor en Vivo</div>
         <span className="text-[10px] text-slate-400 font-mono">{formatTime(elapsed)}</span>
@@ -75,7 +75,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
     cyan: 'text-cyan-400', green: 'text-green-400', purple: 'text-purple-400',
   };
   return (
-    <div className="bg-slate-800/50 rounded-lg p-2 text-center">
+    <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-2 text-center">
       <div className="text-[9px] text-slate-500 uppercase">{label}</div>
       <div className={`text-xs font-bold font-mono mt-0.5 ${colors[color] || 'text-white'}`}>{value}</div>
     </div>

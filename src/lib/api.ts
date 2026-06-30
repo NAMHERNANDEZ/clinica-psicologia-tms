@@ -559,6 +559,37 @@ export const clinicalNotes = {
 };
 
 // ============================================
+// CLINICAL ASSESSMENTS (escalas validadas)
+// ============================================
+
+export interface ClinicalAssessment {
+  id: number;
+  patient_id: number;
+  assessment_type: string;
+  score: number;
+  max_score: number;
+  interpretation: string;
+  administered_at: string;
+}
+
+export const assessments = {
+  create: (data: {
+    patient_id: number;
+    assessment_type: string;
+    score: number;
+    max_score: number;
+    interpretation: string;
+    administered_at: string;
+  }) => request<{ success: boolean; data: { id: number } }>('/api/assessments', { method: 'POST', body: JSON.stringify(data) }),
+
+  listByPatient: (patientId: number) =>
+    request<{ success: boolean; data: ClinicalAssessment[] }>(`/api/assessments/patient/${patientId}`),
+
+  listByType: (patientId: number, assessmentType: string) =>
+    request<{ success: boolean; data: ClinicalAssessment[] }>(`/api/assessments/patient/${patientId}/${assessmentType}`),
+};
+
+// ============================================
 // TIMELINE
 // ============================================
 

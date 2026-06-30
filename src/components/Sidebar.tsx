@@ -30,6 +30,7 @@ const navByRole: Record<string, NavSection[]> = {
     ]},
     { items: [
       { path: '/app/reportes', label: 'Reportes', icon: ClipboardList },
+      { path: '/app/evaluaciones', label: 'Evaluaciones', icon: Activity },
       { path: '/app/configuracion', label: 'Configuración', icon: Settings },
     ]},
   ],
@@ -45,6 +46,9 @@ const navByRole: Record<string, NavSection[]> = {
       { path: '/app/tms/brain', label: 'Brain Viewer', icon: Activity },
       { path: '/app/tms/sesion', label: 'Sesión TMS', icon: Zap },
       { path: '/app/tms/simulador', label: 'Simulador', icon: LineChart },
+    ]},
+    { items: [
+      { path: '/app/evaluaciones', label: 'Evaluaciones', icon: Activity },
     ]},
     { label: 'Visual Engine', items: [
       { path: '/app/visual/tms', label: 'Monitor TMS', icon: Monitor },
@@ -81,21 +85,21 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, isMobile }: {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen bg-slate-900 text-white transition-all duration-300 z-40 flex flex-col ${sidebarWidth} ${
+      className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 text-white transition-all duration-300 z-40 flex flex-col border-r border-slate-700/20 ${sidebarWidth} ${
         isMobile && !mobileOpen ? '-translate-x-full' : 'translate-x-0'
       }`}
     >
-      <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} h-16 px-4 border-b border-slate-700/50`}>
+      <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} h-16 px-4 border-b border-slate-700/30`}>
         {!collapsed && (
           <Link to="/app/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-teal-500/20">
               <Brain className="w-5 h-5 text-white" />
             </div>
             <span className="text-sm font-bold tracking-tight">Neurociencia</span>
           </Link>
         )}
         {collapsed && (
-          <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-teal-500/20">
             <Brain className="w-5 h-5 text-white" />
           </div>
         )}
@@ -116,10 +120,10 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, isMobile }: {
                   key={item.path}
                   to={item.path}
                   title={collapsed ? item.label : undefined}
-                  className={`flex items-center ${collapsed ? 'justify-center' : ''} px-4 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center ${collapsed ? 'justify-center' : ''} px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-teal-600/20 text-teal-400 border-r-2 border-teal-400'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-teal-600/20 text-teal-400 shadow-[inset_3px_0_0_0_theme(colors.teal.400)]'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                   }`}
                 >
                   <item.icon className="w-5 h-5 flex-shrink-0" />

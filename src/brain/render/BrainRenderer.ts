@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { BrainScene } from './BrainScene';
 import { ConnectomeEngine } from '../simulation/ConnectomeEngine';
 import { CoordinateDebugger } from './CoordinateDebugger';
+import { NetworkActivationVisualizer } from './NetworkActivationVisualizer';
 import type { ProtocolPhase } from '../simulation/ProtocolStateMachine';
 
 interface WorkerStateUpdate {
@@ -44,6 +45,9 @@ export class BrainRenderer {
   private disposed = false;
   private currentTargetRegion = 'dlpfc_l';
   private coordDebugger: CoordinateDebugger;
+  private networkViz: NetworkActivationVisualizer | null = null;
+  private ambientParticles: THREE.Points | null = null;
+  private brainGlow: THREE.Mesh | null = null;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -63,8 +67,10 @@ export class BrainRenderer {
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.8;
+    this.renderer.toneMappingExposure = 1.2;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableRotate = true;
@@ -81,18 +87,25 @@ export class BrainRenderer {
     this.controls.rotateSpeed = 1.0;
     this.controls.zoomSpeed = 1.0;
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const key = new THREE.DirectionalLight(0xffffff, 0.8);
-    key.position.set(5, 5, 5);
-    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.4);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+    const key = new THREE.DirectionalLight(0xffffff, 0.7);
+    key.position.set(5, 8, 5);
+    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.35);
     fill.position.set(-5, 3, -3);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.3);
+    const rim = new THREE.DirectionalLight(0xC0D0FF, 0.25);
     rim.position.set(0, -3, -5);
-    this.scene.add(key, fill, rim);
+    const top = new THREE.DirectionalLight(0xE0E8F0, 0.2);
+    top.position.set(0, 10, 0);
+    const accent = new THREE.PointLight(0x4488CC, 0.25, 20);
+    accent.position.set(-3, 2, 3);
+    this.scene.add(key, fill, rim, top, accent);
 
     this.brainScene = new BrainScene(this.scene);
     await this.brainScene.init();
     this.connectome = new ConnectomeEngine();
+    this.networkViz = new NetworkActivationVisualizer(this.scene, this.connectome, this.brainScene.getRegions());
+    this.createAmbientParticles();
+    this.createBrainGlow();
 
     console.log('[BrainRenderer] Meshes:', this.brainScene.getBrainMeshCount());
 
@@ -110,6 +123,43 @@ export class BrainRenderer {
     this.canvas.addEventListener('click', this.onDebugClick);
     this.initWorker();
     window.addEventListener('resize', this.onResize);
+  }
+
+  private createAmbientParticles() {
+    const count = 200;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 12;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 12;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 12;
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({
+      color: 0x4466AA,
+      size: 0.012,
+      transparent: true,
+      opacity: 0.2,
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.ambientParticles = new THREE.Points(geometry, material);
+    this.scene.add(this.ambientParticles);
+  }
+
+  private createBrainGlow() {
+    const geometry = new THREE.SphereGeometry(2.0, 32, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x1A2A3A,
+      transparent: true,
+      opacity: 0.03,
+      side: THREE.BackSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.brainGlow = new THREE.Mesh(geometry, material);
+    this.scene.add(this.brainGlow);
   }
 
   private initWorker() {
@@ -177,11 +227,18 @@ export class BrainRenderer {
     this.currentPulseCount = protocol.pulseCount;
     this.currentCoilIntensity = protocol.coilIntensity;
     for (const [id, val] of Object.entries(activations)) this.brainScene.setActivation(id, val);
+    this.networkViz?.update(this.currentActivations, 0.016);
     const coil = this.brainScene.getCoilField();
     if (protocol.coilIntensity > 0.01 && protocol.phase !== 'idle' && protocol.phase !== 'complete') {
       const target = this.brainScene.getRegionPosition(this.currentTargetRegion) || this.brainScene.getRegionPosition('dlpfc_l');
-      if (target) coil.activate({ position: [target.x * 0.4, target.y * 0.4 + 2.0, target.z + 2.2], targetPosition: [target.x, target.y, target.z], intensity: protocol.coilIntensity });
-    } else { coil.deactivate(); }
+      if (target) {
+        coil.activate({ position: [target.x * 0.4, target.y * 0.4 + 2.0, target.z + 2.2], targetPosition: [target.x, target.y, target.z], intensity: protocol.coilIntensity });
+        const targetRegion = this.brainScene.getRegion(this.currentTargetRegion);
+        if (targetRegion) targetRegion.setActivation(Math.max(0.6, protocol.coilIntensity));
+      }
+    } else {
+      coil.deactivate();
+    }
     if (this.currentProtocolPhase !== protocol.phase) { this.currentProtocolPhase = protocol.phase; this.onProtocolPhaseChange?.(protocol.phase); }
     if (connectome.length > 0) this.connectome.matrix = connectome;
     this.onOverlayUpdate?.({ phase: protocol.phase, activations: this.currentActivations, coilIntensity: protocol.coilIntensity, pulseCount: protocol.pulseCount, connectome: this.connectome.matrix });
@@ -196,10 +253,21 @@ export class BrainRenderer {
       if (this.disposed) return;
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
+      const elapsed = this.clock.getElapsedTime();
       this.controls.update();
       this.brainScene.update(delta);
       this.brainScene.updateConnections(delta, this.currentActivations, this.connectome.matrix);
       this.brainScene.getCoilField().update(delta);
+      if (this.ambientParticles) {
+        this.ambientParticles.rotation.y += delta * 0.02;
+        this.ambientParticles.rotation.x += delta * 0.01;
+      }
+      if (this.brainGlow) {
+        const intensity = this.brainScene.getCoilField().getIntensity();
+        const mat = this.brainGlow.material as THREE.MeshBasicMaterial;
+        mat.opacity = 0.03 + intensity * 0.08 + Math.sin(elapsed * 0.5) * 0.01;
+        this.brainGlow.scale.setScalar(1.0 + Math.sin(elapsed * 0.3) * 0.02);
+      }
       this.renderer.render(this.scene, this.camera);
     };
     loop();
@@ -207,6 +275,19 @@ export class BrainRenderer {
 
   stop() {
     this.disposed = true;
+    this.networkViz?.dispose();
+    if (this.ambientParticles) {
+      this.scene.remove(this.ambientParticles);
+      this.ambientParticles.geometry.dispose();
+      (this.ambientParticles.material as THREE.Material).dispose();
+      this.ambientParticles = null;
+    }
+    if (this.brainGlow) {
+      this.scene.remove(this.brainGlow);
+      this.brainGlow.geometry.dispose();
+      (this.brainGlow.material as THREE.Material).dispose();
+      this.brainGlow = null;
+    }
     if (this.animationId) cancelAnimationFrame(this.animationId);
     if (this.workerReady && this.worker) {
       try { this.worker.postMessage({ type: 'STOP_TICK' }); } catch {}
@@ -253,6 +334,18 @@ export class BrainRenderer {
     if (!this.workerReady) return;
     this.worker.postMessage({ type: 'STOP_PROTOCOL' });
     this.brainScene.getCoilField().deactivate();
+  }
+
+  startTMSSession(regionId: string, intensity: number, frequency: number) {
+    this.runProtocol({
+      targetRegion: regionId,
+      protocol: { frequency_hz: frequency, intensity_pct_mt: intensity, duration_sec: 30, total_pulses: 3000 },
+      mtPct: intensity,
+    });
+  }
+
+  stopTMSSession() {
+    this.stopProtocol();
   }
   onPhaseChange(cb: (phase: ProtocolPhase) => void) { this.onProtocolPhaseChange = cb; }
   onOverlay(cb: (state: OverlayState) => void) { this.onOverlayUpdate = cb; }

@@ -27,7 +27,7 @@ export function ProtocolConfigPanel({
   const regionDefs = renderer?.getBrainScene().getRegionDefs() || [];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-3">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-3 shadow-lg shadow-black/20">
       <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Protocolo TMS</div>
 
       <select value={selectedPreset} onChange={e => onPresetChange(Number(e.target.value))}
@@ -65,12 +65,12 @@ export function ProtocolConfigPanel({
       <div className="flex gap-1 pt-1">
         {!isSimulating ? (
           <button onClick={onStart}
-            className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-medium py-1.5 rounded-lg transition-colors">
+            className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-medium py-1.5 rounded-lg transition-all duration-200 shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-[0.98]">
             Iniciar
           </button>
         ) : (
           <button onClick={onStop}
-            className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium py-1.5 rounded-lg transition-colors">
+            className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium py-1.5 rounded-lg transition-all duration-200 shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30 active:scale-[0.98]">
             Detener
           </button>
         )}

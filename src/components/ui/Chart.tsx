@@ -21,15 +21,15 @@ export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLab
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={className} style={{ maxHeight: height }}>
-      <line x1={pad.left} y1={pad.top} x2={pad.left} y2={height - pad.bottom} stroke="#e2e8f0" strokeWidth="1" />
-      <line x1={pad.left} y1={height - pad.bottom} x2={width - pad.right} y2={height - pad.bottom} stroke="#e2e8f0" strokeWidth="1" />
+      <line x1={pad.left} y1={pad.top} x2={pad.left} y2={height - pad.bottom} stroke="#334155" strokeWidth="1" />
+      <line x1={pad.left} y1={height - pad.bottom} x2={width - pad.right} y2={height - pad.bottom} stroke="#334155" strokeWidth="1" />
 
       {yLabels.map(v => {
         const y = pad.top + plotH - (v / maxVal) * plotH;
         return (
           <g key={v}>
-            <line x1={pad.left - 4} y1={y} x2={pad.left} y2={y} stroke="#cbd5e1" strokeWidth="1" />
-            <text x={pad.left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
+            <line x1={pad.left - 4} y1={y} x2={pad.left} y2={y} stroke="#475569" strokeWidth="1" />
+            <text x={pad.left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#64748b">{v}</text>
           </g>
         );
       })}
@@ -62,7 +62,7 @@ export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLab
               ) : (
                 <rect x="0" y="0" width="10" height="8" rx="1" fill={s.color} />
               )}
-              <text x="14" y="8" fontSize="9" fill="#64748b">{s.name}</text>
+              <text x="14" y="8" fontSize="9" fill="#475569">{s.name}</text>
             </g>
           ))}
         </g>

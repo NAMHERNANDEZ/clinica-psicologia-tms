@@ -40,7 +40,7 @@ export function PhaseIndicator({ overlay, isSimulating, elapsed }: PhaseIndicato
 
   return (
     <div className="absolute top-3 left-3 right-3 z-10 pointer-events-none">
-      <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700/50 rounded-xl p-3 max-w-md">
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-xl p-3 max-w-md shadow-xl shadow-black/40">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: PHASE_COLORS[phase] }} />
           <span className="text-[11px] font-mono font-semibold uppercase tracking-wider" style={{ color: PHASE_COLORS[phase] }}>

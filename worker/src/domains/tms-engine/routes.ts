@@ -1,6 +1,7 @@
 import type { Env, User } from '../../types';
 import { validatePatientId } from './validators';
 import * as service from './service';
+import * as repo from './repository';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
@@ -102,6 +103,69 @@ export async function handleGetTmsDashboard(env: Env, request: Request, user: Us
   try {
     const result = await service.getTmsDashboard(env, user.clinic_id);
     return json({ ...result, requestId }, 200, corsHeaders);
+  } catch (err) {
+    console.error('Handler error:', err);
+    return json({ success: false, error: 'Internal error', requestId }, 500, corsHeaders);
+  }
+}
+
+export async function handleCreateAssessment(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
+  const requestId = getRequestId();
+  try {
+    const body = await request.json();
+    const { patient_id, assessment_type, score, max_score, interpretation, administered_at } = body;
+
+    if (!patient_id || !assessment_type || score === undefined || !administered_at) {
+      return json({ success: false, error: 'Campos requeridos: patient_id, assessment_type, score, administered_at', requestId }, 400, corsHeaders);
+    }
+
+    const id = await repo.insertAssessment(env, {
+      clinic_id: user.clinic_id,
+      patient_id,
+      therapist_id: user.id,
+      assessment_type,
+      score,
+      max_score: max_score || 100,
+      interpretation: interpretation || '',
+      administered_at,
+    });
+
+    return json({ success: true, data: { id }, requestId }, 201, corsHeaders);
+  } catch (err) {
+    console.error('Handler error:', err);
+    return json({ success: false, error: 'Internal error', requestId }, 500, corsHeaders);
+  }
+}
+
+export async function handleGetAssessmentsByPatient(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
+  const requestId = getRequestId();
+  try {
+    const patientId = getPatientIdFromUrl(request);
+    if (patientId === null) {
+      return json({ success: false, error: 'patient_id inválido', requestId }, 400, corsHeaders);
+    }
+    const assessments = await repo.getAssessmentsByPatient(env, patientId);
+    return json({ success: true, data: assessments, requestId }, 200, corsHeaders);
+  } catch (err) {
+    console.error('Handler error:', err);
+    return json({ success: false, error: 'Internal error', requestId }, 500, corsHeaders);
+  }
+}
+
+export async function handleGetAssessmentsByType(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
+  const requestId = getRequestId();
+  try {
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split('/');
+    const patientId = parseInt(pathSegments[pathSegments.length - 2]);
+    const assessmentType = pathSegments[pathSegments.length - 1];
+
+    if (isNaN(patientId) || !assessmentType) {
+      return json({ success: false, error: 'Parámetros inválidos', requestId }, 400, corsHeaders);
+    }
+
+    const assessments = await repo.getAssessmentsByType(env, patientId, assessmentType);
+    return json({ success: true, data: assessments, requestId }, 200, corsHeaders);
   } catch (err) {
     console.error('Handler error:', err);
     return json({ success: false, error: 'Internal error', requestId }, 500, corsHeaders);
