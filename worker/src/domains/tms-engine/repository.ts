@@ -233,3 +233,36 @@ export async function getProtocolDistribution(env: Env, clinicId: number): Promi
   ).bind(clinicId).all<{ indication: string; count: number }>();
   return results;
 }
+
+export async function insertAssessment(env: Env, data: {
+  clinic_id: number;
+  patient_id: number;
+  therapist_id: number;
+  assessment_type: string;
+  score: number;
+  max_score: number;
+  interpretation: string;
+  administered_at: string;
+}): Promise<number> {
+  const result = await env.DB.prepare(
+    `INSERT INTO clinical_assessments (clinic_id, patient_id, therapist_id, assessment_type, score, max_score, interpretation, administered_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(data.clinic_id, data.patient_id, data.therapist_id, data.assessment_type, data.score, data.max_score, data.interpretation, data.administered_at).run();
+  return result.meta?.last_row_id as number;
+}
+
+export async function getAssessmentsByPatient(env: Env, patientId: number): Promise<ClinicalAssessment[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, patient_id, assessment_type, score, max_score, administered_at
+     FROM clinical_assessments WHERE patient_id = ? ORDER BY administered_at DESC`
+  ).bind(patientId).all<ClinicalAssessment>();
+  return results;
+}
+
+export async function getAssessmentsByType(env: Env, patientId: number, assessmentType: string): Promise<ClinicalAssessment[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, patient_id, assessment_type, score, max_score, administered_at
+     FROM clinical_assessments WHERE patient_id = ? AND assessment_type = ? ORDER BY administered_at DESC`
+  ).bind(patientId, assessmentType).all<ClinicalAssessment>();
+  return results;
+}

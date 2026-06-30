@@ -35,6 +35,8 @@ export class CoordinateDebugger {
       [-0.55, -0.25, -0.45],// WERNICKE
       [-0.32, 0.00, 0.29],  // INSULA L
       [0.30, 0.05, 0.28],   // INSULA R
+      [0.0, -0.30, -0.70],  // OCCIPITAL
+      [-0.55, -0.30, 0.10], // TEMPORAL L
     ];
 
     const labels = [

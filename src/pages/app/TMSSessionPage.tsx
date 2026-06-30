@@ -21,11 +21,20 @@ const TMS_PRESETS = [
   { name: 'Dolor (HF)', region: 'm1_l', frequency: 10, intensity: 90, duration: 20, pulses: 2000 },
   { name: 'TOC (HF)', region: 'acc', frequency: 10, intensity: 100, duration: 25, pulses: 2500 },
   { name: 'Afasia', region: 'broca', frequency: 20, intensity: 90, duration: 20, pulses: 2000 },
+  { name: 'TEPT', region: 'dlpfc_l', frequency: 1, intensity: 100, duration: 30, pulses: 1800 },
+  { name: 'Migraña', region: 'm1_l', frequency: 10, intensity: 80, duration: 15, pulses: 1500 },
+  { name: 'Tabaquismo', region: 'dlpfc_l', frequency: 20, intensity: 100, duration: 30, pulses: 3000 },
+  { name: 'Tinnitus', region: 'temporal_l', frequency: 1, intensity: 90, duration: 25, pulses: 1500 },
+  { name: 'Fibromialgia', region: 'm1_l', frequency: 10, intensity: 80, duration: 25, pulses: 2500 },
+  { name: 'Dolor neuropático', region: 'm1_l', frequency: 10, intensity: 100, duration: 20, pulses: 2000 },
+  { name: 'Esquizofrenia', region: 'dlpfc_l', frequency: 20, intensity: 90, duration: 20, pulses: 2000 },
+  { name: 'Insomnio', region: 'dlpfc_l', frequency: 1, intensity: 80, duration: 20, pulses: 1200 },
 ];
 
 const REGION_LABELS: Record<string, string> = {
   dlpfc_l: 'DLPFC-Izq', dlpfc_r: 'DLPFC-Der', m1_l: 'M1-Izq', m1_r: 'M1-Der',
-  sma: 'SMA', acc: 'ACC', insula_l: 'Ínsula-Izq', insula_r: 'Ínsula-Der', broca: 'Broca', wernicke: 'Wernicke',
+  sma: 'SMA', acc: 'ACC', insula_l: 'Ínsula-Izq', insula_r: 'Ínsula-Der',
+  broca: 'Broca', wernicke: 'Wernicke', occipital: 'Occipital', temporal_l: 'Temporal-Izq',
 };
 
 export default function TMSSessionPage() {
@@ -144,10 +153,11 @@ export default function TMSSessionPage() {
 
           {/* Columna central: Visor 3D */}
           <div className="col-span-6">
-            <div className="relative rounded-xl overflow-hidden bg-[#080C12] border border-slate-800" style={{ height: '600px' }}>
+            <div className="relative rounded-xl overflow-hidden bg-[#080C12] border border-slate-800 shadow-xl shadow-black/30" style={{ height: '600px' }}>
               <Brain3DErrorBoundary fallback={<div className="flex items-center justify-center h-full text-slate-500 text-xs">Error al cargar visor 3D</div>}>
                 <BrainCanvas ref={brainRef} />
               </Brain3DErrorBoundary>
+              <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(8,12,18,0.7) 100%)' }} />
               <PhaseIndicator overlay={overlay} isSimulating={isSimulating} elapsed={elapsed} />
               {selectedRegion && (
                 <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none">
@@ -189,12 +199,12 @@ export default function TMSSessionPage() {
               <div className="flex gap-1 pt-1">
                 {!isSimulating ? (
                   <button onClick={startSimulation}
-                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-medium py-2 rounded-lg transition-colors">
+                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-medium py-2 rounded-lg transition-all duration-200 shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-[0.98]">
                     Iniciar Sesión
                   </button>
                 ) : (
                   <button onClick={stopSimulation}
-                    className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium py-2 rounded-lg transition-colors">
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium py-2 rounded-lg transition-all duration-200 shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30 active:scale-[0.98]">
                     Detener
                   </button>
                 )}

@@ -1,7 +1,7 @@
 export const ClinicalColors = {
-  background: '#0A0E14',
-  brainBase: '#9BA8B5',
-  brainInner: '#7A8A9A',
+  background: '#080C12',
+  brainBase: '#7E8C96',
+  brainInner: '#6B7A84',
   idle: '#5A6A7A',
   low: '#4A90A4',
   mid: '#3B7BB5',

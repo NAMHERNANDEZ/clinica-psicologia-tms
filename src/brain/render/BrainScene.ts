@@ -4,6 +4,7 @@ import { RegionMesh } from './RegionMesh';
 import { VolumetricCoil } from './VolumetricCoil';
 import { ConnectionLines } from './ConnectionLines';
 import { ClinicalColors } from './MaterialLibrary';
+import { TMSRegionMarkers } from './TMSRegionMarkers';
 
 interface RegionDef {
   id: string;
@@ -24,6 +25,8 @@ const REGIONS: RegionDef[] = [
   { id: 'insula_r', name: 'INS-R', dir: [0.30, 0.05, 0.28], radius: 0.08, connections: ['acc', 'dlpfc_r'] },
   { id: 'broca', name: 'BRC', dir: [-0.47, -0.36, 0.64], radius: 0.08, connections: ['wernicke'] },
   { id: 'wernicke', name: 'WRN', dir: [-0.55, -0.25, -0.45], radius: 0.08, connections: ['broca'] },
+  { id: 'occipital', name: 'OCC', dir: [0.0, -0.30, -0.70], radius: 0.09, connections: ['temporal_l'] },
+  { id: 'temporal_l', name: 'TMP-L', dir: [-0.55, -0.30, 0.10], radius: 0.08, connections: ['wernicke', 'broca', 'occipital'] },
 ];
 
 export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
@@ -40,6 +43,7 @@ export class BrainScene {
   private loadStatus: BrainLoadStatus = 'loading';
   private loadDetail = '';
   private allMeshNames: string[] = [];
+  private tmsMarkers: TMSRegionMarkers | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -55,6 +59,8 @@ export class BrainScene {
     this.createConnectionLines();
     this.coilField.init();
     this.scene.add(this.coilField.object3D);
+    this.tmsMarkers = new TMSRegionMarkers(this.scene, this.regions);
+    this.tmsMarkers.createAll();
     console.log(`[BrainScene] ${this.loadStatus} | ${this.loadDetail}`);
   }
 
@@ -65,12 +71,14 @@ export class BrainScene {
         loader.load('/models/brain_lowpoly.glb', resolve, undefined, reject);
       });
 
-      const brainMat = new THREE.MeshStandardMaterial({
+      const brainMat = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(ClinicalColors.brainBase),
-        roughness: 0.55,
+        roughness: 0.6,
         metalness: 0.02,
         side: THREE.DoubleSide,
         flatShading: true,
+        clearcoat: 0.15,
+        clearcoatRoughness: 0.6,
       });
 
       gltf.scene.traverse((child: any) => {
@@ -134,14 +142,22 @@ export class BrainScene {
     }
   }
 
-  update(delta: number) { this.regions.forEach(r => r.update(delta)); }
+  update(delta: number) {
+    this.regions.forEach(r => r.update(delta));
+    this.tmsMarkers?.update(delta);
+  }
   updateConnections(delta: number, activations: Map<string, number>, connectome: number[][]) {
     this.connectionLines.update(delta, activations, connectome, this.regionDefs.map(r => r.id));
   }
-  setActivation(id: string, value: number) { this.regions.get(id)?.setActivation(value); }
+  setActivation(id: string, value: number) {
+    this.regions.get(id)?.setActivation(value);
+    this.tmsMarkers?.setActivation(id, value);
+  }
   getRegion(id: string) { return this.regions.get(id); }
+  getRegions() { return this.regions; }
   getRegionDefs() { return this.regionDefs; }
   getCoilField() { return this.coilField; }
+  getTmsMarkers() { return this.tmsMarkers; }
   getRegionPosition(id: string) { return this.regions.get(id)?.mesh.position.clone(); }
   getLoadStatus() { return this.loadStatus; }
   getLoadDetail() { return this.loadDetail; }
@@ -149,6 +165,7 @@ export class BrainScene {
   getBrainMeshCount() { return this.brainMeshes.length; }
   getModel() { return this.brainGroup.children[0] || null; }
   dispose() {
+    this.tmsMarkers?.dispose();
     this.connectionLines.dispose(this.scene);
     this.regions.forEach(r => {
       r.meshes.forEach(m => {

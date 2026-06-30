@@ -36,6 +36,7 @@ const DigitalTwinPage = lazy(() => import('./pages/app/DigitalTwinPage'));
 const SimulatorPage = lazy(() => import('./pages/app/SimulatorPage'));
 const ReportsPage = lazy(() => import('./pages/app/ReportsPage'));
 const SettingsPage = lazy(() => import('./pages/app/SettingsPage'));
+const ClinicalAssessmentsPage = lazy(() => import('./pages/app/ClinicalAssessmentsPage'));
 const VisualBrainPage = lazy(() => import('./pages/visual/VisualBrainPage'));
 const VisualTMSPage = lazy(() => import('./pages/visual/VisualTMSPage'));
 const VisualTwinPage = lazy(() => import('./pages/visual/VisualTwinPage'));
@@ -111,6 +112,7 @@ function App() {
                 <Route path="tms/twin" element={<DigitalTwinPage />} />
                 <Route path="tms/simulador" element={<SimulatorPage />} />
                 <Route path="reportes" element={<ReportsPage />} />
+                <Route path="evaluaciones" element={<ClinicalAssessmentsPage />} />
                 <Route path="configuracion" element={<SettingsPage />} />
                 <Route path="citas" element={<AgendaPage />} />
                 <Route path="visual/brain/:id" element={<VisualBrainPage />} />
