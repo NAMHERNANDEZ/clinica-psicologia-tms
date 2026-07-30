@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { patients, assessments, type Patient, type ClinicalAssessment } from '../../lib/api';
+import { patients, assessments, safeArray, type Patient, type ClinicalAssessment } from '../../lib/api';
 import { CLINICAL_SCALES, getAllScales, interpretScale, type ScaleDefinition } from '../../lib/clinicalScales';
 import { ScaleForm } from '../../components/clinical/ScaleForm';
 import { VASSlider } from '../../components/clinical/VASSlider';
@@ -8,26 +8,30 @@ import { LineChart } from '../../components/ui/Chart';
 import { ClipboardList, Plus, ChevronDown, ChevronUp, Activity, Beaker, Bell, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 const SCALE_FREQUENCY_DAYS: Record<string, number> = {
-  phq9: 14,
-  gad7: 14,
-  ybocs: 21,
-  vas: 1,
-  psqi: 28,
-  ftnd: 999,
-  thi: 21,
-  pcl5: 14,
-};
+phq9: 14,
+    gad7: 14,
+    ybocs: 21,
+    vas: 1,
+    psqi: 28,
+    ftnd: 999,
+    thi: 21,
+    pcl5: 14,
+    bdii: 14,
+    moca: 30,
+  };
 
-const SCALE_FREQUENCY_LABELS: Record<string, string> = {
-  phq9: 'Cada 2 semanas',
-  gad7: 'Cada 2 semanas',
-  ybocs: 'Cada 3 semanas',
-  vas: 'Cada sesión',
-  psqi: 'Cada 4 semanas',
-  ftnd: 'Inicio y fin',
-  thi: 'Cada 3 semanas',
-  pcl5: 'Cada 2 semanas',
-};
+  const SCALE_FREQUENCY_LABELS: Record<string, string> = {
+    phq9: 'Cada 2 semanas',
+    gad7: 'Cada 2 semanas',
+    ybocs: 'Cada 3 semanas',
+    vas: 'Cada sesión',
+    psqi: 'Cada 4 semanas',
+    ftnd: 'Inicio y fin',
+    thi: 'Cada 3 semanas',
+    pcl5: 'Cada 2 semanas',
+    bdii: 'Cada 2 semanas',
+    moca: 'Cada 4 semanas',
+  };
 
 interface ScaleReminder {
   scale: ScaleDefinition;
@@ -95,12 +99,12 @@ export default function ClinicalAssessmentsPage() {
   const dueReminders = reminders.filter(r => r.status === 'due');
 
   useEffect(() => {
-    patients.list().then(res => setPatientList(res.data || [])).catch(() => {}).finally(() => setLoading(false));
+    patients.list().then(res => setPatientList(safeArray(res.data))).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (demoMode || !selectedPatientId) { setPatientAssessments([]); return; }
-    assessments.listByPatient(selectedPatientId).then(res => setPatientAssessments(res.data || [])).catch(() => {});
+    assessments.listByPatient(selectedPatientId).then(res => setPatientAssessments(safeArray(res.data))).catch(() => {});
   }, [selectedPatientId, demoMode]);
 
   const handleScaleComplete = async (score: number, interpretation: string, color: string, _answers: Record<string, number>) => {
@@ -130,7 +134,7 @@ export default function ClinicalAssessmentsPage() {
         administered_at: new Date().toISOString(),
       });
       const res = await assessments.listByPatient(selectedPatientId);
-      setPatientAssessments(res.data || []);
+      setPatientAssessments(safeArray(res.data));
     } catch (err) {
       console.error('Error saving assessment:', err);
     }
@@ -163,7 +167,7 @@ export default function ClinicalAssessmentsPage() {
         administered_at: new Date().toISOString(),
       });
       const res = await assessments.listByPatient(selectedPatientId);
-      setPatientAssessments(res.data || []);
+      setPatientAssessments(safeArray(res.data));
     } catch (err) {
       console.error('Error saving assessment:', err);
     }

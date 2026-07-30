@@ -255,6 +255,77 @@ export const CLINICAL_SCALES: Record<string, ScaleDefinition> = {
       { max: 80, label: 'Síntomas muy severos', color: '#EF4444' },
     ],
   },
+
+  bdii: {
+    id: 'bdii',
+    name: 'BDI-II',
+    fullName: 'Beck Depression Inventory-II',
+    description: 'Inventario de depresión de Beck. 21 ítems, cada uno 0-3. Estándar de oro.',
+    condition: 'Depresión',
+    maxScore: 63,
+    timeToComplete: '~5 min',
+    source: 'Beck et al., 1996',
+    items: [
+      { id: 'bdii_1', text: 'Tristeza', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poca' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+      { id: 'bdii_2', text: 'Pérdida de interés', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poca' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+      { id: 'bdii_3', text: 'Pérdida de energía', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poca' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+      { id: 'bdii_4', text: 'Trastorno del sueño', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Insomnio leve' }, { value: 2, label: 'Insomnio moderado' }, { value: 3, label: 'Insomnio severo' }] },
+      { id: 'bdii_5', text: 'Pérdida de apetito', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Reducido' }, { value: 2, label: 'Mucho' }, { value: 3, label: 'Muy mucho' }] },
+      { id: 'bdii_6', text: 'Sentirse fracasado', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_7', text: 'Pérdida de placer', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_8', text: 'Sentirse culpable', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_9', text: 'Castigo personal', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_10', text: 'Indignación', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Muy poca' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+      { id: 'bdii_11', text: 'Desconfianza hacia otros', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_12', text: 'Apreciación distorsionada de sí mismo', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_13', text: 'Ideas de culpa', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_14', text: 'Ganas de llorar', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'A veces' }, { value: 2, label: 'Frecuente' }, { value: 3, label: 'Siempre' }] },
+      { id: 'bdii_15', text: 'Irritabilidad', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_16', text: 'Retraimiento social', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_17', text: 'Dificultad para decidir', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_18', text: 'Cambio en apariencia', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_19', text: 'Trabajo difícil', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderado' }, { value: 3, label: 'Mucho' }] },
+      { id: 'bdii_20', text: 'Fatiga', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+      { id: 'bdii_21', text: 'Pérdida de interés sexual', options: [{ value: 0, label: 'Nada' }, { value: 1, label: 'Poco' }, { value: 2, label: 'Moderada' }, { value: 3, label: 'Mucha' }] },
+    ],
+    interpretation: [
+      { max: 13, label: 'Mínima', color: '#22C55E' },
+      { max: 19, label: 'Leve', color: '#84CC16' },
+      { max: 28, label: 'Moderada', color: '#F59E0B' },
+      { max: 42, label: 'Severa', color: '#F97316' },
+      { max: 63, label: 'Muy severa', color: '#EF4444' },
+    ],
+  },
+
+  moca: {
+    id: 'moca',
+    name: 'MoCA',
+    fullName: 'Montreal Cognitive Assessment',
+    description: 'Screening cognitivo de 30 puntos. Atención, memoria, lenguaje y funciones ejecutivas.',
+    condition: 'Cognitivo, Neurología, Baseline TMS',
+    maxScore: 30,
+    timeToComplete: '~10 min',
+    source: 'Nasreddine et al., 2005',
+    items: [
+      { id: 'moca_1', text: 'Atención sostenida (digit span forward)', options: [{ value: 0, label: '0' }, { value: 1, label: '1-3' }, { value: 2, label: '4-5' }] },
+      { id: 'moca_2', text: 'Atención sostenida (digit span backward)', options: [{ value: 0, label: '0' }, { value: 1, label: '1-2' }, { value: 2, label: '3-4' }] },
+      { id: 'moca_3', text: 'Atención sostenida (serial 7s)', options: [{ value: 0, label: '0 correctos' }, { value: 1, label: '1 correcto' }, { value: 2, label: '2+ correctos' }] },
+      { id: 'moca_4', text: 'Fluencia verbal (F en 1 min)', options: [{ value: 0, label: '0-9' }, { value: 1, label: '10-14' }, { value: 2, label: '15+' }] },
+      { id: 'moca_5', text: 'Abstracción (ideas similares)', options: [{ value: 0, label: '0 pares' }, { value: 1, label: '1 par' }, { value: 2, label: '2 pares' }] },
+      { id: 'moca_6', text: 'Memoria de corto plazo (3 palabras)', options: [{ value: 0, label: '0' }, { value: 1, label: '1-2' }, { value: 2, label: '3' }] },
+      { id: 'moca_7', text: 'Lenguaje (nombre del reloj)', options: [{ value: 0, label: 'Incorrecto' }, { value: 1, label: 'Parcialmente correcto' }, { value: 2, label: 'Correcto' }] },
+      { id: 'moca_8', text: 'Orientación (fecha y lugar)', options: [{ value: 0, label: '0-3' }, { value: 1, label: '4-5' }, { value: 2, label: '6' }] },
+      { id: 'moca_9', text: 'Memoria de trabajo (backward)', options: [{ value: 0, label: '0' }, { value: 1, label: '1-2' }, { value: 2, label: '3+' }] },
+      { id: 'moca_10', text: 'Función ejecutiva (trail making)', options: [{ value: 0, label: 'Incorrecto' }, { value: 1, label: 'Con errores' }, { value: 2, label: 'Correcto' }] },
+    ],
+    interpretation: [
+      { max: 25, label: 'Demencia', color: '#EF4444' },
+      { max: 22, label: 'Declive leve', color: '#F97316' },
+      { max: 18, label: 'Deterioro moderado', color: '#F59E0B' },
+      { max: 15, label: 'Deterioro severo', color: '#DC2626' },
+      { max: 30, label: 'Normal', color: '#22C55E' },
+    ],
+  },
 };
 
 export function getScaleById(id: string): ScaleDefinition | undefined {
@@ -294,6 +365,8 @@ export function getRemissionThreshold(scaleId: string): number | null {
     psqi: 5,
     ftnd: 2,
     pcl5: 30,
+    bdii: 13,
+    moca: 26,
   };
   return thresholds[scaleId] ?? null;
 }
@@ -304,6 +377,8 @@ export function getResponseThreshold(scaleId: string): number | null {
     gad7: 0.5,
     ybocs: 0.35,
     psqi: 0.3,
+    bdii: 0.5,
+    moca: 0.1,
   };
   return thresholds[scaleId] ?? null;
 }
