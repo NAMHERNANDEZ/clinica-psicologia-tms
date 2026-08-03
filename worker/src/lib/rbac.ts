@@ -13,7 +13,8 @@ export type Permission =
   | 'sessions:read' | 'sessions:write'
   | 'templates:read' | 'templates:write' | 'templates:delete'
   | 'timeline:read' | 'timeline:write'
-  | 'treatments:read' | 'treatments:write' | 'treatments:delete';
+  | 'treatments:read' | 'treatments:write' | 'treatments:delete'
+  | 'documents:read' | 'documents:write' | 'documents:sign' | 'documents:archive';
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [
@@ -25,6 +26,12 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reports:read', 'reports:write',
     'cos:read',
     'admin:access',
+    'clinical_notes:read', 'clinical_notes:write', 'clinical_notes:delete',
+    'sessions:read', 'sessions:write',
+    'templates:read', 'templates:write', 'templates:delete',
+    'timeline:read', 'timeline:write',
+    'treatments:read', 'treatments:write', 'treatments:delete',
+    'documents:read', 'documents:write', 'documents:sign', 'documents:archive',
   ],
   therapist: [
     'patients:read',
@@ -32,14 +39,21 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'tms:read', 'tms:write',
     'clinical:read', 'clinical:write',
     'reports:read',
+    'clinical_notes:read', 'clinical_notes:write',
+    'sessions:read', 'sessions:write',
+    'treatments:read', 'treatments:write',
+    'timeline:read', 'timeline:write',
+    'documents:read', 'documents:write',
   ],
   reception: [
     'patients:read', 'patients:write',
     'therapists:read',
     'appointments:read', 'appointments:write',
+    'documents:read',
   ],
   patient: [
     'appointments:read',
+    'documents:read',
   ],
 };
 
