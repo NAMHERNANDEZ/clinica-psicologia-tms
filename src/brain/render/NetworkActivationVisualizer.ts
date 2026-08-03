@@ -5,7 +5,7 @@ import type { RegionMesh } from './RegionMesh';
 const REGION_FUNCTION_COLORS: Record<string, string> = {
   dlpfc_l: '#06b6d4', dlpfc_r: '#14b8a6', m1_l: '#ef4444', m1_r: '#f97316',
   sma: '#818cf8', acc: '#8b5cf6', insula_l: '#a855f7', insula_r: '#ec4899',
-  broca: '#22c55e', wernicke: '#3b82f6', occipital: '#a3e635', temporal_l: '#c084fc',
+  broca: '#22c55e', temporal: '#c084fc',
 };
 
 interface BurstEffect {
@@ -85,7 +85,7 @@ export class NetworkActivationVisualizer {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const material = new THREE.PointsMaterial({
-      color, size: 0.025 * intensity, transparent: true, opacity: 0.85,
+      color, size: 0.03 * intensity, transparent: true, opacity: 0.9,
       blending: THREE.AdditiveBlending, sizeAttenuation: true,
     });
 
@@ -132,8 +132,8 @@ export class NetworkActivationVisualizer {
 
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineDashedMaterial({
-        color: lineColor, dashSize: 0.04, gapSize: 0.02,
-        transparent: true, opacity: 0.6 * weight * intensity,
+        color: lineColor, dashSize: 0.05, gapSize: 0.02,
+        transparent: true, opacity: 0.7 * weight * intensity,
         blending: THREE.AdditiveBlending,
       });
 

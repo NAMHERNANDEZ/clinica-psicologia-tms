@@ -2,15 +2,21 @@ import type { Env } from '../types';
 
 const RATE_LIMIT_MAX = 100;
 const RATE_LIMIT_WINDOW = 15 * 60;
+const LOGIN_RATE_LIMIT_MAX = 5;
+const LOGIN_RATE_LIMIT_WINDOW = 15 * 60;
 
 export function getClientIP(request: Request): string {
   return request.headers.get('CF-Connecting-IP') ||
     request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
 }
 
-export async function checkRateLimit(env: Env, ip: string, endpoint: string): Promise<{ allowed: boolean; remaining: number }> {
+export function getUserAgent(request: Request): string {
+  return request.headers.get('User-Agent') || 'unknown';
+}
+
+async function checkGenericRateLimit(env: Env, ip: string, endpoint: string, max: number, windowSec: number): Promise<{ allowed: boolean; remaining: number }> {
   const now = new Date().toISOString();
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW * 1000).toISOString();
+  const windowStart = new Date(Date.now() - windowSec * 1000).toISOString();
 
   await env.DB.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(windowStart).run();
 
@@ -20,16 +26,24 @@ export async function checkRateLimit(env: Env, ip: string, endpoint: string): Pr
 
   if (existing) {
     const count = existing.request_count as number;
-    if (count >= RATE_LIMIT_MAX) return { allowed: false, remaining: 0 };
+    if (count >= max) return { allowed: false, remaining: 0 };
     await env.DB.prepare("UPDATE rate_limits SET request_count = request_count + 1 WHERE id = ?").bind(existing.id).run();
-    return { allowed: true, remaining: RATE_LIMIT_MAX - count - 1 };
+    return { allowed: true, remaining: max - count - 1 };
   }
 
   await env.DB.prepare(
     "INSERT INTO rate_limits (ip_address, endpoint, request_count, window_start) VALUES (?, ?, 1, ?)"
   ).bind(ip, endpoint, now).run();
 
-  return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  return { allowed: true, remaining: max - 1 };
+}
+
+export async function checkRateLimit(env: Env, ip: string, endpoint: string): Promise<{ allowed: boolean; remaining: number }> {
+  return checkGenericRateLimit(env, ip, endpoint, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+}
+
+export async function checkLoginRateLimit(env: Env, ip: string, email: string): Promise<{ allowed: boolean; remaining: number }> {
+  return checkGenericRateLimit(env, ip, `login:${email}`, LOGIN_RATE_LIMIT_MAX, LOGIN_RATE_LIMIT_WINDOW);
 }
 
 export function rateLimitHeaders(remaining: number): Record<string, string> {

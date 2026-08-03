@@ -17,7 +17,7 @@ export default function Reminders() {
   const loadReminders = async () => {
     try {
       const res = await remindersApi.list();
-      setReminders(res.data || []);
+      setReminders(safeArray(res.data));
     } catch (error) {
       console.error('Error loading reminders:', error);
     } finally {

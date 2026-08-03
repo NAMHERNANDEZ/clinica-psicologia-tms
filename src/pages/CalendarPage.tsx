@@ -31,7 +31,7 @@ export default function CalendarPage() {
   const loadAppointments = async () => {
     try {
       const res = await appointmentsApi.list();
-      setAppointmentsList(res.data || []);
+      setAppointmentsList(safeArray(res.data));
     } catch (error) {
       console.error('Error loading appointments:', error);
     }

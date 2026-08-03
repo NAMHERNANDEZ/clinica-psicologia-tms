@@ -24,17 +24,6 @@ export interface ProtocolState {
   config: ProtocolConfig | null;
 }
 
-const PHASE_DURATIONS: Record<ProtocolPhase, number> = {
-  idle: 0,
-  approach: 500,
-  ramp: 800,
-  propagation: 1000,
-  peak: 1200,
-  cooldown: 600,
-  complete: 0,
-};
-
-const PHASE_ORDER: ProtocolPhase[] = ['approach', 'ramp', 'propagation', 'peak', 'cooldown', 'complete'];
 
 export function createProtocolState(): ProtocolState {
   return {
@@ -81,29 +70,46 @@ export function stepProtocol(
   const cfg = state.config;
   if (!cfg) return { protocolState: { ...state, phase: 'complete' }, brainState, connectome };
 
-  const newPhaseTime = state.phaseTime + dt * 1000;
-  const phaseDuration = PHASE_DURATIONS[state.phase];
+  const newTotalElapsed = state.totalElapsed + dt * 1000;
+  const totalDurationMs = cfg.durationSec * 1000;
+  const approachMs = 500;
+  const rampMs = 1000;
+  const cooldownMs = 800;
 
   let newPhase = state.phase;
   let newCoilIntensity = state.coilIntensity;
   let newPulseCount = state.pulseCount;
   let newNextPulseIn = state.nextPulseIn;
 
-  if (newPhaseTime >= phaseDuration) {
-    const currentIdx = PHASE_ORDER.indexOf(state.phase);
-    if (currentIdx < PHASE_ORDER.length - 1) {
-      newPhase = PHASE_ORDER[currentIdx + 1];
-    }
+  if (newTotalElapsed < approachMs) {
+    newPhase = 'approach';
+  } else if (newTotalElapsed < approachMs + rampMs) {
+    newPhase = 'ramp';
+  } else if (newTotalElapsed < totalDurationMs - cooldownMs) {
+    newPhase = newTotalElapsed < totalDurationMs * 0.5 ? 'propagation' : 'peak';
+  } else if (newTotalElapsed < totalDurationMs) {
+    newPhase = 'cooldown';
+  } else {
+    newPhase = 'complete';
   }
 
   const effectiveIntensity = (cfg.mtPct * cfg.intensityPctMt) / 10000;
 
   switch (newPhase) {
-    case 'approach':
-      newCoilIntensity = Math.min(0.2, effectiveIntensity * 0.3);
+    case 'approach': {
+      const progress = newTotalElapsed / approachMs;
+      newCoilIntensity = Math.min(0.2, effectiveIntensity * 0.3 * progress);
+      newNextPulseIn -= dt * 1000;
+      if (newNextPulseIn <= 0 && state.targetIdx >= 0) {
+        brainState = applyExternalStimulus(brainState, state.targetIdx, newCoilIntensity * 0.3);
+        newPulseCount++;
+        newNextPulseIn = 1000 / cfg.frequencyHz;
+      }
       break;
-    case 'ramp':
-      newCoilIntensity = effectiveIntensity * 0.6;
+    }
+    case 'ramp': {
+      const progress = (newTotalElapsed - approachMs) / rampMs;
+      newCoilIntensity = effectiveIntensity * (0.3 + progress * 0.55);
       newNextPulseIn -= dt * 1000;
       if (newNextPulseIn <= 0 && state.targetIdx >= 0) {
         brainState = applyExternalStimulus(brainState, state.targetIdx, newCoilIntensity);
@@ -111,6 +117,7 @@ export function stepProtocol(
         newNextPulseIn = 1000 / cfg.frequencyHz;
       }
       break;
+    }
     case 'propagation':
       newCoilIntensity = effectiveIntensity * 0.85;
       newNextPulseIn -= dt * 1000;
@@ -131,10 +138,12 @@ export function stepProtocol(
       }
       connectome = applyPlasticity(connectome, brainState, { learningRate: 0.01 });
       break;
-    case 'cooldown':
-      newCoilIntensity *= 0.95;
+    case 'cooldown': {
+      const progress = (newTotalElapsed - (totalDurationMs - cooldownMs)) / cooldownMs;
+      newCoilIntensity = effectiveIntensity * Math.max(0, 1 - progress);
       brainState = decayState(brainState, 0.02);
       break;
+    }
     case 'complete':
       newCoilIntensity = 0;
       break;
@@ -143,8 +152,8 @@ export function stepProtocol(
   return {
     protocolState: {
       phase: newPhase,
-      phaseTime: newPhase === state.phase ? newPhaseTime : newPhaseTime - phaseDuration,
-      totalElapsed: state.totalElapsed + dt * 1000,
+      phaseTime: 0,
+      totalElapsed: newTotalElapsed,
       pulseCount: newPulseCount,
       nextPulseIn: newNextPulseIn,
       coilIntensity: newCoilIntensity,

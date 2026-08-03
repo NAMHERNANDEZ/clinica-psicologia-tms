@@ -2,7 +2,7 @@ import type { Env, Appointment } from '../../types';
 import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
 export async function findAppointments(env: Env, clinicId: number, filters: { date?: string; therapist_id?: number; patient_id?: number }): Promise<Appointment[]> {
-  let query = "SELECT * FROM appointments WHERE clinic_id = ?";
+  let query = "SELECT * FROM appointments WHERE clinic_id = ? AND deleted_at IS NULL";
   const params: unknown[] = [clinicId];
 
   if (filters.date) {
@@ -25,18 +25,18 @@ export async function findAppointments(env: Env, clinicId: number, filters: { da
 
 export async function findAppointmentById(env: Env, clinicId: number, id: number): Promise<Appointment | null> {
   const row = await env.DB.prepare(
-    "SELECT * FROM appointments WHERE id = ? AND clinic_id = ?"
+    "SELECT * FROM appointments WHERE id = ? AND clinic_id = ? AND deleted_at IS NULL"
   ).bind(id, clinicId).first();
   return (row as unknown as Appointment) || null;
 }
 
 export async function createAppointment(env: Env, clinicId: number, data: {
-  patient_id: number; therapist_id: number; date: string; time: string; duration?: number; notes?: string;
+  patient_id: number; therapist_id: number; date: string; time: string; duration?: number; notes?: string; lead_id?: number | null; type?: string;
 }): Promise<number> {
   const result = await env.DB.prepare(
-    `INSERT INTO appointments (clinic_id, patient_id, therapist_id, date, time, duration, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(clinicId, data.patient_id, data.therapist_id, data.date, data.time, data.duration || 60, data.notes || null).run();
+    `INSERT INTO appointments (clinic_id, patient_id, therapist_id, date, time, duration, notes, lead_id, type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(clinicId, data.patient_id, data.therapist_id || null, data.date, data.time, data.duration || 60, data.notes || null, data.lead_id ?? null, data.type || null).run();
   return result.meta.last_row_id as number;
 }
 
@@ -54,9 +54,9 @@ export async function updateAppointment(env: Env, clinicId: number, id: number, 
   return result.meta.changes > 0;
 }
 
-export async function deleteAppointment(env: Env, clinicId: number, id: number): Promise<boolean> {
+export async function softDeleteAppointment(env: Env, clinicId: number, id: number): Promise<boolean> {
   const result = await env.DB.prepare(
-    "DELETE FROM appointments WHERE id = ? AND clinic_id = ?"
+    "UPDATE appointments SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND clinic_id = ? AND deleted_at IS NULL"
   ).bind(id, clinicId).run();
   return result.meta.changes > 0;
 }

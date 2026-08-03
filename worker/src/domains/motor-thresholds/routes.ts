@@ -51,7 +51,7 @@ export async function handleRecordMeasurement(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
-    const body = await request.json();
+    const body = await request.json() as any;
     const measurement = await service.recordMeasurement(env, user.clinic_id, body);
     return json({ success: true, data: measurement }, 201, corsHeaders);
   } catch (err) {

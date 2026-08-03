@@ -28,5 +28,5 @@ export function validateClinicalNote(data: unknown): { valid: true; data: Clinic
     return { valid: false, error: 'treatment_id debe ser un número' };
   }
 
-  return { valid: true, data: input as ClinicalNoteInput };
+  return { valid: true, data: input as unknown as ClinicalNoteInput };
 }

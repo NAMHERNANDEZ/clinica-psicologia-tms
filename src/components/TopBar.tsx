@@ -43,7 +43,7 @@ export default function TopBar({ sidebarCollapsed, onMenuClick, isMobile }: {
   const loadNotifications = async () => {
     try {
       const res = await alerts.list();
-      setNotificationList(res.data || []);
+      setNotificationList(safeArray(res.data));
       await alerts.markAllRead();
       setUnreadCount(0);
     } catch { /* silent */ }

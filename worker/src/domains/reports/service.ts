@@ -26,7 +26,7 @@ export async function generateTreatmentSummary(env: Env, patientId: number): Pro
       ).bind(profile.protocol_id).first<{ name: string; target_area: string; total_sessions: number; stimulation_type: string }>()
     : { name: 'N/A', target_area: 'N/A', total_sessions: 0, stimulation_type: 'N/A' };
 
-  const motorThreshold = await env.DB.prepare(
+  const { results: motorThreshold } = await env.DB.prepare(
     `SELECT mt_pct, measured_at FROM motor_thresholds WHERE patient_id = ? ORDER BY measured_at DESC`
   ).bind(patientId).all<{ mt_pct: number; measured_at: string }>();
 
@@ -34,7 +34,7 @@ export async function generateTreatmentSummary(env: Env, patientId: number): Pro
     `SELECT COUNT(*) as count FROM tms_sessions WHERE profile_id = ? AND status = 'completed'`
   ).bind(profile?.id ?? 0).first<{ count: number }>();
 
-  const curve = await env.DB.prepare(
+  const { results: curve } = await env.DB.prepare(
     `SELECT ts.session_number, crt.mood_score, crt.anxiety_score, crt.energy_score, crt.sleep_score, crt.concentration_score, crt.overall_response
      FROM clinical_response_tracking crt
      JOIN tms_sessions ts ON crt.tms_session_id = ts.id
@@ -72,7 +72,7 @@ export async function generateTreatmentSummary(env: Env, patientId: number): Pro
     },
   }));
 
-  const predictions = await env.DB.prepare(
+  const { results: predictions } = await env.DB.prepare(
     `SELECT tp.session_number, tp.predicted_mood, tp.predicted_overall, tp.confidence,
             crt.mood_score as actual_mood, crt.overall_response as actual_overall
      FROM twin_predictions tp
@@ -89,7 +89,7 @@ export async function generateTreatmentSummary(env: Env, patientId: number): Pro
     confidence: row.confidence ?? 0,
   }));
 
-  const adverseEffects = await env.DB.prepare(
+  const { results: adverseEffects } = await env.DB.prepare(
     `SELECT effect_type, severity, COUNT(*) as count, SUM(CASE WHEN resolved = 1 THEN 1 ELSE 0 END) as resolved
      FROM adverse_effects
      WHERE patient_id = ? GROUP BY effect_type, severity`
@@ -128,7 +128,7 @@ export async function generateTreatmentSummary(env: Env, patientId: number): Pro
 }
 
 export async function generateClinicalEvolution(env: Env, patientId: number) {
-  const curve = await env.DB.prepare(
+  const { results: curve } = await env.DB.prepare(
     `SELECT ts.session_number, ts.completed_at, crt.mood_score, crt.anxiety_score, crt.energy_score, crt.sleep_score, crt.concentration_score, crt.overall_response
      FROM clinical_response_tracking crt
      JOIN tms_sessions ts ON crt.tms_session_id = ts.id
@@ -171,7 +171,7 @@ export async function generateProtocolReport(env: Env, clinicId: number, protoco
 
   if (!protocol) throw new Error('Protocol not found');
 
-  const profiles = await env.DB.prepare(
+  const { results: profiles } = await env.DB.prepare(
     `SELECT tpp.*, p.name as patient_name
      FROM tms_patient_profiles tpp
      JOIN patients p ON tpp.patient_id = p.id
@@ -229,7 +229,7 @@ export async function exportCSV(env: Env, patientId: number, sections: string[])
   }
 
   if (sections.includes('scores') || sections.length === 0) {
-    const scores = await env.DB.prepare(
+    const { results: scores } = await env.DB.prepare(
       `SELECT ts.session_number, crt.mood_score, crt.anxiety_score, crt.energy_score, crt.sleep_score, crt.concentration_score, crt.overall_response
        FROM clinical_response_tracking crt
        JOIN tms_sessions ts ON crt.tms_session_id = ts.id
@@ -244,7 +244,7 @@ export async function exportCSV(env: Env, patientId: number, sections: string[])
   }
 
   if (sections.includes('adverse_effects') || sections.length === 0) {
-    const effects = await env.DB.prepare(
+    const { results: effects } = await env.DB.prepare(
       `SELECT ae.effect_type, ae.severity, ae.description, ae.resolved, ts.session_number
        FROM adverse_effects ae
        JOIN tms_sessions ts ON ae.tms_session_id = ts.id
@@ -259,7 +259,7 @@ export async function exportCSV(env: Env, patientId: number, sections: string[])
   }
 
   if (sections.includes('predictions') || sections.length === 0) {
-    const preds = await env.DB.prepare(
+    const { results: preds } = await env.DB.prepare(
       `SELECT tp.session_number, tp.predicted_mood, tp.predicted_overall, tp.confidence, tp.risk_score
        FROM twin_predictions tp
        WHERE tp.patient_id = ? ORDER BY tp.session_number ASC`
@@ -275,20 +275,20 @@ export async function exportCSV(env: Env, patientId: number, sections: string[])
 }
 
 export async function getReportHistory(env: Env, patientId: number) {
-  const profiles = await env.DB.prepare(
+  const { results: profiles } = await env.DB.prepare(
     `SELECT id, patient_id, assigned_diagnosis, status, start_date, end_date
      FROM tms_patient_profiles
      WHERE patient_id = ? ORDER BY id DESC`
   ).bind(patientId).all<any>();
 
-  const sessions = await env.DB.prepare(
+  const { results: sessions } = await env.DB.prepare(
     `SELECT id, profile_id, session_number, status, completed_at
      FROM tms_sessions
      WHERE profile_id IN (SELECT id FROM tms_patient_profiles WHERE patient_id = ?)
      ORDER BY completed_at DESC`
   ).bind(patientId).all<any>();
 
-  const scores = await env.DB.prepare(
+  const { results: scores } = await env.DB.prepare(
     `SELECT id, mood_score, overall_response, created_at
      FROM clinical_response_tracking
      WHERE patient_id = ? ORDER BY created_at DESC`

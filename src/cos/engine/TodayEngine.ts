@@ -20,8 +20,8 @@ export class TodayEngine {
       patients.list(),
     ]);
 
-    const allAppointments = apptsRes.status === 'fulfilled' ? (apptsRes.value.data || []) : [];
-    const allPatients = patientsRes.status === 'fulfilled' ? (patientsRes.value.data || []) : [];
+    const allAppointments = apptsRes.status === 'fulfilled' ? (safeArray(apptsRes.value.data)) : [];
+    const allPatients = patientsRes.status === 'fulfilled' ? (safeArray(patientsRes.value.data)) : [];
 
     const patientsWithAppt = new Set(allAppointments.map((a: Appointment) => a.patient_id));
     const patientsWithoutAppt = allPatients.filter((p: Patient) => !patientsWithAppt.has(p.id));
@@ -48,11 +48,11 @@ export class TodayEngine {
     ]);
 
     const todayAppointments = apptsRes.status === 'fulfilled'
-      ? (apptsRes.value.data || []).filter((a: Appointment) => a.patient_id === patientId)
+      ? (safeArray(apptsRes.value.data)).filter((a: Appointment) => a.patient_id === patientId)
       : [];
 
     const activeProfiles = profilesRes.status === 'fulfilled'
-      ? (profilesRes.value.data || []).filter((p: TmsProfile) => p.status === 'active')
+      ? (safeArray(profilesRes.value.data)).filter((p: TmsProfile) => p.status === 'active')
       : [];
 
     return {

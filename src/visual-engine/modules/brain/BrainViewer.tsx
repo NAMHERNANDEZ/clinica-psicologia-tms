@@ -225,7 +225,7 @@ export default function BrainViewer({ patientId }: { patientId: number }) {
           })}
 
           <text x="250" y="335" textAnchor="middle" className="fill-slate-600" style={{ fontSize: '9px' }}>
-            Vista Axial — Simulación de Actividad Cerebral
+            Vista Axial — Actividad Cerebral
           </text>
         </svg>
       </div>

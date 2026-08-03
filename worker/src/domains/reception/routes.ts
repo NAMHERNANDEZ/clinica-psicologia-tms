@@ -59,7 +59,7 @@ export async function handleUpdateQueueStatus(
       return json({ success: false, error: 'Invalid ID' }, 400, corsHeaders);
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { status } = body;
     if (!status || !['waiting', 'in_progress', 'done'].includes(status)) {
       return json({ success: false, error: 'Invalid status' }, 400, corsHeaders);

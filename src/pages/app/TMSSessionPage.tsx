@@ -24,17 +24,17 @@ const TMS_PRESETS = [
   { name: 'TEPT', region: 'dlpfc_l', frequency: 1, intensity: 100, duration: 30, pulses: 1800 },
   { name: 'Migraña', region: 'm1_l', frequency: 10, intensity: 80, duration: 15, pulses: 1500 },
   { name: 'Tabaquismo', region: 'dlpfc_l', frequency: 20, intensity: 100, duration: 30, pulses: 3000 },
-  { name: 'Tinnitus', region: 'temporal_l', frequency: 1, intensity: 90, duration: 25, pulses: 1500 },
+  { name: 'Tinnitus', region: 'temporal', frequency: 1, intensity: 90, duration: 25, pulses: 1500 },
   { name: 'Fibromialgia', region: 'm1_l', frequency: 10, intensity: 80, duration: 25, pulses: 2500 },
   { name: 'Dolor neuropático', region: 'm1_l', frequency: 10, intensity: 100, duration: 20, pulses: 2000 },
   { name: 'Esquizofrenia', region: 'dlpfc_l', frequency: 20, intensity: 90, duration: 20, pulses: 2000 },
-  { name: 'Insomnio', region: 'dlpfc_l', frequency: 1, intensity: 80, duration: 20, pulses: 1200 },
+  { name: 'Insomnio', region: 'dlpfc_r', frequency: 1, intensity: 80, duration: 20, pulses: 1200 },
 ];
 
 const REGION_LABELS: Record<string, string> = {
-  dlpfc_l: 'DLPFC-Izq', dlpfc_r: 'DLPFC-Der', m1_l: 'M1-Izq', m1_r: 'M1-Der',
-  sma: 'SMA', acc: 'ACC', insula_l: 'Ínsula-Izq', insula_r: 'Ínsula-Der',
-  broca: 'Broca', wernicke: 'Wernicke', occipital: 'Occipital', temporal_l: 'Temporal-Izq',
+  dlpfc_l: 'DLPFC', dlpfc_r: 'DLPFC', m1_l: 'M1', m1_r: 'M1',
+  sma: 'SMA', acc: 'ACC', insula_l: 'Ínsula', insula_r: 'Ínsula',
+  broca: 'Broca', temporal: 'Temporal',
 };
 
 export default function TMSSessionPage() {
@@ -55,7 +55,7 @@ export default function TMSSessionPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    patients.list().then(res => setPatientList(res.data || [])).catch(() => {}).finally(() => setLoading(false));
+    patients.list().then(res => setPatientList(Array.isArray(res.data) ? res.data : [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -69,18 +69,19 @@ export default function TMSSessionPage() {
         ]);
         if (cancelled) return;
         if (prRes.status === 'fulfilled') {
-          const p = prRes.value.data || [];
+          const p = Array.isArray(prRes.value.data) ? prRes.value.data : [];
           setProfiles(p);
           const allSessions: TmsSession[] = [];
           for (const profile of p) {
             try {
               const sRes = await tmsSessions.listByProfile(profile.id);
-              if (sRes.data) allSessions.push(...sRes.data);
+              const sData = Array.isArray(sRes.data) ? sRes.data : [];
+              for (const s of sData) allSessions.push(s);
             } catch { /* skip */ }
           }
           if (!cancelled) setSessions(allSessions.sort((a, b) => a.session_number - b.session_number));
         }
-        if (crRes.status === 'fulfilled') setResponses(crRes.value.data || []);
+        if (crRes.status === 'fulfilled') setResponses(Array.isArray(crRes.value.data) ? crRes.value.data : []);
       } catch { /* silent */ }
     };
     load();
@@ -134,18 +135,18 @@ export default function TMSSessionPage() {
       <div className="max-w-[1920px] mx-auto">
         <div className="mb-4">
           <h1 className="text-xl font-bold text-white">Sesión TMS</h1>
-          <p className="text-xs text-slate-400">Simulación completa con monitoreo en tiempo real</p>
+          <p className="text-xs text-slate-400">Sesión completa con monitoreo en tiempo real</p>
         </div>
 
         <div className="grid grid-cols-12 gap-3">
           {/* Columna izquierda: Pacientes + Historia */}
           <div className="col-span-3 space-y-3">
-            <PatientSelector patients={patientList} selectedId={selectedPatientId} onSelect={setSelectedPatientId} />
+            <PatientSelector patients={Array.isArray(patientList) ? patientList : []} selectedId={selectedPatientId} onSelect={setSelectedPatientId} />
             {selectedPatientId && (
               <>
-                <ClinicalHistory sessions={sessions} responses={responses} />
+                <ClinicalHistory sessions={Array.isArray(sessions) ? sessions : []} responses={Array.isArray(responses) ? responses : []} />
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
-                  <ProgressCurve responses={responses} />
+                  <ProgressCurve responses={Array.isArray(responses) ? responses : []} />
                 </div>
               </>
             )}

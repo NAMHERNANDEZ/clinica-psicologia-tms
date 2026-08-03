@@ -112,7 +112,7 @@ export async function handleGetTmsDashboard(env: Env, request: Request, user: Us
 export async function handleCreateAssessment(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
   const requestId = getRequestId();
   try {
-    const body = await request.json();
+    const body = await request.json() as any;
     const { patient_id, assessment_type, score, max_score, interpretation, administered_at } = body;
 
     if (!patient_id || !assessment_type || score === undefined || !administered_at) {

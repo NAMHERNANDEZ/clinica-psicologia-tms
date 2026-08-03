@@ -6,6 +6,17 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { appointments, patients, therapists, type Appointment, type Patient, type Therapist } from '../../lib/api';
 import { Modal } from '../../components/ui/Modal';
 
+function safeArray<T>(v: unknown): T[] { return Array.isArray(v) ? v as T[] : []; }
+
+const APPT_TYPES = ['', 'CONSULTA', 'TMS', 'SEGUIMIENTO'] as const;
+const APPT_STATUSES = [
+  { value: '', label: 'Todos' },
+  { value: 'scheduled', label: 'Programada' },
+  { value: 'completed', label: 'Realizada' },
+  { value: 'cancelled', label: 'Cancelada' },
+  { value: 'no_show', label: 'No asistió' },
+] as const;
+
 export default function AgendaPage() {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<Array<{ id: string; title: string; start: string; end: string; color: string; extendedProps: Record<string, unknown> }>>([]);
@@ -16,6 +27,9 @@ export default function AgendaPage() {
   const [form, setForm] = useState({ patient_id: 0, therapist_id: 0, duration: 30, notes: '' });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridWeek');
+  const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [allAppts, setAllAppts] = useState<Appointment[]>([]);
 
   useEffect(() => { load(); }, []);
 
@@ -25,20 +39,27 @@ export default function AgendaPage() {
         appointments.list(), patients.list(), therapists.list(),
       ]);
       if (apptsRes.status === 'fulfilled') {
-        const appts = (apptsRes.value.data || []) as Appointment[];
-        setEvents(appts.map(a => ({
-          id: String(a.id),
-          title: `${a.patient_name || `Paciente #${a.patient_id}`} — ${a.therapist_name || `Terapeuta #${a.therapist_id}`}`,
-          start: `${a.date}T${a.time}`,
-          end: calculateEnd(a.date, a.time, a.duration),
-          color: statusColor(a.status),
-          extendedProps: { ...a },
-        })));
+        const appts = safeArray<Appointment>(apptsRes.value.data);
+        setAllAppts(appts);
       }
-      if (pRes.status === 'fulfilled') setPatientList(pRes.value.data || []);
-      if (thRes.status === 'fulfilled') setTherapistList(thRes.value.data || []);
+      if (pRes.status === 'fulfilled') setPatientList(safeArray<Patient>(pRes.value.data));
+      if (thRes.status === 'fulfilled') setTherapistList(safeArray<Therapist>(thRes.value.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    let filtered = allAppts;
+    if (filterType) filtered = filtered.filter(a => a.type === filterType);
+    if (filterStatus) filtered = filtered.filter(a => a.status === filterStatus);
+    setEvents(filtered.map(a => ({
+      id: String(a.id),
+      title: `${a.patient_name || `Paciente #${a.patient_id}`}${a.type ? ' — ' + a.type : ''}`,
+      start: `${a.date}T${a.time}`,
+      end: calculateEnd(a.date, a.time, a.duration),
+      color: statusColor(a.status),
+      extendedProps: { ...a },
+    })));
+  }, [allAppts, filterType, filterStatus]);
 
   const calculateEnd = (date: string, time: string, duration: number) => {
     const d = new Date(`${date}T${time}`);
@@ -114,6 +135,17 @@ export default function AgendaPage() {
           locale="es"
           buttonText={{ today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' }}
         />
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3">
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+          <option value="">Todos los servicios</option>
+          {APPT_TYPES.filter(Boolean).map(t => <option key={t} value={t}>{t === 'CONSULTA' ? 'Consulta' : t === 'TMS' ? 'TMS' : 'Seguimiento'}</option>)}
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+          {APPT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
       </div>
 
       <div className="flex items-center space-x-4 text-xs text-slate-500">

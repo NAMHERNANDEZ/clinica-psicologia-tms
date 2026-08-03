@@ -10,5 +10,5 @@ export function validateTherapist(data: unknown): { valid: true; data: Therapist
   if (!input.name || typeof input.name !== 'string') return { valid: false, error: 'Nombre requerido' };
   if (!input.email || typeof input.email !== 'string') return { valid: false, error: 'Email requerido' };
   if (!input.specialty || typeof input.specialty !== 'string') return { valid: false, error: 'Especialidad requerida' };
-  return { valid: true, data: input as TherapistInput };
+  return { valid: true, data: input as unknown as TherapistInput };
 }

@@ -14,7 +14,7 @@ export class TaskEngine {
     const tasks: ClinicalTask[] = [];
 
     const patientsRes = await patients.list();
-    const allPatients = patientsRes.data || [];
+    const allPatients = safeArray(patientsRes.data);
 
     for (const patient of allPatients) {
       const patientTasks = await this.generatePatientTasks(patient);
@@ -46,11 +46,11 @@ export class TaskEngine {
     }
 
     const profilesRes = await tmsProfiles.listByPatient(patient.id);
-    const activeProfiles = (profilesRes.data || []).filter((p: TmsProfile) => p.status === 'active');
+    const activeProfiles = (safeArray(profilesRes.data)).filter((p: TmsProfile) => p.status === 'active');
 
     for (const profile of activeProfiles) {
       const sessionsRes = await tmsSessions.listByProfile(profile.id);
-      const sessions = sessionsRes.data || [];
+      const sessions = safeArray(sessionsRes.data);
 
       const lastSession = sessions
         .filter((s: TmsSession) => s.status === 'completed')
@@ -60,7 +60,7 @@ export class TaskEngine {
         const responsesRes = await import('../../lib/api').then(m =>
           m.clinicalResponse.listByPatient(patient.id)
         );
-        const responses = responsesRes.data || [];
+        const responses = safeArray(responsesRes.data);
         const lastResponse = responses.find((r: { tms_session_id: number }) => r.tms_session_id === lastSession.id);
 
         if (lastResponse && lastResponse.mood_score < 3) {
@@ -75,7 +75,7 @@ export class TaskEngine {
     }
 
     const effectsRes = await adverseEffects.listByPatient(patient.id);
-    const unresolvedEffects = (effectsRes.data || []).filter((e: AdverseEffect) => !e.resolved);
+    const unresolvedEffects = (safeArray(effectsRes.data)).filter((e: AdverseEffect) => !e.resolved);
     if (unresolvedEffects.length > 0) {
       const severe = unresolvedEffects.filter((e: AdverseEffect) => e.severity === 'severe');
       tasks.push(this.createTask('ADVERSE_EFFECT_REPORT', patient, severe.length > 0 ? 'urgent' : 'medium', 'Efectos adversos pendientes', `${unresolvedEffects.length} efecto(s) adverso(s) sin resolver.`));

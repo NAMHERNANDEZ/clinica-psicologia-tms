@@ -1,7 +1,6 @@
-name = "clinica-tms-api"
+name = "clinica-psicologia-tms"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
-
 [triggers]
 crons = ["0 * * * *"]
 
@@ -10,8 +9,15 @@ binding = "DB"
 database_name = "clinica-tms-db"
 database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95"
 
+# R2 — descomentar tras activar R2 en Cloudflare Dashboard
+#[[r2_buckets]]
+#binding = "BACKUPS_BUCKET"
+#bucket_name = "clinica-tms-backups"
+
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173"
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev"
 
 [env.production]
-vars = { ALLOWED_ORIGINS = "https://neurocienciaclinica.mx,https://clinica-psicologia-tms.pages.dev,https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev" }
+vars = { ALLOWED_ORIGINS = "https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev,http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173" }
+d1_databases = [{ binding = "DB", database_name = "clinica-tms-db", database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95" }]
+#r2_buckets = [{ binding = "BACKUPS_BUCKET", bucket_name = "clinica-tms-backups" }]

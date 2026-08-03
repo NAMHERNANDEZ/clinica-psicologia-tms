@@ -5,6 +5,7 @@ import { ConnectomeEngine } from '../simulation/ConnectomeEngine';
 import { CoordinateDebugger } from './CoordinateDebugger';
 import { NetworkActivationVisualizer } from './NetworkActivationVisualizer';
 import type { ProtocolPhase } from '../simulation/ProtocolStateMachine';
+import BrainWorker from '../simulation/brain.worker.ts?worker';
 
 interface WorkerStateUpdate {
   type: 'STATE_UPDATE';
@@ -58,7 +59,7 @@ export class BrainRenderer {
     console.log('[BrainRenderer] Canvas:', w, 'x', h);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#020617');
+    this.scene.background = new THREE.Color('#1B2838');
 
     this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
     this.camera.position.set(0, 0, 5);
@@ -87,18 +88,20 @@ export class BrainRenderer {
     this.controls.rotateSpeed = 1.0;
     this.controls.zoomSpeed = 1.0;
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-    const key = new THREE.DirectionalLight(0xffffff, 0.7);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+    const key = new THREE.DirectionalLight(0xE0F0FF, 0.5);
     key.position.set(5, 8, 5);
-    const fill = new THREE.DirectionalLight(0xE8F0FF, 0.35);
+    const fill = new THREE.DirectionalLight(0x80C0FF, 0.3);
     fill.position.set(-5, 3, -3);
-    const rim = new THREE.DirectionalLight(0xC0D0FF, 0.25);
+    const rim = new THREE.DirectionalLight(0x4080FF, 0.2);
     rim.position.set(0, -3, -5);
-    const top = new THREE.DirectionalLight(0xE0E8F0, 0.2);
+    const top = new THREE.DirectionalLight(0xC0D8F0, 0.15);
     top.position.set(0, 10, 0);
-    const accent = new THREE.PointLight(0x4488CC, 0.25, 20);
+    const accent = new THREE.PointLight(0x00AAFF, 0.3, 25);
     accent.position.set(-3, 2, 3);
-    this.scene.add(key, fill, rim, top, accent);
+    const thermal = new THREE.PointLight(0xFF6600, 0.15, 20);
+    thermal.position.set(3, -1, 2);
+    this.scene.add(key, fill, rim, top, accent, thermal);
 
     this.brainScene = new BrainScene(this.scene);
     await this.brainScene.init();
@@ -126,34 +129,42 @@ export class BrainRenderer {
   }
 
   private createAmbientParticles() {
-    const count = 200;
+    const count = 300;
     const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 12;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 12;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 12;
+      positions[i * 3] = (Math.random() - 0.5) * 14;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 14;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 14;
+      const t = Math.random();
+      if (t < 0.6) {
+        colors[i * 3] = 0; colors[i * 3 + 1] = 0.4 + Math.random() * 0.3; colors[i * 3 + 2] = 1;
+      } else {
+        colors[i * 3] = 1; colors[i * 3 + 1] = 0.3 + Math.random() * 0.3; colors[i * 3 + 2] = 0;
+      }
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const material = new THREE.PointsMaterial({
-      color: 0x4466AA,
-      size: 0.012,
+      size: 0.015,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.3,
       sizeAttenuation: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      vertexColors: true,
     });
     this.ambientParticles = new THREE.Points(geometry, material);
     this.scene.add(this.ambientParticles);
   }
 
   private createBrainGlow() {
-    const geometry = new THREE.SphereGeometry(2.0, 32, 32);
+    const geometry = new THREE.SphereGeometry(2.2, 32, 32);
     const material = new THREE.MeshBasicMaterial({
-      color: 0x1A2A3A,
+      color: '#0044AA',
       transparent: true,
-      opacity: 0.03,
+      opacity: 0.04,
       side: THREE.BackSide,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -164,12 +175,11 @@ export class BrainRenderer {
 
   private initWorker() {
     try {
-      const url = new URL('../simulation/brain.worker.ts', import.meta.url);
-      this.worker = new Worker(url, { type: 'module' });
+      this.worker = new BrainWorker();
       this.worker.onmessage = (e: MessageEvent<WorkerStateUpdate>) => {
         if (e.data.type === 'STATE_UPDATE' && !this.disposed) this.applyWorkerState(e.data);
       };
-      this.worker.onerror = (err) => console.error('[BrainWorker]', err.message);
+      this.worker.onerror = (err) => { console.error('[BrainWorker] ERROR:', err.message, err); this.workerReady = false; };
       this.worker.postMessage({
         type: 'INIT',
         regions: this.brainScene.getRegionDefs().map(r => r.id),
@@ -220,10 +230,21 @@ export class BrainRenderer {
       if (id) {
         this.currentTargetRegion = id;
         this.brainScene.setSelectedRegion(id);
+        if (this.currentProtocolPhase === 'idle' || this.currentProtocolPhase === 'complete') {
+          this.brainScene.setTargetRegion(id);
+          const pos = this.brainScene.getRegionPosition(id);
+          if (pos) {
+            this.brainScene.getCoilField().activate({ position: [pos.x, pos.y + 1.5, pos.z + 1.5], targetPosition: [pos.x, pos.y, pos.z], intensity: 0.5 });
+          }
+        }
         this.onRegionClick?.(id);
       }
     } else {
       this.brainScene.setSelectedRegion(null);
+      if (this.currentProtocolPhase === 'idle' || this.currentProtocolPhase === 'complete') {
+        this.brainScene.setTargetRegion(null);
+        this.brainScene.getCoilField().deactivate();
+      }
     }
   }
 
@@ -232,19 +253,37 @@ export class BrainRenderer {
     this.currentActivations = new Map(Object.entries(activations));
     this.currentPulseCount = protocol.pulseCount;
     this.currentCoilIntensity = protocol.coilIntensity;
-    for (const [id, val] of Object.entries(activations)) this.brainScene.setActivation(id, val);
-    this.networkViz?.update(this.currentActivations, 0.016);
+
+    if (protocol.phase !== 'idle') {
+      const vals = Object.values(activations);
+      const max = Math.max(...vals);
+      console.log(`[BrainRenderer] phase=${protocol.phase} target=${this.currentTargetRegion} act=${activations[this.currentTargetRegion]?.toFixed(3)} max=${max.toFixed(3)} coil=${protocol.coilIntensity.toFixed(2)}`);
+    }
+
+    const isActive = protocol.phase !== 'idle' && protocol.phase !== 'complete';
+
     const coil = this.brainScene.getCoilField();
-    if (protocol.coilIntensity > 0.01 && protocol.phase !== 'idle' && protocol.phase !== 'complete') {
-      const target = this.brainScene.getRegionPosition(this.currentTargetRegion) || this.brainScene.getRegionPosition('dlpfc_l');
+    if (isActive && protocol.coilIntensity > 0) {
+      const target = this.brainScene.getRegionPosition(this.currentTargetRegion);
       if (target) {
-        coil.activate({ position: [target.x * 0.4, target.y * 0.4 + 2.0, target.z + 2.2], targetPosition: [target.x, target.y, target.z], intensity: protocol.coilIntensity });
-        const targetRegion = this.brainScene.getRegion(this.currentTargetRegion);
-        if (targetRegion) targetRegion.setActivation(Math.max(0.6, protocol.coilIntensity));
+        coil.activate({ position: [target.x, target.y + 1.5, target.z + 1.5], targetPosition: [target.x, target.y, target.z], intensity: protocol.coilIntensity });
+      }
+
+      for (const [id, value] of Object.entries(activations)) {
+        if (id === this.currentTargetRegion) {
+          this.brainScene.setActivation(id, Math.max(0.7, protocol.coilIntensity));
+        } else {
+          this.brainScene.setActivation(id, Math.min(1, value * 1.5));
+        }
       }
     } else {
       coil.deactivate();
+      for (const [id] of Object.entries(activations)) {
+        this.brainScene.setActivation(id, 0);
+      }
     }
+
+    this.networkViz?.update(this.currentActivations, 0.016);
     if (this.currentProtocolPhase !== protocol.phase) { this.currentProtocolPhase = protocol.phase; this.onProtocolPhaseChange?.(protocol.phase); }
     if (connectome.length > 0) this.connectome.matrix = connectome;
     this.onOverlayUpdate?.({ phase: protocol.phase, activations: this.currentActivations, coilIntensity: protocol.coilIntensity, pulseCount: protocol.pulseCount, connectome: this.connectome.matrix });
@@ -261,18 +300,20 @@ export class BrainRenderer {
       const delta = this.clock.getDelta();
       const elapsed = this.clock.getElapsedTime();
       this.controls.update();
-      this.brainScene.update(delta);
+      this.brainScene.update(delta, this.currentActivations);
       this.brainScene.updateConnections(delta, this.currentActivations, this.connectome.matrix);
       this.brainScene.getCoilField().update(delta);
       if (this.ambientParticles) {
-        this.ambientParticles.rotation.y += delta * 0.02;
-        this.ambientParticles.rotation.x += delta * 0.01;
+        this.ambientParticles.rotation.y += delta * 0.03;
+        this.ambientParticles.rotation.x += delta * 0.015;
+        const mat = this.ambientParticles.material as THREE.PointsMaterial;
+        mat.opacity = 0.2 + Math.sin(elapsed * 0.8) * 0.1;
       }
       if (this.brainGlow) {
-        const intensity = this.brainScene.getCoilField().getIntensity();
         const mat = this.brainGlow.material as THREE.MeshBasicMaterial;
-        mat.opacity = 0.03 + intensity * 0.08 + Math.sin(elapsed * 0.5) * 0.01;
-        this.brainGlow.scale.setScalar(1.0 + Math.sin(elapsed * 0.3) * 0.02);
+        mat.opacity = 0.04 + Math.sin(elapsed * 0.5) * 0.015;
+        mat.color.set('#0044AA');
+        this.brainGlow.scale.setScalar(1.0 + Math.sin(elapsed * 0.3) * 0.03);
       }
       this.renderer.render(this.scene, this.camera);
     };
@@ -329,17 +370,20 @@ export class BrainRenderer {
   }
 
   async runProtocol(config: { targetRegion: string; protocol: { name?: string; frequency_hz: number; intensity_pct_mt: number; duration_sec: number; total_pulses: number }; mtPct: number }) {
+    console.log('[BrainRenderer] runProtocol called, workerReady:', this.workerReady, 'disposed:', this.disposed);
     if (!this.workerReady) return;
     this.currentTargetRegion = config.targetRegion;
     this.worker.postMessage({ type: 'STOP_PROTOCOL' });
-    this.brainScene.getCoilField().deactivate();
+    this.brainScene.setTargetRegion(config.targetRegion);
     this.worker.postMessage({ type: 'START_PROTOCOL', config: { targetRegion: config.targetRegion, frequencyHz: config.protocol.frequency_hz, intensityPctMt: config.protocol.intensity_pct_mt, durationSec: config.protocol.duration_sec, totalPulses: config.protocol.total_pulses, mtPct: config.mtPct } });
+    console.log('[BrainRenderer] START_PROTOCOL sent to worker, target:', config.targetRegion);
   }
 
   stopProtocol() {
     if (!this.workerReady) return;
     this.worker.postMessage({ type: 'STOP_PROTOCOL' });
     this.brainScene.getCoilField().deactivate();
+    this.brainScene.setTargetRegion(null);
   }
 
   startTMSSession(regionId: string, intensity: number, frequency: number) {

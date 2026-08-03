@@ -14,7 +14,18 @@
     "db:reset:remote": "wrangler d1 execute clinica-tms-db --file=./schema.sql --yes --remote",
     "setup": "powershell -File deploy.ps1",
     "seed": "wrangler d1 execute clinica-tms-db --file=./seed.sql --remote",
-    "health": "curl -s https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/health"
+    "health": "curl -s https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/health",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:security": "node scripts/security-check.js",
+    "check:compliance": "node scripts/compliance-check.js",
+    "check:migrations": "node scripts/migration-check.js",
+    "check:remote": "node scripts/check-remote-migrations.js",
+    "smoke:leads": "node scripts/smoke-test-leads.js",
+    "deploy:production": "powershell -File scripts/deploy-production.ps1",
+    "pipeline": "powershell -File scripts/pipeline.ps1",
+    "pipeline:skip-deploy": "powershell -File scripts/pipeline.ps1 -SkipDeploy",
+    "pipeline:skip-tests": "powershell -File scripts/pipeline.ps1 -SkipTests"
   },
   "devDependencies": {
     "wrangler": "^3.0.0",

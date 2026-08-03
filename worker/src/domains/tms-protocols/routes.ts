@@ -56,7 +56,7 @@ export async function handleUpdateProtocol(env: Env, request: Request, user: Use
     const id = parseInt(new URL(request.url).pathname.split('/')[3] || '0');
     if (isNaN(id) || id <= 0) return json({ success: false, error: 'ID inválido' }, 400, corsHeaders);
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const result = await service.updateProtocol(env, id, body);
     if (!result.success) return json(result, result.status || 400, corsHeaders);
     return json(result, 200, corsHeaders);

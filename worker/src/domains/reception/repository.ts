@@ -54,21 +54,21 @@ export async function addToQueue(
 
 export async function updateQueueStatus(env: Env, id: number, status: string) {
   const now = new Date().toISOString();
-  const { changes } = await env.DB.prepare(`
+  const { meta } = await env.DB.prepare(`
     UPDATE reception_queue
     SET status = ?, updated_at = ?
     WHERE id = ?
   `).bind(status, now, id).run();
 
-  return changes > 0;
+  return meta.changes > 0;
 }
 
 export async function removeFromQueue(env: Env, id: number) {
-  const { changes } = await env.DB.prepare(`
+  const { meta } = await env.DB.prepare(`
     DELETE FROM reception_queue WHERE id = ?
   `).bind(id).run();
 
-  return changes > 0;
+  return meta.changes > 0;
 }
 
 export async function getTodaysAppointments(env: Env, clinicId: number) {

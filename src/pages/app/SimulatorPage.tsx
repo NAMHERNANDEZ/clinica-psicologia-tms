@@ -34,8 +34,8 @@ export default function SimulatorPage() {
   const load = async () => {
     try {
       const [pRes, prRes] = await Promise.allSettled([patients.list(), tmsProtocols.list()]);
-      if (pRes.status === 'fulfilled') setPatientList(pRes.value.data || []);
-      if (prRes.status === 'fulfilled') setProtocols(prRes.value.data || []);
+      if (pRes.status === 'fulfilled') setPatientList(safeArray(pRes.value.data));
+      if (prRes.status === 'fulfilled') setProtocols(safeArray(prRes.value.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 
@@ -141,12 +141,12 @@ export default function SimulatorPage() {
           <button onClick={mode === 'simulate' ? runSimulation : runComparison} disabled={running || !selectedPatientId || !selectedProtocolA || (mode === 'compare' && !selectedProtocolB)}
             className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2">
             <LineChart className="w-4 h-4" />
-            <span>{running ? 'Simulando...' : mode === 'simulate' ? 'Ejecutar Simulación' : 'Comparar Protocolos'}</span>
+            <span>{running ? 'Ejecutando...' : mode === 'simulate' ? 'Ejecutar Protocolo' : 'Comparar Protocolos'}</span>
           </button>
 
           {simResult && mode === 'simulate' && (
             <Card>
-              <CardHeader><h2 className="font-semibold text-slate-900">Resultado de Simulación</h2></CardHeader>
+              <CardHeader><h2 className="font-semibold text-slate-900">Resultado del Protocolo</h2></CardHeader>
               <CardBody>
                 {renderCurve([{ name: 'Predicción', data: simResult.predicted_curve, color: '#6366f1' }])}
                 <div className="mt-4 p-3 bg-slate-50 rounded-lg">

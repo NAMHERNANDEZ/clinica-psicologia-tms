@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Calendar, Activity, FileText, Clock, Brain, Zap } from 'lucide-react';
-import { patients, timeline as timelineApi, clinicalNotes, tmsProfiles, tmsSessions, clinicalResponse, treatments, type Patient, type TimelineEvent, type ClinicalNote, type TmsProfile, type TmsSession, type ClinicalResponse as ClinicalResponseType, type Treatment } from '../../lib/api';
+import { patients, timeline as timelineApi, clinicalNotes, tmsProfiles, tmsSessions, clinicalResponse, treatments, safeArray, type Patient, type TimelineEvent, type ClinicalNote, type TmsProfile, type TmsSession, type ClinicalResponse as ClinicalResponseType, type Treatment } from '../../lib/api';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
@@ -39,25 +39,25 @@ export default function PatientDetailPage() {
         treatments.list(),
       ]);
       if (pRes.status === 'fulfilled') setPatient(pRes.value.data);
-      if (tRes.status === 'fulfilled') setTimeline(tRes.value.data || []);
-      if (nRes.status === 'fulfilled') setNotes(nRes.value.data || []);
+      if (tRes.status === 'fulfilled') setTimeline(safeArray(tRes.value.data));
+      if (nRes.status === 'fulfilled') setNotes(safeArray(nRes.value.data));
       if (prRes.status === 'fulfilled') {
-        const p = prRes.value.data || [];
+        const p = safeArray(prRes.value.data);
         setProfiles(p);
         if (p.length > 0) {
           const allSessions: TmsSession[] = [];
           for (const profile of p) {
             try {
               const sRes = await tmsSessions.listByProfile(profile.id);
-              if (sRes.data) allSessions.push(...sRes.data);
+              if (Array.isArray(sRes.data)) allSessions.push(...sRes.data);
             } catch { /* skip */ }
           }
           setSessions(allSessions.sort((a, b) => a.session_number - b.session_number));
         }
       }
-      if (crRes.status === 'fulfilled') setResponses(crRes.value.data || []);
+      if (crRes.status === 'fulfilled') setResponses(safeArray(crRes.value.data));
       if (trRes.status === 'fulfilled') {
-        const allTreatments = trRes.value.data || [];
+        const allTreatments = safeArray(trRes.value.data);
         setPatientTreatments(allTreatments.filter((t: Treatment) => t.patient_id === patientId));
       }
     } catch { /* silent */ } finally { setLoading(false); }

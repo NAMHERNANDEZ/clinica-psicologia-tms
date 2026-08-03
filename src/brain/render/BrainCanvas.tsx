@@ -4,6 +4,7 @@ import type { ProtocolPhase } from '../simulation/ProtocolStateMachine';
 
 export interface BrainCanvasHandle {
   getRenderer: () => BrainRenderer | null;
+  isReady: () => boolean;
   runProtocol: (config: { targetRegion: string; protocol: { name?: string; frequency_hz: number; intensity_pct_mt: number; duration_sec: number; total_pulses: number }; mtPct: number }) => Promise<void>;
   stopProtocol: () => void;
   onPhaseChange: (cb: (phase: ProtocolPhase) => void) => void;
@@ -15,9 +16,11 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<BrainRenderer | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const readyRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     getRenderer: () => engineRef.current,
+    isReady: () => readyRef.current,
     runProtocol: (config) => engineRef.current?.runProtocol(config) ?? Promise.resolve(),
     stopProtocol: () => engineRef.current?.stopProtocol(),
     onPhaseChange: (cb) => engineRef.current?.onPhaseChange(cb),
@@ -34,6 +37,7 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
       if (disposed) { renderer.stop(); return; }
       renderer.start();
       engineRef.current = renderer;
+      readyRef.current = true;
     }).catch((err) => {
       console.error('[BrainCanvas] Init failed:', err);
       if (!disposed) setInitError(String(err?.message || err));
@@ -42,6 +46,7 @@ export const BrainCanvas = forwardRef<BrainCanvasHandle>(function BrainCanvas(_,
       disposed = true;
       renderer.stop();
       engineRef.current = null;
+      readyRef.current = false;
     };
   }, []);
 

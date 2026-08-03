@@ -51,7 +51,7 @@ export async function handleGetPatient(env: Env, request: Request, user: User, o
       return jsonResponse({ error: 'ID requerido' }, 400, origin);
     }
 
-    if (user.role === 'patient' && user.patient_id !== parseInt(id)) {
+    if (user.role === 'patient' && (user as any).patient_id !== parseInt(id)) {
       return jsonResponse({ error: 'Sin permisos' }, 403, origin);
     }
 
@@ -99,7 +99,7 @@ export async function handleCreatePatient(env: Env, request: Request, user: User
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'create', 'patients', result.meta.last_row_id as number, `Paciente: ${data.name}`, ip, ua);
+    await logAudit(env, user.id, 'create' as any, 'patients', parseInt(String(result.meta.last_row_id)) as any, `Paciente: ${data.name}`, ip as any, ua);
 
     return jsonResponse({ id: result.meta.last_row_id, ...data }, 201, origin);
   } catch (error) {
@@ -157,7 +157,7 @@ export async function handleUpdatePatient(env: Env, request: Request, user: User
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'update', 'patients', parseInt(id), `Campos: ${Object.keys(data).join(', ')}`, ip, ua);
+    await logAudit(env, user.id, 'update' as any, 'patients', parseInt(id) as any, `Campos: ${Object.keys(data).join(', ')}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {
@@ -183,7 +183,7 @@ export async function handleDeletePatient(env: Env, request: Request, user: User
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'delete', 'patients', parseInt(id), `Paciente: ${existing.name}`, ip, ua);
+    await logAudit(env, user.id, 'delete' as any, 'patients', parseInt(id) as any, `Paciente: ${existing.name}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {

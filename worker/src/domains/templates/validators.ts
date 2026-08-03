@@ -15,5 +15,5 @@ export function validateTemplate(data: unknown): { valid: true; data: TemplateIn
   if (input.type !== 'whatsapp' && input.type !== 'email') return { valid: false, error: 'Tipo inválido, debe ser whatsapp o email' };
   if (input.name.length < 2) return { valid: false, error: 'Nombre muy corto' };
   if (input.content.length < 1) return { valid: false, error: 'Contenido vacío' };
-  return { valid: true, data: input as TemplateInput };
+  return { valid: true, data: input as unknown as TemplateInput };
 }

@@ -7,11 +7,12 @@ interface PatientSelectorProps {
 }
 
 export function PatientSelector({ patients, selectedId, onSelect }: PatientSelectorProps) {
+  const safePatients = Array.isArray(patients) ? patients : [];
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
       <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-2">Pacientes</div>
       <div className="space-y-1.5 max-h-80 overflow-y-auto">
-        {patients.map(p => (
+        {safePatients.map(p => (
           <button key={p.id} onClick={() => onSelect(p.id)}
             className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
               selectedId === p.id
@@ -22,7 +23,7 @@ export function PatientSelector({ patients, selectedId, onSelect }: PatientSelec
             <div className="text-[10px] text-slate-500 mt-0.5">{p.phone}</div>
           </button>
         ))}
-        {patients.length === 0 && (
+        {safePatients.length === 0 && (
           <div className="text-center text-slate-500 text-xs py-4">Sin pacientes</div>
         )}
       </div>

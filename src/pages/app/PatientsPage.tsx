@@ -23,7 +23,7 @@ export default function PatientsPage() {
   const load = async () => {
     try {
       const res = await patients.list();
-      setList(res.data || []);
+      setList(Array.isArray(res.data) ? res.data : []);
     } catch { /* silent */ } finally { setLoading(false); }
   };
 

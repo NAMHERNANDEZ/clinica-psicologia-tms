@@ -23,6 +23,13 @@ export async function findPatientById(env: Env, clinicId: number, id: number): P
   return (row as unknown as Patient) || null;
 }
 
+export async function findPatientByPhone(env: Env, clinicId: number, phone: string): Promise<{ id: number } | null> {
+  const row = await env.DB.prepare(
+    "SELECT id FROM patients WHERE clinic_id = ? AND phone = ? LIMIT 1"
+  ).bind(clinicId, phone).first();
+  return (row as unknown as { id: number }) || null;
+}
+
 export async function createPatient(env: Env, clinicId: number, data: { name: string; phone: string; email?: string; birthdate?: string }): Promise<number> {
   const result = await env.DB.prepare(
     "INSERT INTO patients (clinic_id, name, phone, email, birthdate) VALUES (?, ?, ?, ?, ?)"

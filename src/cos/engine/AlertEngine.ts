@@ -11,12 +11,12 @@ export class AlertEngine {
     const patient = patientRes.data;
 
     const profilesRes = await tmsProfiles.listByPatient(patientId);
-    const profiles = (profilesRes.data || []) as TmsProfile[];
+    const profiles = (safeArray(profilesRes.data)) as TmsProfile[];
     const activeProfiles = profiles.filter((p: TmsProfile) => p.status === 'active');
 
     for (const profile of activeProfiles) {
       const sessionsRes = await tmsSessions.listByProfile(profile.id);
-      const sessions = (sessionsRes.data || []) as TmsSession[];
+      const sessions = (safeArray(sessionsRes.data)) as TmsSession[];
 
       const missedSessions = sessions.filter((s: TmsSession) => s.status === 'no_show');
       if (missedSessions.length >= 2) {
@@ -43,7 +43,7 @@ export class AlertEngine {
         const responsesRes = await import('../../lib/api').then(m =>
           m.clinicalResponse.listByPatient(patientId)
         );
-        const responses = (responsesRes.data || []) as { tms_session_id: number; mood_score: number }[];
+        const responses = (safeArray(responsesRes.data)) as { tms_session_id: number; mood_score: number }[];
         const lastResponse = responses.find((r: { tms_session_id: number }) => r.tms_session_id === lastSession.id);
 
         if (lastResponse && lastResponse.mood_score < 3) {
@@ -86,7 +86,7 @@ export class AlertEngine {
     }
 
     const effectsRes = await adverseEffects.listByPatient(patientId);
-    const severeEffects = (effectsRes.data || []).filter((e: AdverseEffect) => e.severity === 'severe' && !e.resolved);
+    const severeEffects = (safeArray(effectsRes.data)).filter((e: AdverseEffect) => e.severity === 'severe' && !e.resolved);
 
     if (severeEffects.length > 0) {
       alerts.push({
@@ -110,7 +110,7 @@ export class AlertEngine {
 
   async evaluateAllPatients(): Promise<ClinicalAlert[]> {
     const patientsRes = await patients.list();
-    const allPatients = patientsRes.data || [];
+    const allPatients = safeArray(patientsRes.data);
 
     const allAlerts: ClinicalAlert[] = [];
     for (const patient of allPatients) {

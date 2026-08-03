@@ -1,6 +1,13 @@
 import type { Env, Therapist } from '../../types';
 import { sanitizeUpdateFields } from '../../lib/sql-safe';
 
+export async function findFirstActiveTherapist(env: Env, clinicId: number): Promise<number | null> {
+  const row = await env.DB.prepare(
+    "SELECT id FROM therapists WHERE clinic_id = ? AND (active = 1 OR active IS NULL) ORDER BY id LIMIT 1"
+  ).bind(clinicId).first();
+  return (row as unknown as { id: number } | null)?.id ?? null;
+}
+
 export async function findTherapists(env: Env, clinicId: number): Promise<Therapist[]> {
   const result = await env.DB.prepare(
     "SELECT id, clinic_id, user_id, name, email, phone, specialty, active, created_at FROM therapists WHERE clinic_id = ? ORDER BY name"

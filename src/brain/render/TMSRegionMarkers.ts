@@ -11,18 +11,16 @@ interface RegionInfo {
 }
 
 const REGION_INFO: Record<string, RegionInfo> = {
-  dlpfc_l: { label: 'DLPFC Izq', functionColor: '#06b6d4', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Regulación emocional · Funciones ejecutivas', conditions: ['Depresión', 'Tabaquismo', 'Esquizofrenia'] },
-  dlpfc_r: { label: 'DLPFC Der', functionColor: '#14b8a6', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Control inhibitorio · Ansiedad', conditions: ['Ansiedad', 'TEPT', 'Insomnio'] },
-  m1_l: { label: 'M1 Izq', functionColor: '#ef4444', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor', conditions: ['Dolor crónico', 'Fibromialgia', 'Dolor neuropático'] },
-  m1_r: { label: 'M1 Der', functionColor: '#f97316', baArea: 'BA 4', lobe: 'Frontal', function: 'Ejecución motora · Dolor', conditions: ['Dolor crónico', 'Hemiplejia'] },
-  sma: { label: 'SMA', functionColor: '#818cf8', baArea: 'BA 6', lobe: 'Frontal', function: 'Planificación motora · Secuencias', conditions: ['Parkinson', 'Distonía', 'Tourette'] },
-  acc: { label: 'ACC', functionColor: '#8b5cf6', baArea: 'BA 24/32', lobe: 'Límbico', function: 'Monitoreo de conflicto · Dolor', conditions: ['TOC', 'Dolor neuropático', 'Depresión resistente'] },
-  insula_l: { label: 'Ínsula Izq', functionColor: '#a855f7', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Interocepción · Adicciones', conditions: ['Adicciones', 'Dolor visceral', 'Ansiedad'] },
-  insula_r: { label: 'Ínsula Der', functionColor: '#ec4899', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Conciencia corporal · Dolor visceral', conditions: ['Dolor crónico', 'Fibromialgia', 'Migraña'] },
-  broca: { label: 'Broca', functionColor: '#22c55e', baArea: 'BA 44/45', lobe: 'Frontal', function: 'Producción del lenguaje', conditions: ['Afasia', 'Disartria', 'TEPT'] },
-  wernicke: { label: 'Wernicke', functionColor: '#3b82f6', baArea: 'BA 22', lobe: 'Temporal', function: 'Comprensión del lenguaje', conditions: ['Afasia', 'Comprensión', 'Demencia'] },
-  occipital: { label: 'Occipital', functionColor: '#a3e635', baArea: 'BA 17', lobe: 'Occipital', function: 'Corteza visual primaria · Migraña', conditions: ['Migraña', 'Cefalea', 'Aurora visual'] },
-  temporal_l: { label: 'Temporal Izq', functionColor: '#c084fc', baArea: 'BA 41/42', lobe: 'Temporal', function: 'Procesamiento auditivo · Tinnitus', conditions: ['Tinnitus', 'Epilepsia', 'Alzheimer'] },
+  dlpfc_l: { label: 'DLPFC', functionColor: '#06b6d4', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Funciones ejecutivas · Memoria de trabajo · Planificación', conditions: ['Depresión', 'Tabaquismo', 'Esquizofrenia'] },
+  dlpfc_r: { label: 'DLPFC', functionColor: '#14b8a6', baArea: 'BA 9/46', lobe: 'Frontal', function: 'Atención · Regulación emocional · Control inhibitorio', conditions: ['Ansiedad', 'TEPT', 'Insomnio'] },
+  m1_l: { label: 'M1', functionColor: '#ef4444', baArea: 'BA 4', lobe: 'Frontal', function: 'Control motor lado derecho · Tacto · Propiocepción', conditions: ['Dolor crónico', 'Fibromialgia', 'Dolor neuropático'] },
+  m1_r: { label: 'M1', functionColor: '#f97316', baArea: 'BA 4', lobe: 'Frontal', function: 'Control motor lado izquierdo · Tacto · Propiocepción', conditions: ['Hemiplejia', 'Espasticidad'] },
+  sma: { label: 'SMA', functionColor: '#818cf8', baArea: 'BA 6', lobe: 'Frontal Medial', function: 'Planificación motora · Secuencias complejas', conditions: ['Parkinson', 'Distonía', 'Tourette'] },
+  acc: { label: 'ACC', functionColor: '#8b5cf6', baArea: 'BA 24/32', lobe: 'Límbico', function: 'Monitoreo de conflicto · Regulación emocional', conditions: ['TOC', 'Dolor neuropático', 'Depresión resistente'] },
+  insula_l: { label: 'Ínsula', functionColor: '#a855f7', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Interocepción · Procesamiento del dolor · Empatía', conditions: ['Adicciones', 'Dolor visceral', 'Ansiedad'] },
+  insula_r: { label: 'Ínsula', functionColor: '#ec4899', baArea: 'BA 13/14', lobe: 'Ínsula', function: 'Conciencia corporal · Procesamiento emocional', conditions: ['Fibromialgia', 'Migraña', 'Dolor crónico'] },
+  broca: { label: 'Broca', functionColor: '#22c55e', baArea: 'BA 44/45', lobe: 'Frontal', function: 'Producción del lenguaje · Articulación', conditions: ['Afasia de Broca', 'Disartria'] },
+  temporal: { label: 'Temporal', functionColor: '#c084fc', baArea: 'BA 41/42', lobe: 'Temporal', function: 'Procesamiento auditivo · Memoria semántica', conditions: ['Tinnitus', 'Epilepsia temporal', 'Alzheimer'] },
 };
 
 export const CONDITION_TO_REGION: Record<string, string> = {
@@ -30,15 +28,17 @@ export const CONDITION_TO_REGION: Record<string, string> = {
   'Ansiedad Generalizada': 'dlpfc_r',
   'TOC': 'acc',
   'Dolor Crónico': 'm1_l',
-  'Afasia': 'broca',
-  'TEPT': 'dlpfc_r',
-  'Migraña': 'occipital',
+  'Afasia de Broca': 'broca',
+  'TEPT': 'dlpfc_l',
   'Tabaquismo': 'dlpfc_l',
-  'Tinnitus': 'temporal_l',
+  'Tinnitus': 'temporal',
   'Fibromialgia': 'm1_l',
   'Dolor Neuropático': 'm1_l',
   'Esquizofrenia': 'dlpfc_l',
   'Insomnio': 'dlpfc_r',
+  'Parkinson': 'sma',
+  'Distonía': 'sma',
+  'Adicciones': 'insula_l',
 };
 
 interface MarkerObjects {
@@ -53,6 +53,7 @@ interface MarkerObjects {
 
 export class TMSRegionMarkers {
   private markers: Map<string, MarkerObjects> = new Map();
+  private hemisphereSprites: THREE.Sprite[] = [];
   private scene: THREE.Scene;
   private regionMeshes: Map<string, RegionMesh>;
   private activationLevels: Map<string, number> = new Map();
@@ -70,6 +71,48 @@ export class TMSRegionMarkers {
       if (!info) continue;
       this.createMarker(id, regionMesh, info);
       this.activationLevels.set(id, 0);
+    }
+    this.createHemisphereLabels();
+  }
+
+  private createHemisphereLabels() {
+    const labels = [
+      { text: '◄ HEMISFERIO IZQUIERDO', color: '#3b82f6', pos: [-1.3, 1.6, 0] as [number, number, number] },
+      { text: 'HEMISFERIO DERECHO ►', color: '#f97316', pos: [1.3, 1.6, 0] as [number, number, number] },
+    ];
+
+    for (const label of labels) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      canvas.width = 800;
+      canvas.height = 120;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.shadowColor = label.color;
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = label.color;
+      ctx.font = 'bold 56px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label.text, 400, 60);
+      ctx.restore();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+        sizeAttenuation: true,
+        opacity: 0.7,
+      }));
+      sprite.position.set(...label.pos);
+      sprite.scale.set(1.8, 0.27, 1);
+      this.scene.add(sprite);
+      this.hemisphereSprites.push(sprite);
     }
   }
 
@@ -101,12 +144,12 @@ export class TMSRegionMarkers {
     }));
     group.add(particles);
 
-    const labelCompact = this.createCompactLabel(info.label, info.baArea, info.lobe, info.functionColor);
-    labelCompact.position.set(0, 0.28, 0);
+    const labelCompact = this.createCompactLabel(info.label, info.baArea, info.lobe, info.functionColor, info.conditions);
+    labelCompact.position.set(0, 0.35, 0);
     group.add(labelCompact);
 
     const labelExpanded = this.createExpandedLabel(info.label, info.baArea, info.lobe, info.conditions, info.functionColor);
-    labelExpanded.position.set(0, 0.28, 0);
+    labelExpanded.position.set(0, 0.35, 0);
     labelExpanded.visible = false;
     group.add(labelExpanded);
 
@@ -120,11 +163,11 @@ export class TMSRegionMarkers {
     this.markers.set(id, { group, halo, particles, labelCompact, labelExpanded, activeLabel: labelCompact, line });
   }
 
-  private createCompactLabel(text: string, baArea: string, lobe: string, color: string): THREE.Sprite {
+  private createCompactLabel(text: string, baArea: string, lobe: string, color: string, conditions: string[]): THREE.Sprite {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     canvas.width = 900;
-    canvas.height = 260;
+    canvas.height = 500;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -149,20 +192,40 @@ export class TMSRegionMarkers {
     ctx.font = 'bold 76px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text.toUpperCase(), 68, 120);
+    ctx.fillText(text.toUpperCase(), 68, 100);
     ctx.restore();
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
     ctx.font = '600 32px "IBM Plex Mono", "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${baArea}  ·  ${lobe}`, 68, 185);
+    ctx.fillText(`${baArea}  ·  ${lobe}`, 68, 160);
+
+    if (conditions && conditions.length > 0) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(68, 195);
+      ctx.lineTo(700, 195);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.50)';
+      ctx.font = '500 24px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('INDICACIONES:', 68, 225);
+
+      const condText = conditions.join('  ·  ');
+      ctx.fillStyle = `${color}CC`;
+      ctx.font = '600 26px "IBM Plex Mono", "SF Mono", Consolas, monospace';
+      ctx.fillText(condText, 68, 270);
+    }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
-    sprite.scale.set(1.0, 0.29, 1);
+    sprite.scale.set(1.0, 0.56, 1);
     return sprite;
   }
 
@@ -310,6 +373,12 @@ export class TMSRegionMarkers {
   }
 
   dispose() {
+    for (const sprite of this.hemisphereSprites) {
+      this.scene.remove(sprite);
+      sprite.material.map?.dispose();
+      sprite.material.dispose();
+    }
+    this.hemisphereSprites = [];
     for (const [, marker] of this.markers) {
       this.scene.remove(marker.group);
       marker.halo.geometry.dispose();

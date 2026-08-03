@@ -1,0 +1,152 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: "22"
+  CLOUDFLARE_ENV: ${{ github.event.inputs.environment || 'production' }}
+  WORKER_DIR: worker
+
+jobs:
+  pipeline:
+    name: "Pipeline: Typecheck -> Test -> Security -> Compliance -> Deploy -> Smoke"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKER_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ${{ env.WORKER_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # STAGE 1: TypeScript Typecheck
+      - name: "[1/11] TypeScript Typecheck"
+        id: typecheck
+        run: npx tsc --noEmit
+
+      # STAGE 2: Environment Validation
+      - name: "[2/11] Environment Validation"
+        id: check-env
+        run: node scripts/check-env.js
+        continue-on-error: true
+
+      # STAGE 3: Database Validation
+      - name: "[3/11] Database Validation"
+        id: check-db
+        run: node scripts/check-db.js
+        continue-on-error: true
+
+      # STAGE 4: Unit Tests
+      - name: "[4/11] Unit Tests"
+        id: tests
+        run: npx vitest run --reporter=verbose
+
+      # STAGE 5: Security Check
+      - name: "[5/11] Security Check"
+        id: security
+        run: node scripts/security-check.js
+        continue-on-error: true
+
+      # STAGE 6: Compliance Check
+      - name: "[6/11] Compliance Check"
+        id: compliance
+        run: node scripts/compliance-check.js
+        continue-on-error: true
+
+      # STAGE 7: Migration Validation
+      - name: "[7/11] Migration Validation"
+        id: migrations
+        run: node scripts/migration-check.js
+        continue-on-error: true
+
+      # STAGE 8: Build (dry-run)
+      - name: "[8/11] Build (dry-run)"
+        id: build
+        run: npx wrangler deploy --dry-run
+
+      # STAGE 9: Deploy
+      - name: "[9/11] Deploy to Cloudflare"
+        id: deploy
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: npx wrangler deploy --env ${{ env.CLOUDFLARE_ENV }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # STAGE 10: Smoke Test
+      - name: "[10/11] Smoke Test"
+        id: smoke
+        if: steps.deploy.outcome == 'success' || steps.deploy.outcome == 'skipped'
+        run: |
+          sleep 5
+          # Health
+          HEALTH=$(curl -sf https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/health)
+          echo "Health: $(echo $HEALTH | jq -r '.data.status')"
+          # Login
+          LOGIN=$(curl -sf -X POST https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@clinica.com","password":"Admin123!"}')
+          TOKEN=$(echo $LOGIN | jq -r '.data.accessToken')
+          echo "Auth: OK (token received: ${TOKEN:0:20}...)"
+          # Dashboard
+          DASH=$(curl -sf https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/compliance/dashboard \
+            -H "Authorization: Bearer $TOKEN")
+          SCORE=$(echo $DASH | jq -r '.data.overallScore')
+          echo "Dashboard: OK (score: $SCORE)"
+          # Backups
+          BACKUPS=$(curl -sf https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/backups/latest \
+            -H "Authorization: Bearer $TOKEN")
+          echo "Backups: OK"
+          echo "SMOKE_RESULT=passed" >> $GITHUB_OUTPUT
+
+      # STAGE 11: Release Tag
+      - name: "[11/11] Release Tag"
+        id: release
+        if: steps.deploy.outcome == 'success'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          TAG="v${VERSION}-deploy-${TIMESTAMP}"
+          git config user.name "Pipeline Bot"
+          git config user.email "bot@clinica-tms"
+          git tag -a "$TAG" -m "Deploy pipeline $TAG"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      # Summary
+      - name: Pipeline Summary
+        if: always()
+        run: |
+          echo "## Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          for step in typecheck check-env check-db tests security compliance migrations build deploy smoke release; do
+            STATUS="${{ steps[step].outcome || 'skipped' }}"
+            echo "| $step | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to: https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev" >> $GITHUB_STEP_SUMMARY

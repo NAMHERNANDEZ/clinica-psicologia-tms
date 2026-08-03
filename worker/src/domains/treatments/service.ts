@@ -25,7 +25,7 @@ export async function createTreatment(env: Env, clinicId: number, userId: number
   start_date: string;
 }, ip: string) {
   const id = await repo.createTreatment(env, clinicId, data);
-  await logAudit(env, clinicId, userId, 'create', 'treatments', id, undefined, JSON.stringify(data), ip);
+  await logAudit(env, clinicId, userId, 'treatments', 'create', 'treatments', id, undefined, JSON.stringify(data), ip, undefined, 'info');
   return { success: true, data: { id } };
 }
 
@@ -33,7 +33,7 @@ export async function updateTreatment(env: Env, clinicId: number, userId: number
   const before = await repo.findTreatmentById(env, clinicId, id);
   const success = await repo.updateTreatment(env, clinicId, id, data as any);
   if (!success) return { success: false, error: 'Tratamiento no encontrado', status: 404 };
-  await logAudit(env, clinicId, userId, 'update', 'treatments', id, JSON.stringify(before), JSON.stringify(data), ip);
+  await logAudit(env, clinicId, userId, 'treatments', 'update', 'treatments', id, JSON.stringify(before), JSON.stringify(data), ip, undefined, 'info');
   return { success: true, data: null };
 }
 
@@ -41,7 +41,7 @@ export async function deleteTreatment(env: Env, clinicId: number, userId: number
   const before = await repo.findTreatmentById(env, clinicId, id);
   const success = await repo.deleteTreatment(env, clinicId, id);
   if (!success) return { success: false, error: 'Tratamiento no encontrado', status: 404 };
-  await logAudit(env, clinicId, userId, 'delete', 'treatments', id, JSON.stringify(before), undefined, ip);
+  await logAudit(env, clinicId, userId, 'treatments', 'delete', 'treatments', id, JSON.stringify(before), undefined, ip, undefined, 'warning');
   return { success: true, data: null };
 }
 
