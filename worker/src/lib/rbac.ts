@@ -8,7 +8,12 @@ export type Permission =
   | 'clinical:read' | 'clinical:write'
   | 'reports:read' | 'reports:write'
   | 'cos:read'
-  | 'admin:access';
+  | 'admin:access'
+  | 'clinical_notes:read' | 'clinical_notes:write' | 'clinical_notes:delete'
+  | 'sessions:read' | 'sessions:write'
+  | 'templates:read' | 'templates:write' | 'templates:delete'
+  | 'timeline:read' | 'timeline:write'
+  | 'treatments:read' | 'treatments:write' | 'treatments:delete';
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [

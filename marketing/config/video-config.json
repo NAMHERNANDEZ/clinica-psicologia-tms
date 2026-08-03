@@ -1,0 +1,120 @@
+{
+  "title": "TMS para Depresión y Ansiedad - Tratamiento No Invasivo",
+  "description": "Video premium de 2 minutos sobre Terapia Magnética Transcraneal con énfasis en depresión y ansiedad",
+  "emphasis": ["depresión", "ansiedad"],
+  "style": "clinical-premium",
+  "colors": {
+    "primary": "#0d1117",
+    "accent": "#00e5ff",
+    "depression": "#1a1a2e",
+    "anxiety": "#16213e",
+    "text": "#ffffff",
+    "success": "#00c853"
+  },
+  "resolution": "1080x1920",
+  "fps": 60,
+  "duration": 120,
+  "transitions": "smooth-fade",
+  "scenes": [
+    {
+      "id": 1,
+      "name": "Hook",
+      "start": 0,
+      "end": 5,
+      "visual": "Persona triste/ansiosa + cerebro 3D",
+      "text": "¿La depresión o la ansiedad controlan tu vida?",
+      "audio": "Música suave de fondo, tono melancólico"
+    },
+    {
+      "id": 2,
+      "name": "Depresión",
+      "start": 5,
+      "end": 20,
+      "visual": "Persona en cama, sin energía, colores oscuros",
+      "text": "Sin energía, sin ganas de vivir, sin esperanza",
+      "audio": "Música triste, melancólica"
+    },
+    {
+      "id": 3,
+      "name": "Ansiedad",
+      "start": 20,
+      "end": 35,
+      "visual": "Persona con manos en la cabeza, pensamientos acelerados",
+      "text": "Ataques de pánico, preocupación constante, miedo sin razón",
+      "audio": "Música tensa, acelerada"
+    },
+    {
+      "id": 4,
+      "name": "¿Qué es TMS?",
+      "start": 35,
+      "end": 55,
+      "visual": "Bobina TMS cyan + cerebro 3D + ondas magnéticas",
+      "text": "Terapia Magnética Transcraneal - Tratamiento no invasivo",
+      "audio": "Música esperanzadora, ascendente"
+    },
+    {
+      "id": 5,
+      "name": "¿Cómo funciona?",
+      "start": 55,
+      "end": 70,
+      "visual": "Diagrama animado del cerebro + neuronas activándose",
+      "text": "Estimula áreas cerebrales específicas - 30-45 minutos por sesión",
+      "audio": "Música informativa, clara"
+    },
+    {
+      "id": 6,
+      "name": "Beneficios Depresión",
+      "start": 70,
+      "end": 85,
+      "visual": "Checkmarks animados + iconos de energía",
+      "text": "Mejora el ánimo, reduce la tristeza, recupera la energía",
+      "audio": "Música positiva, enérgica"
+    },
+    {
+      "id": 7,
+      "name": "Beneficios Ansiedad",
+      "start": 85,
+      "end": 95,
+      "visual": "Checkmarks animados + iconos de calma",
+      "text": "Reduce el estrés, controla ataques de pánico, mejora el sueño",
+      "audio": "Música tranquila, relajante"
+    },
+    {
+      "id": 8,
+      "name": "Credibilidad",
+      "start": 95,
+      "end": 105,
+      "visual": "Logos FDA, COFEPRIS, CE",
+      "text": "Aprobado por autoridades sanitarias mundiales",
+      "audio": "Música confiable, profesional"
+    },
+    {
+      "id": 9,
+      "name": "CTA",
+      "start": 105,
+      "end": 120,
+      "visual": "Logo clínica + WhatsApp + teléfono",
+      "text": "¿Depresión o ansiedad? TMS puede ayudarte. Agenda tu consulta HOY",
+      "audio": "Música con call to action, enérgica"
+    }
+  ],
+  "elements": [
+    "cerebro-3d",
+    "bobina-tms-cyan",
+    "ondas-magneticas",
+    "checkmarks-depresion",
+    "checkmarks-ansiedad",
+    "logo-clinica",
+    "whatsapp-cta",
+    "logos-fda-cofepris",
+    "persona-depresion",
+    "persona-ansiedad"
+  ],
+  "output": {
+    "filename": "tms-depresion-ansiedad-premium.mp4",
+    "format": "mp4",
+    "codec": "h264",
+    "audio": "aac",
+    "bitrate": "8000k"
+  }
+}

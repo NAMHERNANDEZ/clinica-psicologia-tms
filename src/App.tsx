@@ -42,6 +42,11 @@ const VisualTMSPage = lazy(() => import('./pages/visual/VisualTMSPage'));
 const VisualTwinPage = lazy(() => import('./pages/visual/VisualTwinPage'));
 const VisualHospitalPage = lazy(() => import('./pages/visual/VisualHospitalPage'));
 const VisualKioskPage = lazy(() => import('./pages/visual/VisualKioskPage'));
+const AdminLayout = lazy(() => import('./admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminLeadsPage = lazy(() => import('./pages/admin/LeadsPage'));
+const AdminMarketingPage = lazy(() => import('./pages/admin/MarketingPage'));
+const AdminChatPage = lazy(() => import('./pages/admin/ChatPage'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -68,6 +73,20 @@ function PageLoader() {
       <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
 }
 
 function App() {
@@ -126,6 +145,14 @@ function App() {
               <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
               <Route path="/calendar" element={<Navigate to="/app/agenda" replace />} />
               <Route path="/citas" element={<Navigate to="/app/agenda" replace />} />
+
+              {/* Admin private area (FASE 11.2) */}
+              <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="leads" element={<AdminLeadsPage />} />
+                <Route path="marketing" element={<AdminMarketingPage />} />
+                <Route path="chat" element={<AdminChatPage />} />
+              </Route>
             </Routes>
           </Suspense>
           </ErrorBoundary>

@@ -28,14 +28,14 @@ export default function DigitalTwinPage() {
   const loadPatients = async () => {
     try {
       const res = await patients.list();
-      setPatientList(res.data || []);
+      setPatientList(safeArray(res.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 
   const loadPredictions = async (patientId: number) => {
     try {
       const res = await digitalTwin.getPredictions(patientId);
-      setPredictions(res.data || []);
+      setPredictions(safeArray(res.data));
     } catch { /* silent */ }
   };
 

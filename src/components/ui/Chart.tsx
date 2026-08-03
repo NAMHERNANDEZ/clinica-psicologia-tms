@@ -15,6 +15,7 @@ interface ChartProps {
 }
 
 export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLabels = [0, 5, 10], className }: ChartProps) {
+  const safeSeries = Array.isArray(series) ? series : [];
   const pad = { top: 10, right: 20, bottom: 25, left: 40 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
@@ -34,7 +35,7 @@ export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLab
         );
       })}
 
-      {series.map(s => {
+      {safeSeries.map(s => {
         const len = s.data.length;
         const path = s.data.map((v, i) => {
           const x = pad.left + (i / Math.max(len - 1, 1)) * plotW;
@@ -44,7 +45,7 @@ export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLab
         return <path key={s.name} d={path} fill="none" stroke={s.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={s.dashed ? '6 3' : undefined} />;
       })}
 
-      {series.map(s => {
+      {safeSeries.map(s => {
         const len = s.data.length;
         return s.data.map((v, i) => {
           const x = pad.left + (i / Math.max(len - 1, 1)) * plotW;
@@ -53,9 +54,9 @@ export function LineChart({ series, width = 600, height = 180, maxVal = 10, yLab
         });
       })}
 
-      {series.length > 1 && (
+      {safeSeries.length > 1 && (
         <g transform={`translate(${width - 100}, ${pad.top})`}>
-          {series.map((s, i) => (
+          {safeSeries.map((s, i) => (
             <g key={s.name} transform={`translate(0, ${i * 14})`}>
               {s.dashed ? (
                 <line x1="0" y1="4" x2="10" y2="4" stroke={s.color} strokeWidth="1.5" strokeDasharray="4 2" />

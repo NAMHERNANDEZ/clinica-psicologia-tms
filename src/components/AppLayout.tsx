@@ -27,7 +27,7 @@ export default function AppLayout() {
 
   if (isFullscreen) {
     return (
-      <div className="min-h-screen bg-[#080C12]">
+      <div className="min-h-screen bg-[#0A0E14]">
         <Outlet />
       </div>
     );

@@ -1,0 +1,52 @@
+# TASK_QUEUE.md
+
+## Completed (Done)
+- **FASE_11.0** Chat producción ✅: Public `/api/chat`, pricing fallbacks, knowledge base created. Deployed.
+- **FASE_11.1** Captura leads ✅: Lead domain (repository, service, routes), extractor de chat, migración 0020. Local testing passed (8/8). Report: `FASE_11_1_LEADS_REPORT.md`.
+- **FASE_11.2** Dashboard admin ✅:
+  - Dashboard en `/admin` con RBAC (`AdminLayout`, `AdminDashboard`, `LeadsPage`).
+  - Catalogo de CBT y TMS en Slider + Calendar.
+  - Migración de auditoría (0021_leads_audit).
+  - Rutas públicas + endpoints protegidos con RBAC admin.
+  - Tests: 14/14 dashboard PASS, 8/8 leads PASS, tests RBAC fallidos pensan en permisos antiguos (fuera de FASE_11.2). Report: `FASE_11_2_DASHBOARD_REPORT.md`.
+- **FASE_11.2.1** Deploy producción ✅: Migraciones D1 0020/0021 aplicadas, Worker desplegado, flujo Lead extremo a extremo. Report: `FASE_11_2.1_DEPLOY_REPORT.md`.
+- **FASE_11.2.2** Hardening deploy ✅: Pipeline `deploy-production.ps1` (7 etapas) + scripts de verificación D1. Report: `FASE_11_2.2_HARDENING_REPORT.md`.
+- **FASE_11.3** CRM Completion ✅: email + lead_notes (migración 0023), PATCH/DELETE soft, notas, búsqueda + filtros, CRUD completo probado en producción. Report: `FASE_11_3_CRM_REPORT.md`.
+- **FASE_11.4** Agenda Completion ✅: Lead→Paciente promotion (migración 0024: lead_id, type, deleted_at, availability), soft delete appointments,.createFromLead con dedup por teléfono, AgendaPage con filtros tipo/estado, LeadsPage con "Crear cita" inline. Deploy: 7/7 stages OK, smoke appointments 9/9 PASS. Report: `FASE_11_4_AGENDA_REPORT.md`.
+- **FASE_11.5** Automatizaciones ✅: Dominio automation (events, executor, templates, routes), records via DB rules, providers (whatsapp/email). Report: `FASE_11_5_AUTOMATION_REPORT.md`.
+- **FASE_11.5.1** Hardening Automation ✅: Migracion 0025 (automation_rules/queue/history/audit), providers base. Report: `FASE_11_5_1_HARDENING_REPORT.md`.
+- **FASE_11.6** Dashboard metrics ✅: Endpoint `/api/dashboard/overview` con KPIs, smoke 8/8 PASS. Report: `FASE_11_6_DASHBOARD_REPORT.md`.
+- **FASE_11.7** Marketing AI ✅: Provider Gemini real, validador clinico dual-tier, Content/Campaign/SEO AI, 6 endpoints, migration 0026, frontend MarketingPage, smoke 25/25 PASS. Pre-existing errors fixed (automation/executor, reminders, dashboard, analytics). Report: `FASE_11_7_MARKETING_AI_REPORT.md`.
+- **FASE_11.8** Chat IA Clinico ✅: Knowledge base clinica (11 entries), Chat AI service (Gemini + template fallback), emergency detection (Linea de la Vida), contact extraction, D1 persistence (migration 0027: chat_sessions/messages/analytics), 4 API endpoints (public message + admin sessions/messages/stats), frontend ChatPage (simulator, sessions, stats), smoke 19/19 PASS. Report: `FASE_11_8_DEPLOY_REPORT.md`.
+
+## Pending
+- **FASE_12** Portal clinico: pacientes, expedientes, documentos, consentimientos, notas clinicas, seguimientos.
+- **FASE_12.5** Seguridad y cumplimiento: roles, permisos, auditoria, logs, backup, control de acceso.
+- **FASE_13** Agentes clinicos IA: Investigacion (evidencia/papers), TMS (educacion paciente), Supervisor (revision calidad), Documentacion (ayuda administrativa).
+- **FASE_14** Paciente digital: portal con login, citas, documentos, recordatorios, material educativo, seguimiento.
+- **FASE_15** Escalamiento empresarial: multi-clínica (usuarios, pacientes, configuración, facturación).
+- **FASE_16** Ecosistema completo: Marketing AI → Web+Chat IA → CRM → Agenda → Consulta → Expediente → Seguimiento → Analytics → Marketing AI.
+
+### Marco Nº Técnico (backlog técnico, independiente del roadmap de producto)
+- **FASE_10_MLIB** MLIB Upgrades (MWS → MLIB) con fallback a manual.
+- **FASE_MAIN_DEV** Backend refactor (Medication, iconrendering, reviewFlows) → Service-Router → RxRoutes → Database (WOW ADDONS / triggers).
+- **ODOO_DEVICE** Solicitudes de WhatsApp (integración server-side con moderación).
+- **EJECUTIVO** Detener etapas, evaluar reestablecer Camilo (asegurar integridad del modelo).
+
+## Evergreen
+- Clínica URL: https://neurocienciaclinica.mx
+- Worker URL: https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev
+- Workspace: `C:\CLINICA_AI`
+- Guard project: AI_WORKSPACE_GUARD (Python CLI), project id: `proj_293bc46b`
+
+## Architecture
+- **Web**: TS/React (Next.js frontend + Worker backend — en proceso de consolidación)
+- **Backend**: Cloudflare Worker + D1 (SQLite remote).
+- **DB**: Migrations en `worker/migrations/*.sql`
+- **Frontend**: Vite (`src/` → `dist`), integrado en `worker/src/frontend-assets.ts`.
+
+## Notes
+- No enviar WhatsApp sin aprobación humana.
+- No guardar diagnósticos ni medicamentos en leads (Lead ≠ Consulta).
+- Dashboard in `/admin` (solo área privada con RBAC).
+- Guía principal: `WORKSPACE.md` + `ARCHITECTURE.md`, `WARDROBE.md` (dominios).

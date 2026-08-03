@@ -57,7 +57,7 @@ export async function handleUpdateAppointment(env: Env, request: Request, user: 
   if (err) return applyCors(err, corsHeaders);
 
   const id = parseInt(new URL(request.url).pathname.split('/').pop() || '0');
-  const body = await request.json();
+  const body = await request.json() as any;
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const result = await service.updateAppointment(env, user.clinic_id, user.id, id, body, ip);
   if (!result.success) return json(result, result.status || 400, corsHeaders);

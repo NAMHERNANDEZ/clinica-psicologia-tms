@@ -121,7 +121,7 @@ export default function TMSLiveSession({ sessionData, isLive = false }: TMSLiveS
           <div className={`w-3 h-3 rounded-full ${isPulsing ? 'bg-cyan-400 scale-125' : 'bg-slate-600'} transition-all duration-100`} />
           <div className={`w-3 h-3 rounded-full ${isPulsing ? 'bg-cyan-400 scale-125' : 'bg-slate-600'} transition-all duration-100`} style={{ animationDelay: '0.1s' }} />
           <div className={`w-3 h-3 rounded-full ${isPulsing ? 'bg-cyan-400 scale-125' : 'bg-slate-600'} transition-all duration-100`} style={{ animationDelay: '0.2s' }} />
-          <span className="text-xs text-slate-400 ml-2">Simulación de pulso en tiempo real</span>
+          <span className="text-xs text-slate-400 ml-2">Pulso en tiempo real</span>
         </div>
       )}
     </div>

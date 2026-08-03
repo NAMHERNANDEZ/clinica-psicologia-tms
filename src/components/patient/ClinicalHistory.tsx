@@ -7,7 +7,9 @@ interface ClinicalHistoryProps {
 }
 
 export function ClinicalHistory({ sessions, responses }: ClinicalHistoryProps) {
-  const sorted = [...sessions].sort((a, b) => b.session_number - a.session_number);
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const safeResponses = Array.isArray(responses) ? responses : [];
+  const sorted = [...safeSessions].sort((a, b) => b.session_number - a.session_number);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
@@ -16,7 +18,7 @@ export function ClinicalHistory({ sessions, responses }: ClinicalHistoryProps) {
         {sorted.length === 0 ? (
           <div className="text-center text-slate-500 text-xs py-4">Sin sesiones registradas</div>
         ) : sorted.map(s => {
-          const resp = responses.find(r => r.tms_session_id === s.id);
+          const resp = safeResponses.find(r => r.tms_session_id === s.id);
           return (
             <div key={s.id} className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
               <div className="flex items-center justify-between mb-1.5">

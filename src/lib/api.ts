@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const RAW_URL = import.meta.env.VITE_API_URL;
+if (!RAW_URL) throw new Error('VITE_API_URL no esta definida. Configurala antes del build.');
+try { new URL(RAW_URL); } catch { throw new Error('VITE_API_URL invalida: ' + RAW_URL); }
+const API_BASE = RAW_URL;
 
 // ============================================
 // TYPES
@@ -10,6 +13,41 @@ export interface User {
   role: 'admin' | 'therapist' | 'reception' | 'patient';
   clinic_id: number;
 }
+
+export interface Lead {
+  id: number;
+  nombre?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  ciudad?: string | null;
+  servicio_interesado?: string | null;
+  motivo?: string | null;
+  estado: 'NUEVO' | 'CONTACTADO' | 'CITA_CONFIRMADA' | 'ATENDIDO' | 'CERRADO';
+  origen?: string;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+}
+
+export interface LeadAuditEntry {
+  id: number;
+  lead_id: number;
+  accion: string;
+  estado_anterior?: string | null;
+  estado_nuevo?: string | null;
+  usuario?: string | null;
+  fecha: string;
+}
+
+export interface LeadNote {
+  id: number;
+  lead_id: number;
+  note: string;
+  usuario?: string | null;
+  fecha: string;
+}
+
+export const LEAD_ESTADOS = ['NUEVO', 'CONTACTADO', 'CITA_CONFIRMADA', 'ATENDIDO', 'CERRADO'] as const;
+export type LeadEstado = (typeof LEAD_ESTADOS)[number];
 
 export interface LoginResponse {
   success: boolean;
@@ -51,6 +89,8 @@ export interface Appointment {
   notes?: string;
   patient_name?: string;
   therapist_name?: string;
+  lead_id?: number | null;
+  type?: string | null;
   created_at: string;
 }
 
@@ -310,6 +350,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json();
 }
 
+export function safeArray<T>(data: unknown): T[] {
+  return Array.isArray(data) ? data as T[] : [];
+}
+
 // ============================================
 // AUTH
 // ============================================
@@ -367,7 +411,7 @@ export const appointments = {
     return request<{ success: boolean; data: Appointment[] }>(`/api/appointments${q ? `?${q}` : ''}`);
   },
   get: (id: number) => request<{ success: boolean; data: Appointment }>(`/api/appointments/${id}`),
-  create: (data: Omit<Appointment, 'id' | 'clinic_id' | 'created_at'>) =>
+  create: (data: { patient_id?: number; lead_id?: number; therapist_id?: number; date: string; time: string; duration?: number; notes?: string; type?: string }) =>
     request('/api/appointments', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<Appointment>) =>
     request(`/api/appointments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -696,6 +740,98 @@ export const cos = {
   getPatientStates: () => request('/api/cos/patient-states'),
   getTasks: () => request('/api/cos/tasks'),
   getAlerts: () => request('/api/cos/alerts'),
+};
+
+// ============================================
+// LEADS (FASE 11.1 / 11.2 - Dashboard admin)
+// ============================================
+
+export const leads = {
+  list: (params?: { estado?: string; origen?: string; buscar?: string }) => {
+    const qp = new URLSearchParams();
+    if (params?.estado) qp.set('estado', params.estado);
+    if (params?.origen) qp.set('origen', params.origen);
+    if (params?.buscar) qp.set('buscar', params.buscar);
+    const qs = qp.toString();
+    return request<{ success: boolean; data: Lead[] }>(`/api/leads${qs ? `?${qs}` : ''}`);
+  },
+  get: (id: number) =>
+    request<{ success: boolean; data: Lead & { audit: LeadAuditEntry[]; notes: LeadNote[] } }>(`/api/leads/${id}`),
+  stats: () => request<{ success: boolean; data: Record<string, number> }>('/api/leads/stats'),
+  updateEstado: (id: number, estado: LeadEstado) =>
+    request(`/api/leads/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) }),
+  update: (id: number, fields: Partial<Pick<Lead, 'nombre' | 'telefono' | 'email' | 'ciudad' | 'servicio_interesado' | 'motivo'>>) =>
+    request(`/api/leads/${id}`, { method: 'PATCH', body: JSON.stringify(fields) }),
+  remove: (id: number) =>
+    request(`/api/leads/${id}`, { method: 'DELETE' }),
+  addNote: (id: number, note: string) =>
+    request(`/api/leads/${id}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
+};
+
+// ============================================
+// MARKETING AI (FASE 11.7)
+// ============================================
+
+export interface ContentGenerationResult {
+  id?: number;
+  content: { headline: string; body: string; cta: string; hashtags: string[]; notes: string };
+  validation: { score: number; status: string; warnings: string[]; blocked: string[] };
+  model: string | null;
+  source: string;
+}
+
+export interface CampaignGenerationResult {
+  id?: number;
+  campaign: {
+    summary: string;
+    audience_segments: string[];
+    budget_allocation: Record<string, number>;
+    channels: string[];
+    creative_concepts: string[];
+    copy: string;
+    cta: string;
+    expected_metrics: { impressions: number; clicks: number; conversions: number };
+    timeline: Record<string, string>;
+  };
+  validation: { score: number; status: string; warnings: string[]; blocked: string[] };
+  model: string | null;
+  source: string;
+}
+
+export interface SeoGenerationResult {
+  id?: number;
+  seo: {
+    keyword: string;
+    search_intent: string;
+    difficulty: number;
+    volume_estimate: number;
+    meta_title: string;
+    meta_description: string;
+    schema_type: string;
+    content_outline: string[];
+    related_keywords: string[];
+    recommendations: string[];
+  };
+  model: string | null;
+  source: string;
+}
+
+export const marketing = {
+  overview: () => request<{ success: boolean; data: Record<string, unknown> }>('/api/marketing/overview'),
+
+  generateContent: (data: { topic: string; type?: string; audience?: string; goal?: string; length?: string; callToAction?: string }) =>
+    request<{ success: boolean; data: ContentGenerationResult }>('/api/marketing/content/generate', { method: 'POST', body: JSON.stringify(data) }),
+
+  generateCampaign: (data: { name: string; audience?: string; budget?: number; channels?: string[]; durationDays?: number; goal?: string }) =>
+    request<{ success: boolean; data: CampaignGenerationResult }>('/api/marketing/campaign/generate', { method: 'POST', body: JSON.stringify(data) }),
+
+  generateSeo: (data: { keyword: string; searchIntent?: string; competition?: string; audience?: string }) =>
+    request<{ success: boolean; data: SeoGenerationResult }>('/api/marketing/seo/generate', { method: 'POST', body: JSON.stringify(data) }),
+
+  listContent: () => request<{ success: boolean; data: Array<{ id: number; content_type: string; topic: string; validation_score: number; status: string; created_at: string }> }>('/api/marketing/content'),
+
+  updateContentStatus: (id: number, status: string) =>
+    request(`/api/marketing/content/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
 // ============================================

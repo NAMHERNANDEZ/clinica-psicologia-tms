@@ -101,6 +101,9 @@ export async function handleGetTherapistView(
     const therapistId = therapistIdParam ? parseInt(therapistIdParam, 10) : undefined;
 
     if (!therapistId || isNaN(therapistId)) {
+      if (user.role === 'admin') {
+        return json({ success: true, data: { therapists: [], patients: [], active_patients: 0, sessions_today: 0, pending_requests: 0 }, requestId: crypto.randomUUID() }, 200, corsHeaders);
+      }
       return json({ success: false, error: 'therapist_id es requerido', requestId: crypto.randomUUID() }, 400, corsHeaders);
     }
 
@@ -128,12 +131,12 @@ export async function handleDischargePatient(
 
     let finalNotes: string | undefined;
     try {
-      const body = await request.json();
+      const body = await request.json() as Record<string, unknown>;
       const validation = validateDischarge({ patient_id: patientId, ...body });
       if (!validation.valid) {
         return json({ success: false, error: validation.errors.join(', '), requestId: crypto.randomUUID() }, 400, corsHeaders);
       }
-      finalNotes = body.final_notes;
+      finalNotes = body.final_notes as string | undefined;
     } catch {
       // No body is fine for discharge
     }

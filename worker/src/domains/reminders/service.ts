@@ -1,10 +1,6 @@
 import type { Env } from '../../types';
-import {
-  findPendingReminders,
-  createReminder,
-  markReminderSent,
-  deleteRemindersForAppointment,
-} from './repository';
+import { triggerAutomationForReminder } from '../automation/executor';
+import { createReminder, findPendingReminders } from './repository';
 
 export async function generateReminders(env: Env, clinicId: number) {
   const now = new Date();
@@ -28,34 +24,44 @@ export async function generateReminders(env: Env, clinicId: number) {
 
   // 24h reminders: appointments between 24h and 25h from now
   const apt24h = await env.DB.prepare(
-    `SELECT id, patient_id, therapist_id, date, time
-     FROM appointments
-     WHERE clinic_id = ? AND status = 'scheduled'
-       AND date >= ? AND date <= ?
-       AND time >= ? AND time <= ?`
+    `SELECT id, patient_id, therapist_id, date, time, p.name as patient_name, t.name as therapist_name
+     FROM appointments a
+     LEFT JOIN patients p ON a.patient_id = p.id
+     LEFT JOIN therapists t ON a.therapist_id = t.id
+     WHERE a.clinic_id = ? AND a.status = 'scheduled'
+       AND a.date >= ? AND a.date <= ?
+       AND a.time >= ? AND a.time <= ?`
   ).bind(clinicId, formatDate(window24hStart), formatDate(window24hEnd), formatTime(window24hStart), formatTime(window24hEnd)).all();
 
-  for (const apt of apt24h.results) {
+  for (const apt of apt24h.results as Array<Record<string, unknown>>) {
     if (existingSet.has(`${apt.id}-24h`)) continue;
     const scheduledAt = new Date(new Date(`${apt.date}T${apt.time}`).getTime() - 24 * 60 * 60 * 1000);
-    const id = await createReminder(env, clinicId, apt.id as number, apt.patient_id as number, apt.therapist_id as number, '24h', scheduledAt.toISOString());
-    created.push({ appointmentId: apt.id as number, type: '24h', id });
+    const reminderId = await createReminder(env, clinicId, apt.id as number, apt.patient_id as number, apt.therapist_id as number, '24h', scheduledAt.toISOString());
+    created.push({ appointmentId: apt.id as number, type: '24h', id: reminderId });
+
+    // Trigger automation for the 24h reminder
+    await triggerAutomationForReminder(env, apt.id as number, apt.patient_name as string | undefined, apt.therapist_name as string | undefined, apt.date as string | undefined, apt.time as string | undefined, '24h', reminderId);
   }
 
   // 1h reminders: appointments between 1h and 2h from now
   const apt1h = await env.DB.prepare(
-    `SELECT id, patient_id, therapist_id, date, time
-     FROM appointments
-     WHERE clinic_id = ? AND status = 'scheduled'
-       AND date >= ? AND date <= ?
-       AND time >= ? AND time <= ?`
+    `SELECT id, patient_id, therapist_id, date, time, p.name as patient_name, t.name as therapist_name
+     FROM appointments a
+     LEFT JOIN patients p ON a.patient_id = p.id
+     LEFT JOIN therapists t ON a.therapist_id = t.id
+     WHERE a.clinic_id = ? AND a.status = 'scheduled'
+       AND a.date >= ? AND a.date <= ?
+       AND a.time >= ? AND a.time <= ?`
   ).bind(clinicId, formatDate(window1hStart), formatDate(window1hEnd), formatTime(window1hStart), formatTime(window1hEnd)).all();
 
-  for (const apt of apt1h.results) {
+  for (const apt of apt1h.results as Array<Record<string, unknown>>) {
     if (existingSet.has(`${apt.id}-1h`)) continue;
     const scheduledAt = new Date(new Date(`${apt.date}T${apt.time}`).getTime() - 1 * 60 * 60 * 1000);
-    const id = await createReminder(env, clinicId, apt.id as number, apt.patient_id as number, apt.therapist_id as number, '1h', scheduledAt.toISOString());
-    created.push({ appointmentId: apt.id as number, type: '1h', id });
+    const reminderId = await createReminder(env, clinicId, apt.id as number, apt.patient_id as number, apt.therapist_id as number, '1h', scheduledAt.toISOString());
+    created.push({ appointmentId: apt.id as number, type: '1h', id: reminderId });
+
+    // Trigger automation for the 1h reminder
+    await triggerAutomationForReminder(env, apt.id as number, apt.patient_name as string | undefined, apt.therapist_name as string | undefined, apt.date as string | undefined, apt.time as string | undefined, '1h', reminderId);
   }
 
   return { created, count: created.length };

@@ -36,7 +36,7 @@ export async function handleRecordEffect(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
-    const body = await request.json();
+    const body = await request.json() as any;
     const effect = await service.recordEffect(env, user.clinic_id, body);
     return json({ success: true, data: effect }, 201, corsHeaders);
   } catch (err) {
@@ -58,7 +58,7 @@ export async function handleResolveEffect(
     if (isNaN(id)) {
       return json({ success: false, error: 'Invalid effect id' }, 400, corsHeaders);
     }
-    const body = await request.json();
+    const body = await request.json() as any;
     await service.resolveEffect(env, id, body.action_taken);
     return json({ success: true, data: null }, 200, corsHeaders);
   } catch (err) {

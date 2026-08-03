@@ -88,7 +88,7 @@ function doStep(dt: number) {
   connectome = result.connectome;
 
   if (protocolState.phase !== 'idle' && protocolState.phase !== 'complete') {
-    brainState = propagate(brainState, connectome, dt);
+    brainState = propagate(brainState, connectome, dt, protocolState.targetIdx);
   }
 
   postState();

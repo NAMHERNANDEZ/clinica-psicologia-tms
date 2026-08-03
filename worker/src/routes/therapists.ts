@@ -23,7 +23,7 @@ export async function handleGetTherapist(env: Env, request: Request, user: User,
       return jsonResponse({ error: 'ID requerido' }, 400, origin);
     }
 
-    if (user.role === 'therapist' && user.therapist_id !== parseInt(id)) {
+    if (user.role === 'therapist' && (user as any).therapist_id !== parseInt(id)) {
       return jsonResponse({ error: 'Sin permisos' }, 403, origin);
     }
 
@@ -78,7 +78,7 @@ export async function handleCreateTherapist(env: Env, request: Request, user: Us
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'create', 'therapists', result.meta.last_row_id as number, `Terapeuta: ${data.name}`, ip, ua);
+    await logAudit(env, user.id, 'create' as any, 'therapists', parseInt(String(result.meta.last_row_id)) as any, `Terapeuta: ${data.name}`, ip as any, ua);
 
     return jsonResponse({ id: result.meta.last_row_id, ...data }, 201, origin);
   } catch (error) {
@@ -133,7 +133,7 @@ export async function handleUpdateTherapist(env: Env, request: Request, user: Us
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'update', 'therapists', parseInt(id), `Campos: ${Object.keys(data).join(', ')}`, ip, ua);
+    await logAudit(env, user.id, 'update' as any, 'therapists', parseInt(id) as any, `Campos: ${Object.keys(data).join(', ')}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {
@@ -159,7 +159,7 @@ export async function handleDeleteTherapist(env: Env, request: Request, user: Us
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'delete', 'therapists', parseInt(id), `Terapeuta: ${existing.name}`, ip, ua);
+    await logAudit(env, user.id, 'delete' as any, 'therapists', parseInt(id) as any, `Terapeuta: ${existing.name}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {

@@ -11,6 +11,7 @@ export function requireAuth(user: User | null): Response | null {
 }
 
 export function requirePermission(user: User, permission: Permission): Response | null {
+  if (user.role === 'admin') return null;
   if (!hasPermission(user.role, permission)) {
     return new Response(JSON.stringify({ success: false, error: 'Sin permisos' }), {
       status: 403, headers: { 'Content-Type': 'application/json' },
@@ -20,6 +21,7 @@ export function requirePermission(user: User, permission: Permission): Response 
 }
 
 export function requireRole(user: User, ...roles: Role[]): Response | null {
+  if (user.role === 'admin') return null;
   if (!roles.includes(user.role)) {
     return new Response(JSON.stringify({ success: false, error: 'Rol no autorizado' }), {
       status: 403, headers: { 'Content-Type': 'application/json' },

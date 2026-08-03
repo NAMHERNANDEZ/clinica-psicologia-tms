@@ -20,9 +20,9 @@ export default function TreatmentsPage() {
   const load = async () => {
     try {
       const [tRes, pRes, thRes] = await Promise.allSettled([treatments.list(), patients.list(), therapists.list()]);
-      if (tRes.status === 'fulfilled') setList(tRes.value.data || []);
-      if (pRes.status === 'fulfilled') setPatientList(pRes.value.data || []);
-      if (thRes.status === 'fulfilled') setTherapistList(thRes.value.data || []);
+      if (tRes.status === 'fulfilled') setList(safeArray(tRes.value.data));
+      if (pRes.status === 'fulfilled') setPatientList(safeArray(pRes.value.data));
+      if (thRes.status === 'fulfilled') setTherapistList(safeArray(thRes.value.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 

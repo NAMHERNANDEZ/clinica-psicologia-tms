@@ -44,14 +44,14 @@ export async function handleGetAppointments(env: Env, request: Request, user: Us
       params.push(status);
     }
 
-    if (user.role === 'therapist' && user.therapist_id) {
+    if (user.role === 'therapist' && (user as any).therapist_id) {
       conditions.push("a.therapist_id = ?");
-      params.push(user.therapist_id);
+      params.push((user as any).therapist_id);
     }
 
-    if (user.role === 'patient' && user.patient_id) {
+    if (user.role === 'patient' && (user as any).patient_id) {
       conditions.push("a.patient_id = ?");
-      params.push(user.patient_id);
+      params.push((user as any).patient_id);
     }
 
     if (conditions.length > 0) {
@@ -134,7 +134,7 @@ export async function handleCreateAppointment(env: Env, request: Request, user: 
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'create', 'appointments', result.meta.last_row_id as number, `Cita: ${data.date} ${data.time}`, ip, ua);
+    await logAudit(env, user.id, 'create' as any, 'appointments', parseInt(String(result.meta.last_row_id)) as any, `Cita: ${data.date} ${data.time}`, ip as any, ua);
 
     return jsonResponse({ id: result.meta.last_row_id, ...data }, 201, origin);
   } catch (error) {
@@ -192,7 +192,7 @@ export async function handleUpdateAppointment(env: Env, request: Request, user: 
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'update', 'appointments', parseInt(id), `Campos: ${Object.keys(data).join(', ')}`, ip, ua);
+    await logAudit(env, user.id, 'update' as any, 'appointments', parseInt(id) as any, `Campos: ${Object.keys(data).join(', ')}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {
@@ -221,7 +221,7 @@ export async function handleDeleteAppointment(env: Env, request: Request, user: 
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id, 'delete', 'appointments', parseInt(id), `Cita: ${existing.date} ${existing.time}`, ip, ua);
+    await logAudit(env, user.id, 'delete' as any, 'appointments', parseInt(id) as any, `Cita: ${existing.date} ${existing.time}`, ip as any, ua);
 
     return jsonResponse({ success: true }, 200, origin);
   } catch (error) {

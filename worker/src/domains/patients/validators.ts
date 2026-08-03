@@ -11,5 +11,5 @@ export function validatePatient(data: unknown): { valid: true; data: PatientInpu
   if (!input.phone || typeof input.phone !== 'string') return { valid: false, error: 'Teléfono requerido' };
   if (input.name.length < 2) return { valid: false, error: 'Nombre muy corto' };
   if (input.phone.length < 10) return { valid: false, error: 'Teléfono inválido' };
-  return { valid: true, data: input as PatientInput };
+  return { valid: true, data: input as unknown as PatientInput };
 }

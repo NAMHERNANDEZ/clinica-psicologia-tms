@@ -16,6 +16,7 @@ export function propagate(
   state: BrainState,
   connectome: number[][],
   dt: number,
+  targetIdx?: number,
 ): BrainState {
   const n = state.regions.length;
   const next = {
@@ -25,6 +26,7 @@ export function propagate(
   };
 
   for (let j = 0; j < n; j++) {
+    if (j === targetIdx) continue;
     let input = 0;
     for (let i = 0; i < n; i++) {
       if (i === j) continue;
@@ -52,7 +54,7 @@ export function applyExternalStimulus(
     activity: [...state.activity],
     timestamps: [...state.timestamps],
   };
-  next.activity[regionIdx] = Math.max(0, Math.min(1, value));
+  next.activity[regionIdx] = Math.max(0, Math.min(1, state.activity[regionIdx] + value * 0.5));
   return next;
 }
 

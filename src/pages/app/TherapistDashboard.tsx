@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Calendar, Stethoscope, Brain, Activity, ArrowRight, TrendingUp } from 'lucide-react';
 import { StatCard } from '../../components/ui/Misc';
 import { Badge } from '../../components/ui/Badge';
-import { journey, tmsEngine } from '../../lib/api';
+import { journey, tmsEngine, safeArray } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface PatientToday {
@@ -32,7 +32,7 @@ export default function TherapistDashboard() {
       ]);
       if (journeyRes.status === 'fulfilled') {
         const d = (journeyRes.value as any).data as { patients_today?: PatientToday[] };
-        setPatientsToday(d.patients_today || []);
+        setPatientsToday(safeArray(d.patients_today));
       }
       if (statsRes.status === 'fulfilled') {
         setStats((statsRes.value as any).data as typeof stats);

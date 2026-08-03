@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, AlertTriangle, ArrowRight, CheckCircle } from 'lucide-react';
 import { StatCard } from '../../components/ui/Misc';
 import { Badge } from '../../components/ui/Badge';
-import { journey, appointments, alerts } from '../../lib/api';
-import type { Appointment, Alert as AlertType } from '../../lib/api';
+import { journey, appointments, alerts, safeArray, type Appointment, type Alert as AlertType } from '../../lib/api';
 
 export default function ReceptionDashboard() {
   const navigate = useNavigate();
@@ -23,8 +22,8 @@ export default function ReceptionDashboard() {
         alerts.list(),
         journey.getReception(),
       ]);
-      if (apptsRes.status === 'fulfilled') setDayAppointments(apptsRes.value.data || []);
-      if (alertsRes.status === 'fulfilled') setPendingAlerts(alertsRes.value.data || []);
+      if (apptsRes.status === 'fulfilled') setDayAppointments(safeArray(apptsRes.value.data));
+      if (alertsRes.status === 'fulfilled') setPendingAlerts(safeArray(alertsRes.value.data));
       if (journeyRes.status === 'fulfilled') setJourneyData((journeyRes.value as any).data as { queue: Array<{ patient_id: number; patient_name: string; status: string; priority: string }> });
     } catch { /* silent */ } finally { setLoading(false); }
   };

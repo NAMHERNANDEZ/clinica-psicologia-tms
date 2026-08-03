@@ -11,7 +11,7 @@ export async function register(env: Env, email: string, password: string, name: 
   const passwordHash = await hashPassword(password);
   const userId = await createUser(env, clinicId, email, passwordHash, 'admin');
 
-  await logAudit(env, clinicId, userId, 'register', 'users', userId, undefined, undefined, ip);
+  await logAudit(env, clinicId, userId, 'auth', 'register', 'users', userId, undefined, undefined, ip, undefined, 'info');
 
   return { success: true, userId };
 }
@@ -28,7 +28,7 @@ export async function login(env: Env, email: string, password: string, ip: strin
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   await updateRefreshToken(env, user.id, refreshToken, expiresAt);
-  await logAudit(env, user.clinic_id, user.id, 'login', 'users', user.id, undefined, undefined, ip);
+  await logAudit(env, user.clinic_id, user.id, 'auth', 'login', 'users', user.id, undefined, undefined, ip, undefined, 'info');
 
   return {
     user: { id: user.id, email: user.email, role: user.role, clinic_id: user.clinic_id },
@@ -62,7 +62,7 @@ export async function refresh(env: Env, refreshToken: string | undefined) {
 
 export async function logout(env: Env, userId: number, clinicId: number, ip: string) {
   await updateRefreshToken(env, userId, null, null);
-  await logAudit(env, clinicId, userId, 'logout', 'users', userId, undefined, undefined, ip);
+  await logAudit(env, clinicId, userId, 'auth', 'logout', 'users', userId, undefined, undefined, ip, undefined, 'info');
   return {
     accessTokenCookie: clearCookie('access_token'),
     refreshTokenCookie: clearCookie('refresh_token'),

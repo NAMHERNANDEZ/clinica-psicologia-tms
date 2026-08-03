@@ -18,7 +18,7 @@ export default function Appointments() {
     setIsLoading(true);
     try {
       const res = await appointmentsApi.list({ date: selectedDate });
-      setAppointmentsList(res.data || []);
+      setAppointmentsList(safeArray(res.data));
     } catch (error) {
       console.error('Error loading appointments:', error);
     } finally {

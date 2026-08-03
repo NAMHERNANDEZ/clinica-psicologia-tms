@@ -6,7 +6,8 @@ interface ProgressCurveProps {
 }
 
 export function ProgressCurve({ responses }: ProgressCurveProps) {
-  const sorted = [...responses].sort((a, b) => a.id - b.id);
+  const safeResponses = Array.isArray(responses) ? responses : [];
+  const sorted = [...safeResponses].sort((a, b) => a.id - b.id);
 
   if (sorted.length < 2) {
     return <div className="text-center text-slate-400 text-xs py-6">Mínimo 2 sesiones para mostrar curva</div>;

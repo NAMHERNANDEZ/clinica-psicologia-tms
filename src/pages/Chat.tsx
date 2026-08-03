@@ -3,7 +3,10 @@ import { Send, Bot, User, Calendar, Phone, Clock } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { appointments } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const RAW_URL = import.meta.env.VITE_API_URL;
+if (!RAW_URL) throw new Error('VITE_API_URL no esta definida. Configurala antes del build.');
+try { new URL(RAW_URL); } catch { throw new Error('VITE_API_URL invalida: ' + RAW_URL); }
+const API_BASE = RAW_URL;
 
 async function sendChatMessage(message: string): Promise<{ message: string; action?: string; appointment?: { patient_name: string; phone: string; date: string; time: string } }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
@@ -100,8 +103,8 @@ export default function Chat() {
       const errorMessage: Message = {
         id: messages.length + 2,
         text: language === 'es'
-          ? 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.'
-          : 'Sorry, there was an error processing your message. Please try again.',
+          ? 'No pude procesar tu consulta en este momento.\n\nPuedes contactarnos directamente:\n• WhatsApp: +52 231 144 2941\n• O déjanos tus datos en el formulario de contacto.\n\nDisculpa las molestias.'
+          : 'I could not process your request at this moment.\n\nYou can reach us directly:\n• WhatsApp: +52 231 144 2941\n• Or leave your details in the contact form.\n\nSorry for the inconvenience.',
         isUser: false,
         timestamp: new Date(),
       };

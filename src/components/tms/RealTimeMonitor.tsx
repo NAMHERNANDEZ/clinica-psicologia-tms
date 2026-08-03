@@ -6,9 +6,9 @@ const PHASE_LABELS: Record<ProtocolPhase, string> = {
 };
 
 const REGION_LABELS: Record<string, string> = {
-  dlpfc_l: 'DLPFC-L', dlpfc_r: 'DLPFC-R', m1_l: 'M1-L', m1_r: 'M1-R',
-  sma: 'SMA', acc: 'ACC', insula_l: 'INS-L', insula_r: 'INS-R',
-  broca: 'BRC', wernicke: 'WRN',
+  dlpfc_l: 'DLPFC', dlpfc_r: 'DLPFC', m1_l: 'M1', m1_r: 'M1',
+  sma: 'SMA', acc: 'ACC', insula_l: 'Ínsula', insula_r: 'Ínsula',
+  broca: 'Broca', temporal: 'Temporal',
 };
 
 interface RealTimeMonitorProps {
@@ -25,7 +25,8 @@ export function RealTimeMonitor({ activations, elapsed, pulseCount, coilIntensit
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   };
 
-  const sorted = Object.entries(activations).sort(([, a], [, b]) => b - a);
+  const safeActivations = activations && typeof activations === 'object' ? activations : {};
+  const sorted = Object.entries(safeActivations).sort(([, a], [, b]) => b - a);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-3 shadow-lg shadow-black/20">

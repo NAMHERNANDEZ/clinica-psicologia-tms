@@ -12,7 +12,7 @@ export class SessionOrchestrator {
 
   async getSessionContext(sessionId: number): Promise<SessionContext | null> {
     const sessionsRes = await tmsSessions.listByProfile(0);
-    const allSessions = sessionsRes.data || [];
+    const allSessions = safeArray(sessionsRes.data);
     const session = allSessions.find((s: TmsSession) => s.id === sessionId);
 
     if (!session) return null;
@@ -66,10 +66,10 @@ export class SessionOrchestrator {
 
   async getSessionTimeline(profileId: number): Promise<SessionTimeline[]> {
     const sessionsRes = await tmsSessions.listByProfile(profileId);
-    const sessions = sessionsRes.data || [];
+    const sessions = safeArray(sessionsRes.data);
 
     const responsesRes = await clinicalResponse.listByPatient(0);
-    const responses = responsesRes.data || [];
+    const responses = safeArray(responsesRes.data);
 
     return sessions.map((s: TmsSession) => {
       const response = responses.find((r: ClinicalResponse) => r.tms_session_id === s.id);
@@ -86,12 +86,12 @@ export class SessionOrchestrator {
 
   async getActiveSessionsCount(): Promise<number> {
     const profilesRes = await tmsProfiles.list();
-    const activeProfiles = (profilesRes.data || []).filter((p: TmsProfile) => p.status === 'active');
+    const activeProfiles = (safeArray(profilesRes.data)).filter((p: TmsProfile) => p.status === 'active');
 
     let count = 0;
     for (const profile of activeProfiles) {
       const sessionsRes = await tmsSessions.listByProfile(profile.id);
-      const activeSessions = (sessionsRes.data || []).filter((s: TmsSession) => s.status === 'in_progress' || s.status === 'scheduled');
+      const activeSessions = (safeArray(sessionsRes.data)).filter((s: TmsSession) => s.status === 'in_progress' || s.status === 'scheduled');
       count += activeSessions.length;
     }
 
@@ -100,7 +100,7 @@ export class SessionOrchestrator {
 
   async getSessionsSummary(profileId: number) {
     const sessionsRes = await tmsSessions.listByProfile(profileId);
-    const sessions = sessionsRes.data || [];
+    const sessions = safeArray(sessionsRes.data);
 
     return {
       total: sessions.length,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Brain, AlertTriangle, CheckCircle, XCircle, Plus, X } from 'lucide-react';
-import { tmsProfiles, tmsSessions, tmsProtocols, clinicalResponse, adverseEffects, motorThresholds, patients, therapists, type TmsProfile, type TmsSession, type TmsProtocol, type ClinicalResponse, type AdverseEffect, type MotorThreshold, type Patient, type Therapist } from '../../lib/api';
+import { tmsProfiles, tmsSessions, tmsProtocols, clinicalResponse, adverseEffects, motorThresholds, patients, therapists, safeArray, type TmsProfile, type TmsSession, type TmsProtocol, type ClinicalResponse, type AdverseEffect, type MotorThreshold, type Patient, type Therapist } from '../../lib/api';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 
@@ -46,13 +46,13 @@ export default function TmsModulePage() {
         adverseEffects.listByPatient(0), motorThresholds.list(),
         patients.list(), therapists.list(),
       ]);
-      if (prRes.status === 'fulfilled') setProfiles(prRes.value.data || []);
-      if (protRes.status === 'fulfilled') setProtocols(protRes.value.data || []);
-      if (crRes.status === 'fulfilled') setResponses(crRes.value.data || []);
-      if (aeRes.status === 'fulfilled') setEffects(aeRes.value.data || []);
-      if (mtRes.status === 'fulfilled') setMts(mtRes.value.data || []);
-      if (patRes.status === 'fulfilled') setPatList(patRes.value.data || []);
-      if (therRes.status === 'fulfilled') setTherList(therRes.value.data || []);
+      if (prRes.status === 'fulfilled') setProfiles(safeArray(prRes.value.data));
+      if (protRes.status === 'fulfilled') setProtocols(safeArray(protRes.value.data));
+      if (crRes.status === 'fulfilled') setResponses(safeArray(crRes.value.data));
+      if (aeRes.status === 'fulfilled') setEffects(safeArray(aeRes.value.data));
+      if (mtRes.status === 'fulfilled') setMts(safeArray(mtRes.value.data));
+      if (patRes.status === 'fulfilled') setPatList(safeArray(patRes.value.data));
+      if (therRes.status === 'fulfilled') setTherList(safeArray(therRes.value.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 

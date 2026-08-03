@@ -46,9 +46,9 @@ export class ClinicalFlowEngine {
       treatments.list(),
     ]);
 
-    const profiles = profilesRes.status === 'fulfilled' ? (profilesRes.value.data || []) : [];
-    const thresholds = thresholdsRes.status === 'fulfilled' ? (thresholdsRes.value.data || []) : [];
-    const allTreatments = treatmentsRes.status === 'fulfilled' ? (treatmentsRes.value.data || []) : [];
+    const profiles = profilesRes.status === 'fulfilled' ? (safeArray(profilesRes.value.data)) : [];
+    const thresholds = thresholdsRes.status === 'fulfilled' ? (safeArray(thresholdsRes.value.data)) : [];
+    const allTreatments = treatmentsRes.status === 'fulfilled' ? (safeArray(treatmentsRes.value.data)) : [];
     const patientTreatments = allTreatments.filter((t: { patient_id: number }) => t.patient_id === patientId);
 
     if (profiles.some((p: { status: string }) => p.status === 'active')) {
@@ -82,7 +82,7 @@ export class ClinicalFlowEngine {
 
   async getAllPatientStates(): Promise<PatientClinicalProfile[]> {
     const patientsRes = await patients.list();
-    const allPatients = patientsRes.data || [];
+    const allPatients = safeArray(patientsRes.data);
 
     const profiles = await Promise.all(
       allPatients.map((p: { id: number }) => this.getPatientProfile(p.id))
@@ -103,19 +103,19 @@ export class ClinicalFlowEngine {
       }
       case 'EVALUATED': {
         const thresholdsRes = await motorThresholds.listByPatient(patientId);
-        const thresholds = thresholdsRes.data || [];
+        const thresholds = safeArray(thresholdsRes.data);
         if (thresholds.length === 0) reasons.push('No se ha medido umbral motor');
         break;
       }
       case 'MT_MEASURED': {
         const profilesRes = await tmsProfiles.listByPatient(patientId);
-        const profiles = profilesRes.data || [];
+        const profiles = safeArray(profilesRes.data);
         if (profiles.length === 0) reasons.push('No se ha asignado protocolo TMS');
         break;
       }
       case 'PROTOCOL_ASSIGNED': {
         const profilesRes = await tmsProfiles.listByPatient(patientId);
-        const active = (profilesRes.data || []).filter((p: { status: string }) => p.status === 'evaluation');
+        const active = (safeArray(profilesRes.data)).filter((p: { status: string }) => p.status === 'evaluation');
         if (active.length === 0) reasons.push('No hay perfiles pendientes de activación');
         break;
       }

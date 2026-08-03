@@ -23,7 +23,7 @@ export function validateRegister(data: unknown): { valid: true; data: RegisterIn
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(input.email)) return { valid: false, error: 'Email inválido' };
 
-  return { valid: true, data: input as RegisterInput };
+  return { valid: true, data: input as unknown as RegisterInput };
 }
 
 export function validateLogin(data: unknown): { valid: true; data: LoginInput } | { valid: false; error: string } {
@@ -32,5 +32,5 @@ export function validateLogin(data: unknown): { valid: true; data: LoginInput } 
   if (!input.email || typeof input.email !== 'string') return { valid: false, error: 'Email requerido' };
   if (!input.password || typeof input.password !== 'string') return { valid: false, error: 'Password requerido' };
 
-  return { valid: true, data: input as LoginInput };
+  return { valid: true, data: input as unknown as LoginInput };
 }

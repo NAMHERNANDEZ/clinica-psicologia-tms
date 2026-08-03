@@ -17,7 +17,7 @@ export default function ReportsPage() {
   const load = async () => {
     try {
       const res = await patients.list();
-      setPatientList(res.data || []);
+      setPatientList(safeArray(res.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 

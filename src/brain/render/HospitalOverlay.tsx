@@ -74,7 +74,7 @@ export function HospitalOverlay({ phase, regionActivations, coilIntensity, pulse
           <div className="grid grid-cols-5 gap-[3px]">
             {[
               ['dlpfc_l', 'DLP'], ['dlpfc_r', 'DPR'], ['m1_l', 'M1L'], ['m1_r', 'M1R'], ['sma', 'SMA'],
-              ['acc', 'ACC'], ['insula_l', 'InL'], ['insula_r', 'InR'], ['broca', 'BRC'], ['wernicke', 'WRN'],
+              ['acc', 'ACC'], ['insula_l', 'InL'], ['insula_r', 'InR'], ['broca', 'BRC'], ['temporal', 'TMP'],
             ].map(([id, label]) => {
               const val = regionActivations.get(id) || 0;
               return (

@@ -24,9 +24,9 @@ export default function SettingsPage() {
       const [thRes, tRes, prRes, aRes] = await Promise.allSettled([
         therapists.list(), templates.list(), tmsProtocols.list(), alerts.getSummary(),
       ]);
-      if (thRes.status === 'fulfilled') setTherapistList(thRes.value.data || []);
-      if (tRes.status === 'fulfilled') setTemplateList(tRes.value.data || []);
-      if (prRes.status === 'fulfilled') setProtocolList(prRes.value.data || []);
+      if (thRes.status === 'fulfilled') setTherapistList(safeArray(thRes.value.data));
+      if (tRes.status === 'fulfilled') setTemplateList(safeArray(tRes.value.data));
+      if (prRes.status === 'fulfilled') setProtocolList(safeArray(prRes.value.data));
       if (aRes.status === 'fulfilled') setAlertSummary(aRes.value.data as typeof alertSummary);
     } catch { /* silent */ } finally { setLoading(false); }
   };
@@ -224,7 +224,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Área Objetivo</label>
               <select value={protocolForm.target_area} onChange={e => setProtocolForm({ ...protocolForm, target_area: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
-                <option value="dlpfc">DLPFC</option><option value="m1">M1</option><option value="broca">Broca</option><option value="wernicke">Wernicke</option><option value="acc">ACC</option><option value="insula">Ínsula</option>
+                <option value="dlpfc">DLPFC</option><option value="m1">M1</option><option value="broca">Broca</option><option value="temporal">Temporal</option><option value="acc">ACC</option><option value="insula">Ínsula</option>
               </select>
             </div>
             <div>

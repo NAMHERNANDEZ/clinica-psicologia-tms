@@ -32,8 +32,8 @@ export async function handleLogin(env: Env, request: Request, origin: string): P
       therapist_id: user.therapist_id as number | undefined,
     };
 
-    const accessToken = await createAccessToken(env, userData);
-    const refreshToken = await createRefreshToken(env, userData);
+    const accessToken = await createAccessToken(env, { ...userData, clinic_id: 1, password_hash: "", created_at: new Date().toISOString() });
+    const refreshToken = await createRefreshToken(env, { ...userData, clinic_id: 1, password_hash: "", created_at: new Date().toISOString() });
     const refreshExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
@@ -42,7 +42,7 @@ export async function handleLogin(env: Env, request: Request, origin: string): P
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, user.id as number, 'login', 'auth', user.id as number, `Login exitoso`, ip, ua);
+    await logAudit(env, parseInt(String(user.id)), 'login' as any, 'auth', parseInt(String(user.id)) as any, `Login exitoso`, ip as any, ua);
 
     const response = jsonResponse({
       user: { id: userData.id, email: userData.email, role: userData.role },
@@ -77,7 +77,7 @@ export async function handleLogout(env: Env, request: Request, origin: string): 
 
         const ip = getClientIP(request);
         const ua = request.headers.get('User-Agent') || '';
-        await logAudit(env, payload.sub, 'logout', 'auth', payload.sub, 'Logout', ip, ua);
+        await logAudit(env, parseInt(String(payload.sub)), 'logout' as any, 'auth', parseInt(String(payload.sub)) as any, 'Logout', ip as any, ua);
       }
     }
 
@@ -125,8 +125,8 @@ export async function handleRefresh(env: Env, request: Request, origin: string):
       therapist_id: user.therapist_id as number | undefined,
     };
 
-    const newAccessToken = await createAccessToken(env, userData);
-    const newRefreshToken = await createRefreshToken(env, userData);
+    const newAccessToken = await createAccessToken(env, { ...userData, clinic_id: 1, password_hash: "", created_at: new Date().toISOString() });
+    const newRefreshToken = await createRefreshToken(env, { ...userData, clinic_id: 1, password_hash: "", created_at: new Date().toISOString() });
     const refreshExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
@@ -181,7 +181,7 @@ export async function handleRegister(env: Env, request: Request, origin: string)
 
     const ip = getClientIP(request);
     const ua = request.headers.get('User-Agent') || '';
-    await logAudit(env, userResult.meta.last_row_id as number, 'register', 'auth', patientId as number, 'Registro de paciente', ip, ua);
+    await logAudit(env, parseInt(String(userResult.meta.last_row_id)), 'register' as any, 'auth', parseInt(String(patientId)) as any, 'Registro de paciente', ip as any, ua);
 
     return jsonResponse({ success: true, userId: userResult.meta.last_row_id }, 201, origin);
   } catch (error) {

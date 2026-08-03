@@ -8,10 +8,12 @@ interface Synapse {
 }
 
 function lineColor(level: number): number {
-  if (level < 0.2) return 0x2A3A4A;
-  if (level < 0.5) return 0x2E7D8A;
-  if (level < 0.8) return 0x2563A8;
-  return 0x4A5AC0;
+  if (level < 0.2) return 0x0A2848;
+  if (level < 0.4) return 0x003366;
+  if (level < 0.6) return 0x005588;
+  if (level < 0.75) return 0x0088CC;
+  if (level < 0.85) return 0xFF8800;
+  return 0xFF4400;
 }
 
 export class ConnectionLines {
@@ -58,10 +60,10 @@ export class ConnectionLines {
       const mat = s.line.material as THREE.LineBasicMaterial;
       if (maxAct > 0.15) {
         mat.color.setHex(lineColor(maxAct));
-        mat.opacity = 0.15 + maxAct * 0.4 + w * 0.15;
+        mat.opacity = 0.15 + maxAct * 0.5 + w * 0.2;
       } else {
-        mat.color.setHex(0x2A3A4A);
-        mat.opacity = 0.05 + w * 0.05;
+        mat.color.setHex(0x0A1828);
+        mat.opacity = 0.04 + w * 0.04;
       }
     }
   }

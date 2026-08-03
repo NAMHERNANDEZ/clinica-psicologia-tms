@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RegionMesh } from './RegionMesh';
 import { VolumetricCoil } from './VolumetricCoil';
 import { ConnectionLines } from './ConnectionLines';
-import { ClinicalColors } from './MaterialLibrary';
+import { ClinicalColors, thermalColor } from './MaterialLibrary';
 import { TMSRegionMarkers } from './TMSRegionMarkers';
 
 interface RegionDef {
@@ -15,18 +15,16 @@ interface RegionDef {
 }
 
 const REGIONS: RegionDef[] = [
-  { id: 'dlpfc_l', name: 'DLPFC-L', dir: [-0.62, 0.69, 0.60], radius: 0.10, connections: ['acc', 'insula_l', 'm1_l'] },
-  { id: 'dlpfc_r', name: 'DLPFC-R', dir: [0.57, 0.65, 0.72], radius: 0.10, connections: ['acc', 'insula_r', 'm1_r'] },
-  { id: 'm1_l', name: 'M1-L', dir: [-0.65, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_l', 'sma'] },
-  { id: 'm1_r', name: 'M1-R', dir: [0.60, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_r', 'sma'] },
+  { id: 'dlpfc_l', name: 'DLPFC', dir: [-0.62, 0.69, 0.60], radius: 0.10, connections: ['acc', 'insula_l', 'm1_l'] },
+  { id: 'dlpfc_r', name: 'DLPFC', dir: [0.57, 0.65, 0.72], radius: 0.10, connections: ['acc', 'insula_r', 'm1_r'] },
+  { id: 'm1_l', name: 'M1', dir: [-0.65, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_l', 'sma'] },
+  { id: 'm1_r', name: 'M1', dir: [0.60, 0.35, -0.10], radius: 0.09, connections: ['dlpfc_r', 'sma'] },
   { id: 'sma', name: 'SMA', dir: [0.02, 0.85, -0.32], radius: 0.08, connections: ['m1_l', 'm1_r', 'acc'] },
   { id: 'acc', name: 'ACC', dir: [0.02, 0.74, 0.18], radius: 0.08, connections: ['dlpfc_l', 'dlpfc_r', 'insula_l', 'insula_r'] },
-  { id: 'insula_l', name: 'INS-L', dir: [-0.32, 0.00, 0.29], radius: 0.08, connections: ['acc', 'dlpfc_l'] },
-  { id: 'insula_r', name: 'INS-R', dir: [0.30, 0.05, 0.28], radius: 0.08, connections: ['acc', 'dlpfc_r'] },
-  { id: 'broca', name: 'BRC', dir: [-0.47, -0.36, 0.64], radius: 0.08, connections: ['wernicke'] },
-  { id: 'wernicke', name: 'WRN', dir: [-0.55, -0.25, -0.45], radius: 0.08, connections: ['broca'] },
-  { id: 'occipital', name: 'OCC', dir: [0.0, -0.30, -0.70], radius: 0.09, connections: ['temporal_l'] },
-  { id: 'temporal_l', name: 'TMP-L', dir: [-0.55, -0.30, 0.10], radius: 0.08, connections: ['wernicke', 'broca', 'occipital'] },
+  { id: 'insula_l', name: 'Ínsula', dir: [-0.32, 0.00, 0.03], radius: 0.08, connections: ['acc', 'dlpfc_l'] },
+  { id: 'insula_r', name: 'Ínsula', dir: [0.30, 0.05, 0.03], radius: 0.08, connections: ['acc', 'dlpfc_r'] },
+  { id: 'broca', name: 'Broca', dir: [-0.47, -0.36, 0.64], radius: 0.08, connections: ['temporal'] },
+  { id: 'temporal', name: 'Temporal', dir: [-0.55, -0.30, 0.10], radius: 0.08, connections: ['broca'] },
 ];
 
 export type BrainLoadStatus = 'loading' | 'glb_ok' | 'error';
@@ -44,6 +42,9 @@ export class BrainScene {
   private loadDetail = '';
   private allMeshNames: string[] = [];
   private tmsMarkers: TMSRegionMarkers | null = null;
+  private regionWorldPositions: Map<string, THREE.Vector3> = new Map();
+  private brainBaseColor = new THREE.Color(ClinicalColors.brainBase);
+  private thermalTempColor = new THREE.Color();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -56,6 +57,10 @@ export class BrainScene {
     await this.loadBrain();
     this.scene.add(this.brainGroup);
     this.createRegions();
+    this.regionDefs.forEach(def => {
+      const pos = this.getRegionPosition(def.id);
+      if (pos) this.regionWorldPositions.set(def.id, pos);
+    });
     this.createConnectionLines();
     this.coilField.init();
     this.scene.add(this.coilField.object3D);
@@ -72,13 +77,16 @@ export class BrainScene {
       });
 
       const brainMat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(ClinicalColors.brainBase),
-        roughness: 0.6,
-        metalness: 0.02,
+        color: new THREE.Color(0xffffff),
+        roughness: 0.55,
+        metalness: 0.03,
         side: THREE.DoubleSide,
         flatShading: true,
         clearcoat: 0.15,
-        clearcoatRoughness: 0.6,
+        clearcoatRoughness: 0.5,
+        transparent: true,
+        opacity: 0.95,
+        vertexColors: true,
       });
 
       gltf.scene.traverse((child: any) => {
@@ -86,6 +94,14 @@ export class BrainScene {
         if (child.geometry && !child.geometry.attributes.normal) {
           child.geometry.computeVertexNormals();
         }
+        const count = child.geometry.attributes.position.count;
+        const vColors = new Float32Array(count * 3);
+        for (let i = 0; i < count * 3; i += 3) {
+          vColors[i] = this.brainBaseColor.r;
+          vColors[i + 1] = this.brainBaseColor.g;
+          vColors[i + 2] = this.brainBaseColor.b;
+        }
+        child.geometry.setAttribute('color', new THREE.BufferAttribute(vColors, 3));
         child.material = brainMat;
         child.castShadow = true;
         child.receiveShadow = true;
@@ -98,8 +114,8 @@ export class BrainScene {
       const center = box.getCenter(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 3.0 / maxDim;
-      gltf.scene.scale.setScalar(scale);
-      gltf.scene.position.sub(center.multiplyScalar(scale));
+      gltf.scene.scale.set(scale, scale, scale);
+      gltf.scene.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
 
       const scaledBox = new THREE.Box3().setFromObject(gltf.scene);
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
@@ -142,12 +158,58 @@ export class BrainScene {
     }
   }
 
-  update(delta: number) {
+  update(delta: number, activations?: Map<string, number>) {
     this.regions.forEach(r => r.update(delta));
     this.tmsMarkers?.update(delta);
+    if (activations && activations.size > 0) {
+      this.updateBrainColors(activations);
+    }
+  }
+
+  private updateBrainColors(activations: Map<string, number>) {
+    const _v = new THREE.Vector3();
+    const _base = this.brainBaseColor;
+    const _thermal = new THREE.Color();
+
+    for (const mesh of this.brainMeshes) {
+      const pos = mesh.geometry.attributes.position;
+      const col = mesh.geometry.attributes.color;
+      if (!col) continue;
+      mesh.updateWorldMatrix(true, true);
+
+      for (let i = 0, n = pos.count; i < n; i++) {
+        _v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(mesh.matrixWorld);
+        let peak = 0;
+        for (const [id, act] of activations) {
+          if (act <= 0.02) continue;
+          const rp = this.regionWorldPositions.get(id);
+          if (!rp) continue;
+          const d2 = (_v.x - rp.x) ** 2 + (_v.y - rp.y) ** 2 + (_v.z - rp.z) ** 2;
+          const inf = Math.exp(-d2 * 1.8) * act;
+          if (inf > peak) peak = inf;
+        }
+        if (peak > 0.02) {
+          _thermal.set(thermalColor(peak));
+          const t = Math.min(peak, 1);
+          col.setXYZ(i,
+            _base.r + (_thermal.r - _base.r) * t,
+            _base.g + (_thermal.g - _base.g) * t,
+            _base.b + (_thermal.b - _base.b) * t,
+          );
+        } else {
+          col.setXYZ(i, _base.r, _base.g, _base.b);
+        }
+      }
+      col.needsUpdate = true;
+    }
   }
   updateConnections(delta: number, activations: Map<string, number>, connectome: number[][]) {
     this.connectionLines.update(delta, activations, connectome, this.regionDefs.map(r => r.id));
+  }
+  setTargetRegion(id: string | null) {
+    for (const [rid, region] of this.regions) {
+      region.setTarget(rid === id);
+    }
   }
   setActivation(id: string, value: number) {
     this.regions.get(id)?.setActivation(value);

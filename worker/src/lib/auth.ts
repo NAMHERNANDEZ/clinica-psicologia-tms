@@ -2,8 +2,8 @@ import type { Env, JWTPayload, User } from '../types';
 
 const encoder = new TextEncoder();
 
-function base64url(data: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(data)))
+function base64url(data: Uint8Array): string {
+  return btoa(String.fromCharCode(...data))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -18,7 +18,7 @@ async function hmacSign(secret: string, data: string): Promise<string> {
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
-  return base64url(sig);
+  return base64url(new Uint8Array(sig));
 }
 
 export async function createAccessToken(env: Env, user: User): Promise<string> {

@@ -12,13 +12,13 @@ const PHASE_LABELS: Record<ProtocolPhase, string> = {
 };
 
 const PHASE_COLORS: Record<ProtocolPhase, string> = {
-  idle: '#475569',
-  approach: '#38bdf8',
-  ramp: '#facc15',
-  propagation: '#f97316',
-  peak: '#ef4444',
-  cooldown: '#34d399',
-  complete: '#22d3ee',
+  idle: '#1E3040',
+  approach: '#00AAFF',
+  ramp: '#FF8800',
+  propagation: '#FF6600',
+  peak: '#FF2200',
+  cooldown: '#00CC88',
+  complete: '#00AAFF',
 };
 
 const PHASE_ORDER: ProtocolPhase[] = ['approach', 'ramp', 'propagation', 'peak', 'cooldown', 'complete'];
@@ -41,9 +41,9 @@ export function PhaseIndicator({ overlay, isSimulating, elapsed }: PhaseIndicato
   return (
     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
       <div
-        className="bg-[#0d1117]/85 backdrop-blur-xl border border-slate-700/30 rounded-2xl px-5 py-3 shadow-2xl shadow-black/50"
+        className="bg-[#0A0E14]/90 backdrop-blur-xl border border-slate-700/30 rounded-2xl px-5 py-3 shadow-2xl shadow-black/50"
         style={{
-          boxShadow: `0 0 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
+          boxShadow: `0 0 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
         }}
       >
         <div className="flex items-center gap-2 mb-2">

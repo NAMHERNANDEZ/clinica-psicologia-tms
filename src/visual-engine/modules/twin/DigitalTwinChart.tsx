@@ -22,7 +22,7 @@ export default function DigitalTwinChart({ patientId }: DigitalTwinChartProps) {
   const load = async () => {
     try {
       const res = await digitalTwin.getPredictions(patientId);
-      setPredictions(res.data || []);
+      setPredictions(safeArray(res.data));
     } catch { /* silent */ } finally { setLoading(false); }
   };
 
