@@ -46,3 +46,25 @@ export async function handleGetConsent(env: Env, request: Request, user: User, c
   if (!result.success) return json(result, result.status || 404, corsHeaders);
   return json(result, 200, corsHeaders);
 }
+
+export async function handleRevokeConsent(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
+  const err = requirePermission(user, 'clinical:write');
+  if (err) return applyCors(err, corsHeaders);
+
+  try {
+    const parts = request.url.split('/');
+    const id = parseInt(parts[parts.length - 2] || '0');
+    if (!id) return json({ success: false, 'ID requerido': true }, 400, corsHeaders);
+
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const result = await env.DB.prepare(
+      `UPDATE consents SET status = 'revoked', revoked_at = datetime('now'), revoked_by = ?, updated_at = datetime('now') WHERE id = ? AND clinic_id = ?`
+    ).bind(user.id, id, user.clinic_id).run();
+
+    if (result.meta?.changes === 0) return json({ success: false, error: 'Consentimiento no encontrado' }, 404, corsHeaders);
+    return json({ success: true, data: { id, status: 'revoked' } }, 200, corsHeaders);
+  } catch (err) {
+    console.error('Revoke consent error:', err);
+    return json({ success: false, error: 'Internal error' }, 500, corsHeaders);
+  }
+}
