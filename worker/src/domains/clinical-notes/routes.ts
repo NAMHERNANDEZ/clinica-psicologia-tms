@@ -55,7 +55,7 @@ export async function handleCreateNote(env: Env, request: Request, user: User, c
     const validation = validateClinicalNote(body);
     if (!validation.valid) return json({ success: false, error: validation.error }, 400, corsHeaders);
 
-    const result = await service.createNote(env, user.clinic_id, user.id, validation.data);
+    const result = await service.createNote(env, user.clinic_id, user.id, validation.data, request.headers.get('CF-Connecting-IP') || 'unknown');
     return json(result, 201, corsHeaders);
   } catch (err) {
     console.error('Handler error:', err);

@@ -1,18 +1,22 @@
 import type { Env } from '../../types';
 import * as repo from './repository';
+import { logAudit } from '../../lib/audit';
+import { triggerCompliance } from '../../compliance/automation';
 
 export async function getTreatmentSessions(env: Env, treatmentId: number) {
   const sessions = await repo.getSessionsByTreatment(env, treatmentId);
   return { success: true, data: { sessions } };
 }
 
-export async function completeSession(env: Env, sessionId: number) {
+export async function completeSession(env: Env, clinicId: number, userId: number, sessionId: number, ip: string) {
   const session = await repo.getSessionById(env, sessionId);
   if (!session) return { success: false, error: 'Sesión no encontrada', status: 404 };
 
   const completedAt = new Date().toISOString();
   const updated = await repo.updateSession(env, sessionId, 'completed', session.notes || null, completedAt);
   if (!updated) return { success: false, error: 'Error al actualizar sesión', status: 500 };
+
+  await logAudit(env, clinicId, userId, 'clinical', 'complete', 'sessions', sessionId, undefined, JSON.stringify({ status: 'completed' }), ip, undefined, 'info');
 
   const completedCount = await repo.getCompletedCount(env, session.treatment_id);
 
@@ -33,11 +37,12 @@ export async function completeSession(env: Env, sessionId: number) {
     `).bind(session.treatment_id).run();
   }
 
+  triggerCompliance(env, session.patient_id || 0);
   const updatedSession = await repo.getSessionById(env, sessionId);
   return { success: true, data: { session: updatedSession } };
 }
 
-export async function updateSessionStatus(env: Env, sessionId: number, status: string, notes?: string) {
+export async function updateSessionStatus(env: Env, clinicId: number, userId: number, sessionId: number, status: string, notes?: string, ip?: string) {
   const session = await repo.getSessionById(env, sessionId);
   if (!session) return { success: false, error: 'Sesión no encontrada', status: 404 };
 
@@ -45,6 +50,8 @@ export async function updateSessionStatus(env: Env, sessionId: number, status: s
   const updatedNotes = notes !== undefined ? notes : session.notes || null;
   const updated = await repo.updateSession(env, sessionId, status, updatedNotes, completedAt);
   if (!updated) return { success: false, error: 'Error al actualizar sesión', status: 500 };
+
+  await logAudit(env, clinicId, userId, 'clinical', 'update', 'sessions', sessionId, undefined, JSON.stringify({ status }), ip || 'unknown', undefined, 'info');
 
   if (status === 'completed') {
     const completedCount = await repo.getCompletedCount(env, session.treatment_id);
@@ -65,6 +72,8 @@ export async function updateSessionStatus(env: Env, sessionId: number, status: s
         WHERE id = ?
       `).bind(session.treatment_id).run();
     }
+
+    triggerCompliance(env, session.patient_id || 0);
   }
 
   const updatedSession = await repo.getSessionById(env, sessionId);

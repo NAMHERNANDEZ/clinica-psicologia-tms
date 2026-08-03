@@ -34,7 +34,7 @@ export async function handleCompleteSession(env: Env, request: Request, user: Us
   if (!validation.valid) return json({ success: false, error: validation.error }, 400, corsHeaders);
   if (validation.data.status !== 'completed') return json({ success: false, error: 'Use POST con status completed' }, 400, corsHeaders);
 
-  const result = await service.completeSession(env, validation.data.session_id);
+  const result = await service.completeSession(env, user.clinic_id, user.id, validation.data.session_id, request.headers.get('CF-Connecting-IP') || 'unknown');
   if (!result.success) return json(result, result.status || 400, corsHeaders);
   return json(result, 200, corsHeaders);
 }
@@ -47,7 +47,7 @@ export async function handleUpdateSession(env: Env, request: Request, user: User
   const validation = validateSessionUpdate(body);
   if (!validation.valid) return json({ success: false, error: validation.error }, 400, corsHeaders);
 
-  const result = await service.updateSessionStatus(env, validation.data.session_id, validation.data.status, validation.data.notes);
+  const result = await service.updateSessionStatus(env, user.clinic_id, user.id, validation.data.session_id, validation.data.status, validation.data.notes, request.headers.get('CF-Connecting-IP') || 'unknown');
   if (!result.success) return json(result, result.status || 400, corsHeaders);
   return json(result, 200, corsHeaders);
 }
