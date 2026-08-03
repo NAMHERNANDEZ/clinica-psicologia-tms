@@ -63,6 +63,45 @@ export async function handleCreateNote(env: Env, request: Request, user: User, c
   }
 }
 
+export async function handleUpdateNote(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
+  const err = requirePermission(user, 'clinical_notes:write');
+  if (err) return applyCors(err, corsHeaders);
+
+  try {
+    const parts = request.url.split('/');
+    const id = parseInt(parts[parts.length - 1] || '0');
+    if (!id) return json({ success: false, error: 'ID inválido' }, 400, corsHeaders);
+
+    const body = await request.json();
+    const updates: string[] = [];
+    const bindValues: unknown[] = [];
+
+    if (body.note) { updates.push('note = ?'); bindValues.push(body.note); }
+    if (body.note_type) { updates.push('note_type = ?'); bindValues.push(body.note_type); }
+    if (body.risk_level) { updates.push('risk_level = ?'); bindValues.push(body.risk_level); }
+    if (body.status) { updates.push('status = ?'); bindValues.push(body.status); }
+
+    if (updates.length === 0) return json({ success: false, error: 'Sin cambios' }, 400, corsHeaders);
+
+    updates.push('updated_at = datetime(\'now\')');
+    updates.push('version = version + 1');
+    bindValues.push(id, user.clinic_id);
+
+    const result = await env.DB.prepare(
+      `UPDATE clinical_notes SET ${updates.join(', ')} WHERE id = ? AND clinic_id = ?`
+    ).bind(...bindValues).run();
+
+    if (result.meta?.changes === 0) return json({ success: false, error: 'Nota no encontrada' }, 404, corsHeaders);
+
+    await service.logAudit(env, user.clinic_id, user.id, 'clinical_note', id, 'update', request.headers.get('CF-Connecting-IP') || 'unknown', body);
+
+    return json({ success: true, data: { id, ...body } }, 200, corsHeaders);
+  } catch (err) {
+    console.error('Handler error:', err);
+    return json({ success: false, error: 'Internal error' }, 500, corsHeaders);
+  }
+}
+
 export async function handleDeleteNote(env: Env, request: Request, user: User, corsHeaders: Record<string, string>): Promise<Response> {
   const err = requirePermission(user, 'clinical_notes:delete');
   if (err) return applyCors(err, corsHeaders);

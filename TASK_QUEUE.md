@@ -18,9 +18,12 @@
 - **FASE_11.6** Dashboard metrics ✅: Endpoint `/api/dashboard/overview` con KPIs, smoke 8/8 PASS. Report: `FASE_11_6_DASHBOARD_REPORT.md`.
 - **FASE_11.7** Marketing AI ✅: Provider Gemini real, validador clinico dual-tier, Content/Campaign/SEO AI, 6 endpoints, migration 0026, frontend MarketingPage, smoke 25/25 PASS. Pre-existing errors fixed (automation/executor, reminders, dashboard, analytics). Report: `FASE_11_7_MARKETING_AI_REPORT.md`.
 - **FASE_11.8** Chat IA Clinico ✅: Knowledge base clinica (11 entries), Chat AI service (Gemini + template fallback), emergency detection (Linea de la Vida), contact extraction, D1 persistence (migration 0027: chat_sessions/messages/analytics), 4 API endpoints (public message + admin sessions/messages/stats), frontend ChatPage (simulator, sessions, stats), smoke 19/19 PASS. Report: `FASE_11_8_DEPLOY_REPORT.md`.
+- **FASE_12.1** EMR Core ✅: Patient demographics overhaul (CURP, gender, address, emergency contacts, insurance, allergies, medications — migration 0028), clinical records extensions (CIE10 codes, vitals, status, version — migration 0029), consent lifecycle (revocation, witness, versioning — migration 0030), document content fields, RBAC fixes (documents routes + map expansion), audit logging (clinical-notes + sessions services), CIE10 catalog (20 mental health codes seeded), access_log + vital_signs tables. 75 D1 tables. Smoke tests PASS. Report: `RELEASE_12.1.md`.
+- **FASE_12.2** PatientChartPage ✅: Vista unificada del expediente clinico (10 tabs: datos, diagnosticos, tratamientos, notas, TMS, medicamentos, escalas, documentos, consentimientos, timeline), consume 12+ endpoints existentes, PUT /api/clinical-notes/:id (actualizar nota con version auto-increment), PUT /api/consents/:id/revoke (revocar consentimiento), route /app/expediente/:patientId, 84 assets frontend. Sin entidades nuevas. Smoke PASS. Report: `RELEASE_12.2.md`.
 
 ## Pending
-- **FASE_12** Portal clinico: pacientes, expedientes, documentos, consentimientos, notas clinicas, seguimientos.
+- **FASE_12.3** Portal clinico avanzado: PDF export del expediente, versionado de notas clinicas, firma electronica.
+- **FASE_12.4** Portal del paciente: login, citas, documentos, recordatorios, material educativo, seguimiento.
 - **FASE_12.5** Seguridad y cumplimiento: roles, permisos, auditoria, logs, backup, control de acceso.
 - **FASE_13** Agentes clinicos IA: Investigacion (evidencia/papers), TMS (educacion paciente), Supervisor (revision calidad), Documentacion (ayuda administrativa).
 - **FASE_14** Paciente digital: portal con login, citas, documentos, recordatorios, material educativo, seguimiento.

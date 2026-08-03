@@ -27,6 +27,7 @@ const ReceptionDashboard = lazy(() => import('./pages/app/ReceptionDashboard'));
 const TherapistDashboard = lazy(() => import('./pages/app/TherapistDashboard'));
 const PatientsPage = lazy(() => import('./pages/app/PatientsPage'));
 const PatientDetailPage = lazy(() => import('./pages/app/PatientDetailPage'));
+const PatientChartPage = lazy(() => import('./pages/app/PatientChartPage'));
 const AgendaPage = lazy(() => import('./pages/app/AgendaPage'));
 const TreatmentsPage = lazy(() => import('./pages/app/TreatmentsPage'));
 const TmsModulePage = lazy(() => import('./pages/app/TmsModulePage'));
@@ -123,6 +124,7 @@ function App() {
                 <Route path="terapeuta" element={<TherapistDashboard />} />
                 <Route path="pacientes" element={<PatientsPage />} />
                 <Route path="pacientes/:id" element={<PatientDetailPage />} />
+                <Route path="expediente/:patientId" element={<PatientChartPage />} />
                 <Route path="agenda" element={<AgendaPage />} />
                 <Route path="tratamientos" element={<TreatmentsPage />} />
                 <Route path="tms" element={<TmsModulePage />} />

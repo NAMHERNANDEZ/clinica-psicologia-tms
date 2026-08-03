@@ -16,7 +16,7 @@ import { handleGetAlerts, handleGetAlertSummary, handleCreateAlert, handleMarkAl
 import { handleAutomationEvent } from './domains/automation/routes';
 import { handleDashboardOverview } from './domains/dashboard/routes';
 import { handleGetTreatments, handleGetTreatment, handleCreateTreatment, handleUpdateTreatment, handleDeleteTreatment } from './domains/treatments/routes';
-import { handleGetPatientNotes, handleGetClinicNotes, handleCreateNote, handleDeleteNote } from './domains/clinical-notes/routes';
+import { handleGetPatientNotes, handleGetClinicNotes, handleCreateNote, handleUpdateNote, handleDeleteNote } from './domains/clinical-notes/routes';
 import { handleGetPatientTimeline, handleGetClinicTimeline, handleCreateEvent } from './domains/timeline/routes';
 import { handleGetSessions, handleCompleteSession, handleUpdateSession } from './domains/sessions/routes';
 import { handleGetProtocols, handleGetProtocol, handleCreateProtocol, handleUpdateProtocol, handleDeactivateProtocol, handleSuggestProtocol } from './domains/tms-protocols/routes';
@@ -33,7 +33,7 @@ import { handleGetPatientJourney, handleStartTreatment, handleCompleteSession as
 import { handleCosToday, handleCosNextAction, handleCosPatientStates, handleCosTasks, handleCosAlerts } from './domains/cos/routes';
 import { handleListRecords, handleGetRecord, handleCreateRecord, handleUpdateRecord, handleDeleteRecord } from './domains/clinical-records/routes';
 import { handleListNotes, handleGetNote, handleCreateNote as handleCreateSessionNote, handleUpdateNote, handleDeleteNote as handleDeleteSessionNote } from './domains/session-notes/routes';
-import { handleListConsents, handleGetConsent, handleCreateConsent } from './domains/consents/routes';
+import { handleListConsents, handleGetConsent, handleCreateConsent, handleRevokeConsent } from './domains/consents/routes';
 import { handleListIncidents, handleGetIncident, handleCreateIncident, handleResolveIncident, handleDeleteIncident } from './domains/security-incidents/routes';
 import { handleListDocuments, handleGetDocument, handleCreateDocument, handleSignDocument, handleArchiveDocument, handleSupersedeDocument } from './domains/documents/routes';
 import { handleRunBackup, handleGetLatestBackup, handleListBackups, handleRestoreFromBackup, handleRestoreFromLatest, handleRestoreByDate, handleVerifyBackup, handleFireDrill, handleListRestores } from './domains/backups/routes';
@@ -379,6 +379,7 @@ export default {
       if (path === '/api/clinical-notes' && method === 'GET') return withCors(() => handleGetClinicNotes(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/clinical-notes' && method === 'POST') return withCors(() => handleCreateNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'GET') return withCors(() => handleGetPatientNotes(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'DELETE') return withCors(() => handleDeleteNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 1: CLINICAL RECORDS (expediente clinico digital)
@@ -399,6 +400,7 @@ export default {
       if (path === '/api/consents' && method === 'GET') return withCors(() => handleListConsents(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/consents' && method === 'POST') return withCors(() => handleCreateConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/consents\/\d+$/) && method === 'GET') return withCors(() => handleGetConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/consents\/\d+\/revoke$/) && method === 'PUT') return withCors(() => handleRevokeConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 3: TIMELINE
       if (path === '/api/timeline' && method === 'GET') return withCors(() => handleGetClinicTimeline(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
