@@ -111,7 +111,7 @@ export interface SessionNote {
   updated_at: string;
 }
 
-export type ConsentType = 'CONSENTIMIENTO_TERAPIA' | 'CONSENTIMIENTO_DATOS' | 'CONSENTIMIENTO_TMS' | 'CONSENTIMIENTO_TELEPSICOLOGIA';
+export type ConsentType = 'CONSENTIMIENTO_TERAPIA' | 'CONSENTIMIENTO_DATOS' | 'CONSENTIMIENTO_TMS' | 'CONSENTIMIENTO_TELEPSICOLOGIA' | 'AVISO_PRIVACIDAD' | 'COMUNICACION_WHATSAPP' | 'DATOS_CLINICOS';
 
 export interface Consent {
   id: number;
@@ -123,6 +123,27 @@ export interface Consent {
   ip?: string;
   signature?: string;
   created_at: string;
+  status?: string;
+  lifecycle?: string;
+  template_id?: number;
+  version?: number;
+  revoked_at?: string;
+  revoked_by?: number;
+  revoked_reason?: string;
+  witness_name?: string;
+  witness_signature?: string;
+  language?: string;
+  expires_at?: string;
+  updated_at?: string;
+  signed_at?: string;
+  signed_by?: number;
+  signed_by_name?: string;
+  signer_type?: string;
+  signature_hash?: string;
+  user_agent?: string;
+  metadata_json?: string;
+  is_active?: number;
+  updated_by?: number;
 }
 
 export type DocumentType = 'CONSENTIMIENTO_INFORMADO' | 'AVISO_PRIVACIDAD' | 'EXPEDIENTE'
