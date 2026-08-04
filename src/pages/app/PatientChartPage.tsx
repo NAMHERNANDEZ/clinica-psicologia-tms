@@ -488,22 +488,166 @@ function DocumentosTab({ documents }: { documents: any[] }) {
   );
 }
 
-function ConsentimientosTab({ consents }: { consents: any[] }) {
-  if (!consents.length) return <div className="text-slate-500 text-sm py-8 text-center">No hay consentimientos registrados</div>;
+function ConsentimientosTab({ consents, patientId }: { consents: any[]; patientId: number }) {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [signing, setSigning] = useState<string | null>(null);
+
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/consents/templates?active=true`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      const data = await res.json();
+      if (data.data?.templates) setTemplates(data.data.templates);
+    } catch {}
+  };
+
+  useEffect(() => { loadTemplates(); }, []);
+
+  const handleCreate = async () => {
+    if (!selectedTemplate) return;
+    setLoading(true);
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/consents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        body: JSON.stringify({
+          patient_id: patientId,
+          type: selectedTemplate.type,
+          document_hash: btoa(selectedTemplate.content),
+          accepted_at: new Date().toISOString(),
+          template_id: selectedTemplate.id,
+          version: selectedTemplate.version,
+        }),
+      });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/consents?patient_id=${patientId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      const data = await res.json();
+      if (data.data?.consents) setConsents(data.data.consents);
+      setShowCreate(false);
+      setSelectedTemplate(null);
+    } catch {}
+    setLoading(false);
+  };
+
+  const handleSign = async (c: any) => {
+    setSigning(c.id);
+    try {
+      const sigHash = btoa(`${c.id}-${Date.now()}-${localStorage.getItem('userId') || 'user'}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/consents/${c.id}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        body: JSON.stringify({ signer_type: 'patient', signer_name: c.patient_name || 'Paciente', signature_hash: sigHash }),
+      });
+      if (res.ok) {
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/consents?patient_id=${patientId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        const data = await r.json();
+        if (data.data?.consents) setConsents(data.data.consents);
+      }
+    } catch {}
+    setSigning(null);
+  };
+
+  const handleRevoke = async (c: any) => {
+    if (!window.confirm(`Revocar consentimiento "${c.type.replace(/_/g, ' ')}"?`)) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/consents/${c.id}/revoke`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        body: JSON.stringify({ reason: 'Revocado por usuario' }),
+      });
+      if (res.ok) {
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/consents?patient_id=${patientId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        const data = await r.json();
+        if (data.data?.consents) setConsents(data.data.consents);
+      }
+    } catch {}
+  };
+
+  const lifecycleColor = (l: string) => {
+    switch (l) {
+      case 'draft': return 'bg-amber-500/20 text-amber-400';
+      case 'pending_signature': return 'bg-blue-500/20 text-blue-400';
+      case 'signed': return 'bg-green-500/20 text-green-400';
+      case 'active': return 'bg-emerald-500/20 text-emerald-400';
+      case 'expired': return 'bg-slate-500/20 text-slate-400';
+      case 'revoked': return 'bg-red-500/20 text-red-400';
+      default: return 'bg-slate-500/20 text-slate-400';
+    }
+  };
+
   return (
-    <div className="space-y-2">
-      {consents.map((c: any) => (
-        <div key={c.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-white text-sm">{c.type.replace(/_/g, ' ')}</span>
-              <span className="text-slate-500 text-xs ml-2">{new Date(c.accepted_at).toLocaleDateString('es-MX')}</span>
-            </div>
-            <StatusBadge status={c.status || 'active'} />
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-medium">Consentimientos</h3>
+        <button
+          onClick={() => { setShowCreate(true); setSelectedTemplate(templates[0] || null); }}
+          disabled={templates.length === 0 || loading}
+          className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg disabled:opacity-50"
+        >
+          + Nuevo consentimiento
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4 space-y-3">
+          <h4 className="text-white text-sm">Crear desde plantilla</h4>
+          <select
+            value={selectedTemplate?.id || ''}
+            onChange={(e) => setSelectedTemplate(templates.find(t => t.id === Number(e.target.value)) || null)}
+            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm"
+          >
+            <option value="">Seleccionar plantilla</option>
+            {templates.map(t => (
+              <option key={t.id} value={t.id}>{t.name} ({t.type.replace(/_/g, ' ')})</option>
+            ))}
+          </select>
+          <div className="flex gap-2 pt-2">
+            <button onClick={handleCreate} disabled={loading || !selectedTemplate} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded">Crear</button>
+            <button onClick={() => { setShowCreate(false); setSelectedTemplate(null); }} className="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded">Cancelar</button>
           </div>
-          {c.witness_name && <div className="text-xs text-slate-400 mt-1">Testigo: {c.witness_name}</div>}
         </div>
-      ))}
+      )}
+
+      {consents.length === 0 && !showCreate && (
+        <div className="text-slate-500 text-sm py-8 text-center">No hay consentimientos registrados</div>
+      )}
+
+      <div className="space-y-2">
+        {consents.map((c: any) => (
+          <div key={c.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white text-sm">{c.type.replace(/_/g, ' ')}</span>
+                  {c.template_id && <span className="text-xs px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded">Plantilla</span>}
+                  <span className={lifecycleColor(c.lifecycle || c.status || 'active')}> {c.lifecycle || c.status || 'active'} </span>
+                </div>
+                <div className="text-slate-500 text-xs mt-1 flex gap-4 flex-wrap">
+                  <span>Creado: {new Date(c.created_at).toLocaleDateString('es-MX')}</span>
+                  {c.accepted_at && <span>Aceptado: {new Date(c.accepted_at).toLocaleDateString('es-MX')}</span>}
+                  {c.signed_at && <span>Firmado: {new Date(c.signed_at).toLocaleDateString('es-MX')}</span>}
+                  {c.signed_by_name && <span>Por: {c.signed_by_name}</span>}
+                </div>
+                {c.revoked_reason && <div className="text-xs text-red-400 mt-1">Revocado: {c.revoked_reason}</div>}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {c.lifecycle === 'draft' && <button onClick={() => handleSign(c)} disabled={signing === c.id} className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded">Firmar</button>}
+                {c.lifecycle === 'signed' && <button onClick={() => handleSign(c)} disabled={signing === c.id} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded">Refirmar</button>}
+                {c.lifecycle !== 'revoked' && <button onClick={() => handleRevoke(c)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded">Revocar</button>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -654,7 +798,7 @@ export default function PatientChartPage() {
       {tab === 'medicamentos' && <MedicamentosTab patient={patient} />}
       {tab === 'escalas' && <EscalasTab assessments={assessments} />}
       {tab === 'documentos' && <DocumentosTab documents={documents} />}
-      {tab === 'consentimientos' && <ConsentimientosTab consents={consents} />}
+      {tab === 'consentimientos' && <ConsentimientosTab consents={consents} patientId={id} />}
       {tab === 'timeline' && <TimelineTab events={timeline} />}
     </div>
   );

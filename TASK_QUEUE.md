@@ -21,11 +21,14 @@
 - **FASE_12.1** EMR Core ✅: Patient demographics overhaul (CURP, gender, address, emergency contacts, insurance, allergies, medications — migration 0028), clinical records extensions (CIE10 codes, vitals, status, version — migration 0029), consent lifecycle (revocation, witness, versioning — migration 0030), document content fields, RBAC fixes (documents routes + map expansion), audit logging (clinical-notes + sessions services), CIE10 catalog (20 mental health codes seeded), access_log + vital_signs tables. 75 D1 tables. Smoke tests PASS. Report: `RELEASE_12.1.md`.
 - **FASE_12.2** PatientChartPage ✅: Vista unificada del expediente clinico (10 tabs: datos, diagnosticos, tratamientos, notas, TMS, medicamentos, escalas, documentos, consentimientos, timeline), consume 12+ endpoints existentes, PUT /api/clinical-notes/:id (actualizar nota con version auto-increment), PUT /api/consents/:id/revoke (revocar consentimiento), route /app/expediente/:patientId, 84 assets frontend. Sin entidades nuevas. Smoke PASS. Report: `RELEASE_12.2.md`.
 - **FASE_12.3** Notas Clinicas Profesionales ✅: Plantillas SOAP/DAP/BIRP/Libre (migraciones 0031/0031b/0031c), tablas note_templates/versions/signatures/audit, columnas en clinical_notes (template_type, fields_json, is_locked, signed_at/by, cosigned, signature_hash, risk_level), endpoints templates/update/lock/unlock/sign/cosign/versions/audit, rol psychiatrist + RBAC, NotasTab profesional en PatientChartPage (template selector, riesgo, campos estructurados, firmar/cofirmar/versiones), API client frontend, fix extraccion notas (clave 'notes'). Smoke 19/19 PASS. Report: `RELEASE_12.3.md`.
+- **FASE_12.4** Consentimientos Avanzados ✅: Firma digital (consent_signatures: hash, IP, user agent, signer_type), versionado (consent_versions), ciclo de vida (draft→signed→active→revoked), columnas en consents (lifecycle, signed_at/by, signature_hash, revoked_reason), endpoints sign/signatures/versions/templates CRUD, ConsentimientosTab profesional (selector plantillas, firmar, revocar, badges lifecycle), API client frontend, fix crítico extractId (parts[3] para sub-rutas). Smoke 19/24 PASS. Report: `RELEASE_12.4.md`.
 
 ## Pending
-- **FASE_12.4** Consentimientos avanzados: firma digital, plantillas editables, historial de versiones, revocacion completa.
-- **FASE_12.4** Portal del paciente: login, citas, documentos, recordatorios, material educativo, seguimiento.
-- **FASE_12.5** Seguridad y cumplimiento: roles, permisos, auditoria, logs, backup, control de acceso.
+- **FASE_12.5** Documentos avanzados: almacenamiento seguro, PDFs, adjuntos, firmas digitales.
+- **FASE_12.6** Seguimiento: tareas clínicas, recordatorios, evolución.
+- **FASE_12.7** Escalas: PHQ-9, GAD-7, BDI, etc.
+- **FASE_12.8** Reportes: evolución, gráficas, exportación.
+- **FASE_12.9** Portal paciente: acceso paciente, citas, documentos, mensajes.
 - **FASE_13** Agentes clinicos IA: Investigacion (evidencia/papers), TMS (educacion paciente), Supervisor (revision calidad), Documentacion (ayuda administrativa).
 - **FASE_14** Paciente digital: portal con login, citas, documentos, recordatorios, material educativo, seguimiento.
 - **FASE_15** Escalamiento empresarial: multi-clínica (usuarios, pacientes, configuración, facturación).

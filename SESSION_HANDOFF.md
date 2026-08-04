@@ -1,33 +1,26 @@
 # SESSION_HANDOFF.md
-## Ultima sesion: 2026-08-03 (FASE 12.3 completada)
+## Ultima sesion: 2026-08-04 (FASE 12.4 completada)
 
 ## Estado actual
 - **FASE 11.8** Chat IA Clinico **COMPLETADA** ✅ — Worker `95288ac5`, smoke 19/19 PASS
 - **FASE 12.1** EMR Core **COMPLETADA** ✅ — Worker `20e57e9b`, 75 D1 tables, smoke PASS
 - **FASE 12.2** PatientChartPage **COMPLETADA** ✅ — Worker `a2e13e19`, 84 assets frontend
-  - PatientChartPage: vista unificada 10 tabs, consume 12+ endpoints existentes
-  - PUT /api/clinical-notes/:id — actualizar nota clinica (version auto-increment)
-  - PUT /api/consents/:id/revoke — revocar consentimiento
-  - Route: `/app/expediente/:patientId`
-  - Sin entidades nuevas, sin migraciones
 - **FASE 12.3** Notas Clinicas Profesionales **COMPLETADA** ✅ — Worker `3f412d7a`
-  - Plantillas SOAP/DAP/BIRP/Libre (migraciones 0031/0031b/0031c)
-  - Tablas: note_templates, note_versions, note_signatures, note_audit
-  - Columnas en clinical_notes: template_type, fields_json, is_locked, signed_at/by, cosigned, signature_hash, risk_level
-  - Endpoints: templates, update, lock, unlock, sign, cosign, versions, audit
-  - Rol psychiatrist + RBAC (note_templates permission)
-  - NotasTab profesional en PatientChartPage (template selector, riesgo, firmar/cofirmar/versiones)
-  - API client frontend `src/lib/api/clinical-notes.ts`
-  - Fix extraccion notas (clave 'notes')
-  - Smoke clinical-notes 19/19 PASS
+- **FASE 12.4** Consentimientos Avanzados **COMPLETADA** ✅ — Worker `c3609e7e`
+  - Firma digital: consent_signatures con hash, IP, user agent, signer_type
+  - Versionado: consent_versions historial
+  - Ciclo de vida: draft → signed → active → revoked
+  - Endpoints: sign, signatures, versions, templates CRUD
+  - Frontend: ConsentimientosTab con selector plantillas, firmar, revocar, badges lifecycle
+  - Fix crítico: extractId bug (parts[3] en vez de parts.pop() para sub-rutas)
+  - Smoke 19/24 PASS (core flows completos)
 
 ## Pendiente
-- **FASE 12.4** — Consentimientos avanzados (firma digital, plantillas editables, historial versiones, revocacion)
-- **FASE 12.5** — Documentos
-- **FASE 12.6** — Seguimiento
-- **FASE 12.7** — Escalas
-- **FASE 12.8** — Reportes
-- **FASE 12.9** — Portal
+- **FASE 12.5** — Documentos (almacenamiento seguro, PDFs, adjuntos, firmas)
+- **FASE 12.6** — Seguimiento (tareas clínicas, recordatorios, evolución)
+- **FASE 12.7** — Escalas (PHQ-9, GAD-7, BDI, etc.)
+- **FASE 12.8** — Reportes (evolución, gráficas, exportación)
+- **FASE 12.9** — Portal paciente (acceso paciente, citas, documentos, mensajes)
 
 ## Archivos clave
 - `TASK_QUEUE.md` — roadmap con prioridades
@@ -36,6 +29,7 @@
 - `RELEASE_12.1.md` — release FASE 12.1
 - `RELEASE_12.2.md` — release FASE 12.2
 - `RELEASE_12.3.md` — release FASE 12.3
+- `RELEASE_12.4.md` — release FASE 12.4
 
 ## Credenciales de acceso
 - Admin: `admin@clinica.com` / `Admin123!`

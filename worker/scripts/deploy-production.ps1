@@ -121,21 +121,35 @@ Run-Stage 2 "Migraciones D1 leads" {
      Write-Host "  0027 ya aplicado (clinical_chat_sessions presente), se omite."
    }
 
-   # FASE 12.3: 0031 usa CREATE TABLE IF NOT EXISTS + columnas nuevas (tablas nuevas idempotentes)
-   $hasNoteTemplates = $false
-   $chkTpl = node $WRANGLER_JS d1 execute clinica-tms-db --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name='note_templates'" --json 2>$null | Out-String
-   if ($chkTpl -match 'note_templates') {
-     $hasNoteTemplates = $true
-   }
-   if (-not $hasNoteTemplates) {
-     Write-Host "  Aplicando 0031_clinical_notes_professional.sql (note_templates/versions/audit/signatures)..."
-     $code = Invoke-Wrangler d1 execute clinica-tms-db --remote --file=./migrations/0031_clinical_notes_professional.sql
-     if ($code -ne 0) { throw "Fallo aplicando 0031 (exit $code)" }
-   } else {
-     Write-Host "  0031 ya aplicado (note_templates presente), se omite."
-   }
+# FASE 12.3: 0031 usa CREATE TABLE IF NOT EXISTS + columnas nuevas (tablas nuevas idempotentes)
+    $hasNoteTemplates = $false
+    $chkTpl = node $WRANGLER_JS d1 execute clinica-tms-db --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name='note_templates'" --json 2>$null | Out-String
+    if ($chkTpl -match 'note_templates') {
+      $hasNoteTemplates = $true
+    }
+    if (-not $hasNoteTemplates) {
+      Write-Host "  Aplicando 0031_clinical_notes_professional.sql (note_templates/versions/audit/signatures)..."
+      $code = Invoke-Wrangler d1 execute clinica-tms-db --remote --file=./migrations/0031_clinical_notes_professional.sql
+      if ($code -ne 0) { throw "Fallo aplicando 0031 (exit $code)" }
+    } else {
+      Write-Host "  0031 ya aplicado (note_templates presente), se omite."
+    }
 
-   Write-Host "  Migraciones de leads aplicadas."
+    # FASE 12.4: 0032 consentimientos avanzados
+    $hasConsentSignatures = $false
+    $chkSig = node $WRANGLER_JS d1 execute clinica-tms-db --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name='consent_signatures'" --json 2>$null | Out-String
+    if ($chkSig -match 'consent_signatures') {
+      $hasConsentSignatures = $true
+    }
+    if (-not $hasConsentSignatures) {
+      Write-Host "  Aplicando 0032_consents_advanced.sql (consent_signatures/versions + lifecycle)..."
+      $code = Invoke-Wrangler d1 execute clinica-tms-db --remote --file=./migrations/0032_consents_advanced.sql
+      if ($code -ne 0) { throw "Fallo aplicando 0032 (exit $code)" }
+    } else {
+      Write-Host "  0032 ya aplicado (consent_signatures presente), se omite."
+    }
+
+    Write-Host "  Migraciones de leads aplicadas."
  }
 
 # STAGE 3: Verificar esquema remoto (tablas críticas)
@@ -189,6 +203,13 @@ Run-Stage 10 "Smoke test clinical notes" {
   Start-Sleep -Seconds 5
   node scripts/smoke-test-clinical-notes.js
   if ($LASTEXITCODE -ne 0) { throw "Smoke test clinical notes falló" }
+}
+
+# STAGE 11: Smoke test Consentimientos (FASE 12.4)
+Run-Stage 11 "Smoke test consents" {
+  Start-Sleep -Seconds 5
+  node scripts/smoke-test-consents.js
+  if ($LASTEXITCODE -ne 0) { throw "Smoke test consents falló" }
 }
 
 # SUMMARY

@@ -33,7 +33,7 @@ import { handleGetPatientJourney, handleStartTreatment, handleCompleteSession as
 import { handleCosToday, handleCosNextAction, handleCosPatientStates, handleCosTasks, handleCosAlerts } from './domains/cos/routes';
 import { handleListRecords, handleGetRecord, handleCreateRecord, handleUpdateRecord, handleDeleteRecord } from './domains/clinical-records/routes';
 import { handleListNotes, handleGetNote, handleCreateNote as handleCreateSessionNote, handleUpdateNote as handleUpdateSessionNote, handleDeleteNote as handleDeleteSessionNote } from './domains/session-notes/routes';
-import { handleListConsents, handleGetConsent, handleCreateConsent, handleRevokeConsent } from './domains/consents/routes';
+import { handleListConsents, handleGetConsent, handleCreateConsent, handleRevokeConsent, handleSignConsent, handleGetSignatures, handleGetVersions, handleListTemplates, handleCreateTemplate, handleUpdateTemplate } from './domains/consents/routes';
 import { handleListIncidents, handleGetIncident, handleCreateIncident, handleResolveIncident, handleDeleteIncident } from './domains/security-incidents/routes';
 import { handleListDocuments, handleGetDocument, handleCreateDocument, handleSignDocument, handleArchiveDocument, handleSupersedeDocument } from './domains/documents/routes';
 import { handleRunBackup, handleGetLatestBackup, handleListBackups, handleRestoreFromBackup, handleRestoreFromLatest, handleRestoreByDate, handleVerifyBackup, handleFireDrill, handleListRestores } from './domains/backups/routes';
@@ -408,6 +408,14 @@ export default {
       if (path === '/api/consents' && method === 'POST') return withCors(() => handleCreateConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/consents\/\d+$/) && method === 'GET') return withCors(() => handleGetConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/consents\/\d+\/revoke$/) && method === 'PUT') return withCors(() => handleRevokeConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/consents\/\d+\/sign$/) && method === 'POST') return withCors(() => handleSignConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/consents\/\d+\/signatures$/) && method === 'GET') return withCors(() => handleGetSignatures(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/consents\/\d+\/versions$/) && method === 'GET') return withCors(() => handleGetVersions(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+
+      // FASE 12.4: CONSENT TEMPLATES
+      if (path === '/api/consents/templates' && method === 'GET') return withCors(() => handleListTemplates(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/consents/templates' && method === 'POST') return withCors(() => handleCreateTemplate(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/consents\/templates\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateTemplate(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 3: TIMELINE
       if (path === '/api/timeline' && method === 'GET') return withCors(() => handleGetClinicTimeline(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
