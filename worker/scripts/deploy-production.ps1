@@ -121,6 +121,20 @@ Run-Stage 2 "Migraciones D1 leads" {
      Write-Host "  0027 ya aplicado (clinical_chat_sessions presente), se omite."
    }
 
+   # FASE 12.3: 0031 usa CREATE TABLE IF NOT EXISTS + columnas nuevas (tablas nuevas idempotentes)
+   $hasNoteTemplates = $false
+   $chkTpl = node $WRANGLER_JS d1 execute clinica-tms-db --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name='note_templates'" --json 2>$null | Out-String
+   if ($chkTpl -match 'note_templates') {
+     $hasNoteTemplates = $true
+   }
+   if (-not $hasNoteTemplates) {
+     Write-Host "  Aplicando 0031_clinical_notes_professional.sql (note_templates/versions/audit/signatures)..."
+     $code = Invoke-Wrangler d1 execute clinica-tms-db --remote --file=./migrations/0031_clinical_notes_professional.sql
+     if ($code -ne 0) { throw "Fallo aplicando 0031 (exit $code)" }
+   } else {
+     Write-Host "  0031 ya aplicado (note_templates presente), se omite."
+   }
+
    Write-Host "  Migraciones de leads aplicadas."
  }
 
@@ -168,6 +182,13 @@ Run-Stage 9 "Smoke test clinical chat" {
   Start-Sleep -Seconds 5
   node scripts/smoke-test-clinical-chat.js
   if ($LASTEXITCODE -ne 0) { throw "Smoke test clinical chat falló" }
+}
+
+# STAGE 10: Smoke test Clinical Notes (FASE 12.3)
+Run-Stage 10 "Smoke test clinical notes" {
+  Start-Sleep -Seconds 5
+  node scripts/smoke-test-clinical-notes.js
+  if ($LASTEXITCODE -ne 0) { throw "Smoke test clinical notes falló" }
 }
 
 # SUMMARY

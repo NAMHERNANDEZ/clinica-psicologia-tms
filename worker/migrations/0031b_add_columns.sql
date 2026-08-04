@@ -1,0 +1,11 @@
+ALTER TABLE clinical_notes ADD COLUMN template_type TEXT DEFAULT 'Libre';
+ALTER TABLE clinical_notes ADD COLUMN fields_json TEXT;
+ALTER TABLE clinical_notes ADD COLUMN structure_version INTEGER DEFAULT 1;
+ALTER TABLE clinical_notes ADD COLUMN is_locked INTEGER DEFAULT 0;
+ALTER TABLE clinical_notes ADD COLUMN locked_at TEXT;
+ALTER TABLE clinical_notes ADD COLUMN locked_by INTEGER;
+ALTER TABLE clinical_notes ADD COLUMN signed_at TEXT;
+ALTER TABLE clinical_notes ADD COLUMN signed_by INTEGER;
+ALTER TABLE clinical_notes ADD COLUMN cosigned_by INTEGER;
+ALTER TABLE clinical_notes ADD COLUMN cosigned_at TEXT;
+ALTER TABLE clinical_notes ADD COLUMN signature_hash TEXT;
