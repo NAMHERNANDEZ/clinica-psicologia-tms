@@ -16,7 +16,7 @@ import { handleGetAlerts, handleGetAlertSummary, handleCreateAlert, handleMarkAl
 import { handleAutomationEvent } from './domains/automation/routes';
 import { handleDashboardOverview } from './domains/dashboard/routes';
 import { handleGetTreatments, handleGetTreatment, handleCreateTreatment, handleUpdateTreatment, handleDeleteTreatment } from './domains/treatments/routes';
-import { handleGetPatientNotes, handleGetClinicNotes, handleCreateNote, handleUpdateNote, handleDeleteNote } from './domains/clinical-notes/routes';
+import { handleGetPatientNotes, handleGetClinicNotes, handleCreateNote, handleUpdateNote, handleLockNote, handleUnlockNote, handleSignNote, handleCosignNote, handleGetNoteVersions, handleGetNoteAudit, handleGetNoteTemplates, handleDeleteNote } from './domains/clinical-notes/routes';
 import { handleGetPatientTimeline, handleGetClinicTimeline, handleCreateEvent } from './domains/timeline/routes';
 import { handleGetSessions, handleCompleteSession, handleUpdateSession } from './domains/sessions/routes';
 import { handleGetProtocols, handleGetProtocol, handleCreateProtocol, handleUpdateProtocol, handleDeactivateProtocol, handleSuggestProtocol } from './domains/tms-protocols/routes';
@@ -32,7 +32,7 @@ import { handleGenerateReport, handleGetTreatmentSummary, handleExportCSV, handl
 import { handleGetPatientJourney, handleStartTreatment, handleCompleteSession as handleJourneyCompleteSession, handleGetReceptionView, handleGetTherapistView, handleDischargePatient } from './domains/patient-journey/routes';
 import { handleCosToday, handleCosNextAction, handleCosPatientStates, handleCosTasks, handleCosAlerts } from './domains/cos/routes';
 import { handleListRecords, handleGetRecord, handleCreateRecord, handleUpdateRecord, handleDeleteRecord } from './domains/clinical-records/routes';
-import { handleListNotes, handleGetNote, handleCreateNote as handleCreateSessionNote, handleUpdateNote, handleDeleteNote as handleDeleteSessionNote } from './domains/session-notes/routes';
+import { handleListNotes, handleGetNote, handleCreateNote as handleCreateSessionNote, handleUpdateNote as handleUpdateSessionNote, handleDeleteNote as handleDeleteSessionNote } from './domains/session-notes/routes';
 import { handleListConsents, handleGetConsent, handleCreateConsent, handleRevokeConsent } from './domains/consents/routes';
 import { handleListIncidents, handleGetIncident, handleCreateIncident, handleResolveIncident, handleDeleteIncident } from './domains/security-incidents/routes';
 import { handleListDocuments, handleGetDocument, handleCreateDocument, handleSignDocument, handleArchiveDocument, handleSupersedeDocument } from './domains/documents/routes';
@@ -381,6 +381,13 @@ export default {
       if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'GET') return withCors(() => handleGetPatientNotes(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/clinical-notes\/\d+$/) && method === 'DELETE') return withCors(() => handleDeleteNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/lock$/) && method === 'POST') return withCors(() => handleLockNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/unlock$/) && method === 'POST') return withCors(() => handleUnlockNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/sign$/) && method === 'POST') return withCors(() => handleSignNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/cosign$/) && method === 'POST') return withCors(() => handleCosignNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/versions$/) && method === 'GET') return withCors(() => handleGetNoteVersions(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/clinical-notes\/\d+\/audit$/) && method === 'GET') return withCors(() => handleGetNoteAudit(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/clinical-notes/templates' && method === 'GET') return withCors(() => handleGetNoteTemplates(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 1: CLINICAL RECORDS (expediente clinico digital)
       if (path === '/api/clinical-records' && method === 'GET') return withCors(() => handleListRecords(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
@@ -393,7 +400,7 @@ export default {
       if (path === '/api/session-notes' && method === 'GET') return withCors(() => handleListNotes(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/session-notes' && method === 'POST') return withCors(() => handleCreateSessionNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/session-notes\/\d+$/) && method === 'GET') return withCors(() => handleGetNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
-      if (path.match(/^\/api\/session-notes\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/session-notes\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateSessionNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/session-notes\/\d+$/) && method === 'DELETE') return withCors(() => handleDeleteSessionNote(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 2: CONSENTS

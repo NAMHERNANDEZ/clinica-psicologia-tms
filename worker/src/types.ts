@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'therapist' | 'reception' | 'patient';
+export type Role = 'admin' | 'therapist' | 'psychiatrist' | 'reception' | 'patient';
 export type PatientStatus = 'active' | 'inactive' | 'discharged';
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled';
 

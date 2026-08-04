@@ -39,8 +39,9 @@ export async function findNotesByClinic(env: Env, clinicId: number, limit: numbe
 
 export async function createNote(env: Env, clinicId: number, data: ClinicalNoteInput & { therapist_id: number }): Promise<number> {
   const result = await env.DB.prepare(
-    `INSERT INTO clinical_notes (clinic_id, patient_id, therapist_id, appointment_id, treatment_id, note, note_type)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO clinical_notes (clinic_id, patient_id, therapist_id, appointment_id, treatment_id, note, note_type,
+      template_type, risk_level, status, fields_json, structure_version)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     clinicId,
     data.patient_id,
@@ -48,7 +49,12 @@ export async function createNote(env: Env, clinicId: number, data: ClinicalNoteI
     data.appointment_id || null,
     data.treatment_id || null,
     data.note,
-    data.note_type || 'session'
+    data.note_type || 'session',
+    data.template_type || 'Libre',
+    data.risk_level || null,
+    data.status || 'draft',
+    data.fields_json || null,
+    1
   ).run();
   return result.meta.last_row_id as number;
 }

@@ -10,6 +10,7 @@ export type Permission =
   | 'cos:read'
   | 'admin:access'
   | 'clinical_notes:read' | 'clinical_notes:write' | 'clinical_notes:delete'
+  | 'note_templates:read' | 'note_templates:write'
   | 'sessions:read' | 'sessions:write'
   | 'templates:read' | 'templates:write' | 'templates:delete'
   | 'timeline:read' | 'timeline:write'
@@ -27,6 +28,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'cos:read',
     'admin:access',
     'clinical_notes:read', 'clinical_notes:write', 'clinical_notes:delete',
+    'note_templates:read', 'note_templates:write',
     'sessions:read', 'sessions:write',
     'templates:read', 'templates:write', 'templates:delete',
     'timeline:read', 'timeline:write',
@@ -40,10 +42,19 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'clinical:read', 'clinical:write',
     'reports:read',
     'clinical_notes:read', 'clinical_notes:write',
+    'note_templates:read',
     'sessions:read', 'sessions:write',
     'treatments:read', 'treatments:write',
     'timeline:read', 'timeline:write',
     'documents:read', 'documents:write',
+  ],
+  psychiatrist: [
+    'patients:read',
+    'clinical:read', 'clinical:write',
+    'clinical_notes:read', 'clinical_notes:write', 'clinical_notes:delete',
+    'note_templates:read', 'note_templates:write',
+    'treatments:read', 'treatments:write',
+    'documents:read', 'documents:write', 'documents:sign',
   ],
   reception: [
     'patients:read', 'patients:write',
@@ -60,3 +71,4 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 export function hasPermission(role: Role, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role]?.includes(permission) || false;
 }
+

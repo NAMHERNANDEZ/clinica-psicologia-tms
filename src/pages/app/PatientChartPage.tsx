@@ -193,43 +193,185 @@ function TratamientosTab({ treatments, sessions }: { treatments: any[]; sessions
   );
 }
 
-function NotasTab({ clinicalNotes, sessionNotes }: { clinicalNotes: any[]; sessionNotes: any[] }) {
+function NotasTab({ clinicalNotes, sessionNotes, patientId }: { clinicalNotes: any[]; sessionNotes: any[]; patientId: number }) {
+  const [showForm, setShowForm] = useState(false);
+  const [template, setTemplate] = useState('SOAP');
+  const [risk, setRisk] = useState('low');
+  const [fields, setFields] = useState<any>({});
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [noteVersion, setNoteVersion] = useState<Record<number, any[]>>({});
+  const [loadingVersion, setLoadingVersion] = useState<Record<number, boolean>>({});
+
+  const TEMPLATE_SECTIONS: Record<string, { key: string; label: string }[]> = {
+    SOAP: [
+      { key: 'motivo_consulta', label: 'Motivo de consulta' },
+      { key: 'observaciones', label: 'Observaciones' },
+      { key: 'evaluacion', label: 'Evaluacion' },
+      { key: 'intervencion', label: 'Intervencion realizada' },
+      { key: 'plan_terapeutico', label: 'Plan terapeutico' },
+      { key: 'proxima_sesion', label: 'Proxima sesion' },
+    ],
+    DAP: [
+      { key: 'dato', label: 'Dato' },
+      { key: 'aspecto', label: 'Aspecto' },
+      { key: 'plan', label: 'Plan' },
+    ],
+    BIRP: [
+      { key: 'background', label: 'Background' },
+      { key: 'identificacion', label: 'Identificacion' },
+      { key: 'respuesta', label: 'Respuesta' },
+      { key: 'plan', label: 'Plan' },
+    ],
+    Libre: [{ key: 'nota', label: 'Nota' }],
+  };
+
+  async function createNote() {
+    setSaving(true); setError('');
+    const structured: any = {};
+    (TEMPLATE_SECTIONS[template] || []).forEach(s => { if (fields[s.key]) structured[s.key] = fields[s.key]; });
+    const body: any = { patient_id: patientId, note_type: 'session' };
+    if (template === 'Libre') {
+      body.note = note;
+      body.template_type = 'LIBRE';
+    } else {
+      body.template_type = template;
+      body.fields_json = JSON.stringify(structured);
+      body.note = (TEMPLATE_SECTIONS[template] || []).map(s => `${s.label}: ${fields[s.key] || ''}`).join('\n');
+    }
+    body.risk_level = risk;
+    body.status = 'draft';
+    try {
+      const r = await fetch(`${API}/api/clinical-notes`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) { setError(d.error || 'Error al crear nota'); return; }
+      setShowForm(false); setFields({}); setNote(''); setRisk('low');
+      window.location.reload();
+    } catch { setError('Error de red'); }
+    finally { setSaving(false); }
+  }
+
+  async function signNote(id: number) {
+    const r = await fetch(`${API}/api/clinical-notes/${id}/sign`, { method: 'POST', headers: authHeaders() });
+    if (r.ok) window.location.reload();
+  }
+
+  async function toggleVersions(id: number) {
+    if (noteVersion[id]) { setNoteVersion((p: any) => { const c = { ...p }; delete c[id]; return c; }); return; }
+    setLoadingVersion((p: any) => ({ ...p, [id]: true }));
+    try {
+      const d = await api(`/api/clinical-notes/${id}/versions`);
+      setNoteVersion((p: any) => ({ ...p, [id]: extractArray(d, 'versions') }));
+    } catch {}
+    finally { setLoadingVersion((p: any) => ({ ...p, [id]: false })); }
+  }
+
+  const riskColors: Record<string, string> = { low: 'bg-emerald-500/15 text-emerald-300', medium: 'bg-amber-500/15 text-amber-300', high: 'bg-red-500/15 text-red-300', critical: 'bg-red-700/20 text-red-300' };
+
   return (
     <div className="space-y-4">
-      {sessionNotes.length > 0 && (
-        <Section title="Notas SOAP">
-          <div className="space-y-3">
-            {sessionNotes.map((n: any) => (
-              <div key={n.id} className="bg-slate-900/50 rounded p-3 border border-slate-700/50">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-slate-400">{new Date(n.session_date).toLocaleDateString('es-MX')}</span>
-                  <StatusBadge status={n.status || 'draft'} />
-                </div>
-                {n.subjective && <div className="text-xs"><span className="text-blue-400 font-semibold">S:</span> <span className="text-slate-300">{n.subjective}</span></div>}
-                {n.objective && <div className="text-xs"><span className="text-emerald-400 font-semibold">O:</span> <span className="text-slate-300">{n.objective}</span></div>}
-                {n.assessment && <div className="text-xs"><span className="text-amber-400 font-semibold">A:</span> <span className="text-slate-300">{n.assessment}</span></div>}
-                {n.plan && <div className="text-xs"><span className="text-violet-400 font-semibold">P:</span> <span className="text-slate-300">{n.plan}</span></div>}
-              </div>
-            ))}
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold">
+          {showForm ? 'Cancelar' : '+ Nueva nota clinica'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-slate-800/50 rounded-lg border border-teal-500/30 p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Plantilla</label>
+              <select value={template} onChange={e => { setTemplate(e.target.value); setFields({}); }} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm">
+                <option value="SOAP">SOAP</option>
+                <option value="DAP">DAP</option>
+                <option value="BIRP">BIRP</option>
+                <option value="Libre">Libre</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Riesgo clinico</label>
+              <select value={risk} onChange={e => setRisk(e.target.value)} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm">
+                <option value="low">Bajo</option>
+                <option value="medium">Medio</option>
+                <option value="high">Alto</option>
+                <option value="critical">Critico</option>
+              </select>
+            </div>
           </div>
-        </Section>
+
+          {template === 'Libre' ? (
+            <textarea value={note} onChange={e => setNote(e.target.value)} rows={6} placeholder="Contenido de la nota..." className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200" />
+          ) : (
+            <div className="space-y-3">
+              {(TEMPLATE_SECTIONS[template] || []).map(s => (
+                <div key={s.key}>
+                  <label className="text-xs text-slate-400 font-semibold">{s.label}</label>
+                  <textarea value={fields[s.key] || ''} onChange={e => setFields({ ...fields, [s.key]: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {error && <div className="text-red-400 text-sm">{error}</div>}
+          <div className="flex justify-end">
+            <button onClick={createNote} disabled={saving} className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar nota'}
+            </button>
+          </div>
+        </div>
       )}
+
       {clinicalNotes.length > 0 && (
-        <Section title="Notas clinicas">
-          <div className="space-y-2">
+        <Section title="Notas clinicas profesionales">
+          <div className="space-y-3">
             {clinicalNotes.map((n: any) => (
               <div key={n.id} className="bg-slate-900/50 rounded p-3 border border-slate-700/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-slate-400">{new Date(n.created_at).toLocaleDateString('es-MX')}</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">{n.note_type}</span>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">{new Date(n.created_at).toLocaleDateString('es-MX')}</span>
+                    <span className="text-xs px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">{n.template_type || n.note_type}</span>
+                    {n.version > 1 && <span className="text-xs px-1.5 py-0.5 bg-blue-500/15 text-blue-300 rounded">v{n.version}</span>}
+                    {n.risk_level && <span className={`text-xs px-1.5 py-0.5 rounded ${riskColors[n.risk_level] || ''}`}>{n.risk_level}</span>}
+                  </div>
+                  <StatusBadge status={n.status || 'draft'} />
                 </div>
-                <p className="text-sm text-slate-300">{n.note}</p>
+                {n.fields_json ? (
+                  <div className="text-xs space-y-1 mt-1">
+                    {(() => { try { return Object.entries(JSON.parse(n.fields_json)).map(([k, v]) => (
+                      <div key={k}><span className="text-slate-500 capitalize font-semibold">{k.replace(/_/g, ' ')}:</span> <span className="text-slate-300">{String(v)}</span></div>
+                    )); } catch { return <p className="text-slate-300">{n.note}</p>; } })()}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-300 mt-1">{n.note}</p>
+                )}
+                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                  {n.signed_at && <span className="text-emerald-400">Firmada</span>}
+                  {n.cosigned_at && <span className="text-violet-400">Cofirmada</span>}
+                  {n.is_locked === 1 && <span className="text-amber-400">Bloqueada</span>}
+                  {n.signed_by && !n.cosigned_by && <button onClick={() => signNote(n.id)} className="text-violet-400 hover:text-violet-300 font-semibold">Cofirmar</button>}
+                  {!n.signed_at && n.is_locked !== 1 && <button onClick={() => signNote(n.id)} className="text-emerald-400 hover:text-emerald-300 font-semibold">Firmar</button>}
+                  <button onClick={() => toggleVersions(n.id)} className="text-blue-400 hover:text-blue-300 font-semibold">{noteVersion[n.id] ? 'Ocultar versiones' : 'Ver versiones'}</button>
+                </div>
+                {noteVersion[n.id] && (
+                  <div className="mt-2 space-y-1">
+                    {noteVersion[n.id].map((v: any) => (
+                      <div key={v.id} className="text-xs bg-slate-800/50 rounded p-2">
+                        <span className="text-slate-400">v{v.version}</span> - <span className="text-slate-300">{v.change_reason}</span> <span className="text-slate-500">({new Date(v.changed_at).toLocaleString('es-MX')})</span>
+                        {v.changed_by_email && <span className="text-slate-500"> por {v.changed_by_email}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </Section>
       )}
-      {!sessionNotes.length && !clinicalNotes.length && (
+
+      {!clinicalNotes.length && !sessionNotes.length && (
         <div className="text-slate-500 text-sm py-8 text-center">No hay notas clinicas registradas</div>
       )}
     </div>
@@ -437,7 +579,7 @@ export default function PatientChartPage() {
       const allT = extractArray(get(results[2]), 'treatments');
       setTreatments(allT.filter((t: any) => t.patient_id === id));
 
-      setClinicalNotes(extractArray(get(results[3])));
+      setClinicalNotes(extractArray(get(results[3]), 'notes'));
       setSessionNotes(extractArray(get(results[4]), 'notes'));
 
       const profs = extractArray(get(results[5]));
@@ -507,7 +649,7 @@ export default function PatientChartPage() {
       {tab === 'datos' && <DatosTab patient={patient} />}
       {tab === 'diagnosticos' && <DiagnosticosTab records={records} />}
       {tab === 'tratamientos' && <TratamientosTab treatments={treatments} sessions={sessionsMap} />}
-      {tab === 'notas' && <NotasTab clinicalNotes={clinicalNotes} sessionNotes={sessionNotes} />}
+      {tab === 'notas' && <NotasTab clinicalNotes={clinicalNotes} sessionNotes={sessionNotes} patientId={id} />}
       {tab === 'tms' && <TmsTab profiles={profiles} tmsSessions={tmsSessionsMap} responses={responses} effects={effects} />}
       {tab === 'medicamentos' && <MedicamentosTab patient={patient} />}
       {tab === 'escalas' && <EscalasTab assessments={assessments} />}
