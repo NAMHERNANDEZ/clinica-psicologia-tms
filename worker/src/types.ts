@@ -73,6 +73,26 @@ export interface Appointment {
   updated_at: string;
 }
 
+export type FollowupStatus = 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADO' | 'CANCELADO' | 'NO_ASISTIO';
+export type FollowupPriority = 'BAJA' | 'NORMAL' | 'ALTA' | 'URGENTE';
+
+export interface Followup {
+  id: number;
+  clinic_id: number;
+  patient_id: number;
+  type: string;
+  scheduled_at: string;
+  completed_at: string | null;
+  status: FollowupStatus;
+  priority: FollowupPriority;
+  notes: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface JWTPayload {
   sub: number;
   email: string;

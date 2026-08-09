@@ -8,6 +8,7 @@ import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe }
 import { handleListPatients, handleGetPatient, handleCreatePatient, handleUpdatePatient, handleDeletePatient } from './domains/patients/routes';
 import { handleListTherapists, handleGetTherapist, handleCreateTherapist, handleUpdateTherapist, handleDeleteTherapist } from './domains/therapists/routes';
 import { handleListAppointments, handleGetAppointment, handleCreateAppointment, handleUpdateAppointment, handleDeleteAppointment } from './domains/appointments/routes';
+import { handleListFollowups, handleGetFollowup, handleCreateFollowup, handleUpdateFollowup, handleCompleteFollowup, handleDeleteFollowup } from './domains/followups/routes';
 import { handleGetReminders, handleGenerateReminders } from './domains/reminders/routes';
 import { handleLogNotification, handleGetNotifications } from './domains/notifications/routes';
 import { handleGetTemplates, handleCreateTemplate, handleUpdateTemplate, handleDeleteTemplate } from './domains/templates/routes';
@@ -305,6 +306,14 @@ export default {
       if (path.match(/^\/api\/appointments\/\d+$/) && method === 'GET') return withCors(() => handleGetAppointment(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/appointments\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateAppointment(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/appointments\/\d+$/) && method === 'DELETE') return withCors(() => handleDeleteAppointment(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+
+      // FASE 12.6: FOLLOWUPS (seguimiento clinico)
+      if (path === '/api/followups' && method === 'GET') return withCors(() => handleListFollowups(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/followups' && method === 'POST') return withCors(() => handleCreateFollowup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/followups\/\d+\/complete$/) && method === 'POST') return withCors(() => handleCompleteFollowup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/followups\/\d+$/) && method === 'GET') return withCors(() => handleGetFollowup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/followups\/\d+$/) && method === 'PUT') return withCors(() => handleUpdateFollowup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/followups\/\d+$/) && method === 'DELETE') return withCors(() => handleDeleteFollowup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 2: REMINDERS
       if (path === '/api/reminders' && method === 'GET') return withCors(() => handleGetReminders(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
