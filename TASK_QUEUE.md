@@ -27,7 +27,11 @@
 
 ## Pending
 - **FASE_12.5** Documentos avanzados (completar funcionalidad restante): validación adjuntos, firmas digitales en documentos.
-- **FASE_12.6** Seguimiento: tareas clínicas, recordatorios, evolución.
+- **FASE_12.6** Seguimiento Clinico ✅ (backend): Dominio followups (migracion 0033, repository, service, validators, routes), endpoints POST/GET `/api/followups`, GET/PUT/DELETE `/api/followups/:id`, POST `/api/followups/:id/complete`, permisos `followups:read/write/delete` en RBAC (admin, therapist, psychiatrist, reception), tipo Followup en types.ts, tests 11 assertions (validators). **Evidencia real: typecheck PASS, build PASS, tests 114/114 PASS.** Commit: `99e0201`. Pendiente: frontend SeguimientoTab.
+
+## Pending
+- **FASE_12.6** Seguimiento Clinico (frontend): SeguimientoTab en PatientChartPage, API client followup.
+- **FASE_12.7** Escalas: PHQ-9, GAD-7, BDI, etc.
 - **FASE_12.7** Escalas: PHQ-9, GAD-7, BDI, etc.
 - **FASE_12.8** Reportes: evolución, gráficas, exportación.
 - **FASE_12.9** Portal paciente: acceso paciente, citas, documentos, mensajes.

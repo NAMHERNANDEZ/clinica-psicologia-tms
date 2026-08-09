@@ -1,28 +1,28 @@
 {
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-08-09T02:25:00.000Z",
+  "updatedAt": "2026-08-09T02:42:00.000Z",
   "phase": {
-    "current": "12.5",
-    "name": "Documentos avanzados (reparación completada)",
-    "status": "READY_FOR_COMMIT"
+    "current": "12.6",
+    "name": "Seguimiento Clinico (followups) — backend completo, frontend pendiente",
+    "status": "BACKEND_DONE"
   },
   "lastCommit": {
-    "hash": "814b61a",
-    "message": "fix: FASE 12.5 typecheck/build/tests PASS real + bridge integrado con config persistente"
+    "hash": "99e0201",
+    "message": "feat: FASE 12.6 Seguimiento Clinico (followups)"
   },
   "uncommittedChanges": {
     "count": 0,
     "files": [],
-    "note": "Commit 814b61a realizado. Restan sin trackear (no relacionados): 00_CORE/, MASTER_LOOP.ps1, OPENCE_EXECUTE_PLAN_CMD.txt, AUTONOMOUS_EXECUTION_PLAN.md, worker/dist-check/, worker/worker/."
+    "note": "Commit 99e0201 realizado. Restan sin trackear (no relacionados): 00_CORE/, MASTER_LOOP.ps1, OPENCE_EXECUTE_PLAN_CMD.txt, AUTONOMOUS_EXECUTION_PLAN.md, worker/dist-check/, worker/worker/."
   },
   "build": {
     "typecheck": "PASS",
     "wranglerDryRun": "PASS",
-    "tests": "PASS 103/103",
+    "tests": "PASS 114/114",
     "vitestInstalled": true
   },
   "bridge": {
-    "status": "RUNNING (pid 864) + auto-start configurado en Startup",
+    "status": "RUNNING + auto-start configurado en Startup",
     "queueDir": "bridge/queue",
     "resultsDir": "bridge/results",
     "fixes": ["promptMsgID no-duplicación", "sesión perdida tras reinicio", "sesión colgada (stuck)"],
@@ -34,8 +34,8 @@
     }
   },
   "nextAction": {
-    "label": "Continuar FASE 12.5 restante (adjuntos, firmas) o pasar a FASE 12.6",
-    "detail": "FASE 12.5 ya tiene commit 814b61a. Resta la funcionalidad pendiente de 12.5 (validación adjuntos, firmas digitales en documentos) segun TASK_QUEUE.md, o avanzar a FASE 12.6 (plan en PHASES/12.6.md)."
+    "label": "FASE 12.6 frontend (SeguimientoTab en PatientChartPage) o pasar a FASE 12.7",
+    "detail": "Backend FASE 12.6 completo (migracion 0033, dominio followups, endpoints, RBAC, tests). Pendiente: frontend SeguimientoTab + API client, o avanzar a FASE 12.7 (Escalas)."
   },
   "blockers": []
 }
