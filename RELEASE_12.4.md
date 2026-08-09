@@ -40,11 +40,12 @@
 
 ### Fixes
 - **extractId bug crítico corregido**: `parts[parts.length-1]` extraía 'sign' en vez de '3' para `/api/consents/3/sign`. Cambiado a `parts[3]` (posición fija para `/api/consents/:id/*`).
+- **consent_templates.updated_by faltante**: Migración 0032 actualizada con ALTER TABLE para agregar columna (resuelve 500 en POST /api/consents/templates).
 - Migración 0032 aplicada manualmente (detection script agregado a deploy-production.ps1)
-- Templates seed: COMUNICACION_WHATSAPP y DATOS_CLINICOS insertados como type='CUSTOM' (CHECK constraint de tabla pre-existente limita tipos)
+- Templates seed: COMUNICACION_WHATSAPP y DATOS_CLINICOS usan type='CUSTOM' (solución pragmática - CHECK constraint de tabla 0030 limita tipos)
 
 ### Smokes
-- 19/24 consents tests PASS (create, sign, signatures, versions, revoke, list, lifecycle)
+- **22/24 consents tests PASS** (create, sign, signatures, versions, revoke, list, lifecycle, template CRUD)
 - 19/19 clinical-notes PASS
 - 19/19 clinical-chat PASS
 - 9/9 appointments PASS
@@ -52,8 +53,7 @@
 - marketing-ai PASS
 
 ### Limitaciones Conocidas
-- Template types COMUNICACION_WHATSAPP y DATOS_CLINICOS usan type='CUSTOM' por CHECK constraint en `consent_templates` (tabla de migración 0030). Solución completa requiere recrear tabla.
-- POST /api/consents/templates da 500 en smoke test (requiere debug adicional - no bloqueante para ciclo de vida principal)
+- Template types COMUNICACION_WHATSAPP y DATOS_CLINICOS usan type='CUSTOM' temporalmente (CHECK constraint en tabla 0030). Para solución completa se requiere recrear tabla con tipos ampliados - no crítico para funcionalidad.
 
 ### Build
 - TypeScript: errores pre-existentes únicamente

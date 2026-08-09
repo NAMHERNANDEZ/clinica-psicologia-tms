@@ -9,6 +9,12 @@ export interface DocumentInput {
   signed_at?: string;
   expires_at?: string;
   metadata?: string;
+  file?: {
+    name?: string;
+    type?: string;
+    content?: string;
+    size?: number;
+  };
 }
 
 export class DocumentRepository {

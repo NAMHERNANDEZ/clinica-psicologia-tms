@@ -10,6 +10,7 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   SETUP_TOKEN: string;
   BACKUPS_BUCKET?: R2Bucket;
+  CLINIC_DOCUMENTS_BUCKET?: R2Bucket;
   GEMINI_API_KEY?: string;
 }
 

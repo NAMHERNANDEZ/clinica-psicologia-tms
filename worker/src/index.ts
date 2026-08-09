@@ -35,7 +35,7 @@ import { handleListRecords, handleGetRecord, handleCreateRecord, handleUpdateRec
 import { handleListNotes, handleGetNote, handleCreateNote as handleCreateSessionNote, handleUpdateNote as handleUpdateSessionNote, handleDeleteNote as handleDeleteSessionNote } from './domains/session-notes/routes';
 import { handleListConsents, handleGetConsent, handleCreateConsent, handleRevokeConsent, handleSignConsent, handleGetSignatures, handleGetVersions, handleListTemplates, handleCreateTemplate, handleUpdateTemplate } from './domains/consents/routes';
 import { handleListIncidents, handleGetIncident, handleCreateIncident, handleResolveIncident, handleDeleteIncident } from './domains/security-incidents/routes';
-import { handleListDocuments, handleGetDocument, handleCreateDocument, handleSignDocument, handleArchiveDocument, handleSupersedeDocument } from './domains/documents/routes';
+import { handleListDocuments, handleGetDocument, handleCreateDocument, handleSignDocument, handleArchiveDocument, handleSupersedeDocument, handleDownloadDocument } from './domains/documents/routes';
 import { handleRunBackup, handleGetLatestBackup, handleListBackups, handleRestoreFromBackup, handleRestoreFromLatest, handleRestoreByDate, handleVerifyBackup, handleFireDrill, handleListRestores } from './domains/backups/routes';
 import { handleSecurityEvents, handleSecurityDashboard, handleBlockIP, handleUnblockIP, handleBlockedIPs, handleUserSessions, handleRevokeSession, handleRevokeAllSessions, handleTrustDevice, handleRotateSecret, handleDocumentIntegrity, handleVerifyDocument, handleScanDocument } from './domains/security/routes';
 import { handleObservabilityDashboard, handleObservabilityEvents, handleObservabilityMetrics, handleObservabilityHealthHistory, handleObservabilityAlerts, handleObservabilityExport } from './domains/observability/routes';
@@ -536,6 +536,7 @@ export default {
       if (path.match(/^\/api\/documents\/\d+\/sign$/) && method === 'PUT') return withCors(() => handleSignDocument(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/documents\/\d+\/archive$/) && method === 'PUT') return withCors(() => handleArchiveDocument(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/documents\/\d+\/supersede$/) && method === 'POST') return withCors(() => handleSupersedeDocument(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/documents\/\d+\/download$/) && method === 'GET') return withCors(() => handleDownloadDocument(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 4: BACKUPS
        if (path === '/api/backups/run' && method === 'POST') return withCors(() => handleRunBackup(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);

@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
+import PatientAIChat from './components/PatientAIChat';
 import AppLayout from './components/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -90,6 +91,21 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Widget "Pregúntale a nuestra IA" solo en páginas públicas del sitio
+// (nunca en el área clínica /app, /admin ni en login/registro).
+function PublicAIChat() {
+  const { pathname } = useLocation();
+  if (
+    pathname.startsWith('/app') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register')
+  ) {
+    return null;
+  }
+  return <PatientAIChat />;
+}
+
 function App() {
   return (
     <LanguageProvider>
@@ -158,6 +174,7 @@ function App() {
             </Routes>
           </Suspense>
           </ErrorBoundary>
+          <PublicAIChat />
         </BrowserRouter>
       </AuthProvider>
     </LanguageProvider>

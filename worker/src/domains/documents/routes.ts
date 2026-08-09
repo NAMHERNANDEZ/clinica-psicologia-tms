@@ -95,3 +95,20 @@ export async function handleSupersedeDocument(env: Env, request: Request, user: 
     return json({ success: false, error: "Internal error" }, 500, cors);
   }
 }
+
+export async function handleDownloadDocument(env: Env, request: Request, user: User, cors: Record<string, string>): Promise<Response> {
+  const permErr = requirePermission(user, 'documents:read');
+  if (permErr) return permErr;
+  try {
+    const parts = request.url.split("/");
+    const id = parseInt(parts[parts.length - 1] || "0");
+    if (!id) return json({ success: false, error: "ID requerido" }, 400, cors);
+    const service = new DocumentService(env);
+    const contentType = await service.getDownloadUrl(user.clinic_id || 1, id);
+    if (!contentType) return json({ success: false, error: "Documento sin archivo almacenado" }, 404, cors);
+    return json({ success: true, data: { contentType } }, 200, cors);
+  } catch (err) {
+    console.error("Download document error:", err);
+    return json({ success: false, error: "Internal error" }, 500, cors);
+  }
+}

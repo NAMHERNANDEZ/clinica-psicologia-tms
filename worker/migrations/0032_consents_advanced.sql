@@ -1,11 +1,14 @@
 -- FASE 12.4: Consentimientos avanzados
 -- Firma digital, ciclo de vida, versionado, auditoria completa
 
+-- Fix: agregar updated_by a consent_templates (tabla de migración 0030)
+ALTER TABLE consent_templates ADD COLUMN updated_by INTEGER;
+
 -- Plantillas adicionales de consentimientos
 INSERT OR IGNORE INTO consent_templates (clinic_id, name, type, content, language) VALUES
-  (1, 'Consentimiento Comunicación WhatsApp/Email', 'COMUNICACION_WHATSAPP',
+  (1, 'Consentimiento Comunicación WhatsApp/Email', 'CUSTOM',
    'Autorizo a Neurociencia Clínica a contactarme vía WhatsApp, correo electrónico o SMS para: recordatorios de citas, confirmaciones, información clínica relevante, seguimiento de tratamiento y comunicaciones administrativas. Entiendo que puedo revocar esta autorización en cualquier momento.', 'es'),
-  (1, 'Consentimiento Uso de Datos Clínicos', 'DATOS_CLINICOS',
+  (1, 'Consentimiento Uso de Datos Clínicos', 'CUSTOM',
    'Autorizo el uso anonimizado de mis datos clínicos para fines de investigación, mejora de calidad, estadísticas internas y desarrollo de protocolos. Mis datos personales identificables no serán compartidos. Puedo revocar esta autorización sin afectar mi atención.', 'es'),
   (1, 'Consentimiento Telepsicología', 'CONSENTIMIENTO_TELEPSICOLOGIA',
    'Consiento recibir atención psicológica mediante videoconferencia. Entiendo las limitaciones técnicas, la confidencialidad se mantiene bajo los mismos estándares que la atención presencial, y puedo solicitar cambio a modalidad presencial.', 'es');
