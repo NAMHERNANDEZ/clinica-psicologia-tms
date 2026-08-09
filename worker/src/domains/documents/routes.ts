@@ -28,7 +28,8 @@ export async function handleGetDocument(env: Env, request: Request, user: User, 
     const id = parseInt(request.url.split("/").pop() || "0");
     if (!id) return json({ success: false, error: "ID requerido" }, 400, cors);
     const service = new DocumentService(env);
-    return json(await service.getDocument(user.clinic_id || 1, id), 200, cors);
+    const result = await service.getDocument(user.clinic_id || 1, id);
+    return json(result, result.status || 200, cors);
   } catch (err) {
     console.error("Get document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);
@@ -42,7 +43,8 @@ export async function handleCreateDocument(env: Env, request: Request, user: Use
     const body = await request.json() as any;
     const service = new DocumentService(env);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    return json(await service.createDocument(user.clinic_id || 1, body, user.id, ip), 201, cors);
+    const result = await service.createDocument(user.clinic_id || 1, body, user.id, ip);
+    return json(result, result.status || 201, cors);
   } catch (err) {
     console.error("Create document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);
@@ -55,10 +57,11 @@ export async function handleSignDocument(env: Env, request: Request, user: User,
   try {
     const parts = request.url.split("/");
     const id = parseInt(parts[parts.length - 2] || "0");
-    const body = await request.json() as { signed_by: string };
+    const body = await request.json() as { signed_by: string; signature?: string };
     const service = new DocumentService(env);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    return json(await service.signDocument(user.clinic_id || 1, id, body.signed_by || user.email, user.id, ip), 200, cors);
+    const result = await service.signDocument(user.clinic_id || 1, id, body.signed_by || user.email, user.id, ip, body.signature);
+    return json(result, result.status || 200, cors);
   } catch (err) {
     console.error("Sign document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);
@@ -73,7 +76,8 @@ export async function handleArchiveDocument(env: Env, request: Request, user: Us
     const id = parseInt(parts[parts.length - 2] || "0");
     const service = new DocumentService(env);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    return json(await service.archiveDocument(user.clinic_id || 1, id, user.id, ip), 200, cors);
+    const result = await service.archiveDocument(user.clinic_id || 1, id, user.id, ip);
+    return json(result, result.status || 200, cors);
   } catch (err) {
     console.error("Archive document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);
@@ -89,7 +93,8 @@ export async function handleSupersedeDocument(env: Env, request: Request, user: 
     const body = await request.json() as any;
     const service = new DocumentService(env);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    return json(await service.supersedeDocument(user.clinic_id || 1, id, body, user.id, ip), 200, cors);
+    const result = await service.supersedeDocument(user.clinic_id || 1, id, body, user.id, ip);
+    return json(result, result.status || 200, cors);
   } catch (err) {
     console.error("Supersede document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);
@@ -101,12 +106,23 @@ export async function handleDownloadDocument(env: Env, request: Request, user: U
   if (permErr) return permErr;
   try {
     const parts = request.url.split("/");
-    const id = parseInt(parts[parts.length - 1] || "0");
+    const id = parseInt(parts[parts.length - 2] || "0");
     if (!id) return json({ success: false, error: "ID requerido" }, 400, cors);
     const service = new DocumentService(env);
-    const contentType = await service.getDownloadUrl(user.clinic_id || 1, id);
-    if (!contentType) return json({ success: false, error: "Documento sin archivo almacenado" }, 404, cors);
-    return json({ success: true, data: { contentType } }, 200, cors);
+    const result = await service.downloadDocument(user.clinic_id || 1, id);
+    if (!result.success) return json(result, result.status || 404, cors);
+    const data = result.data as { body: ReadableStream; contentType: string; fileName: string; size: number };
+    const safeName = data.fileName.replace(/[^\w.\- ]+/g, "_");
+    return new Response(data.body, {
+      status: 200,
+      headers: {
+        "Content-Type": data.contentType,
+        "Content-Disposition": `attachment; filename="${safeName}"`,
+        "Content-Length": String(data.size),
+        "Cache-Control": "private, no-store",
+        ...cors,
+      },
+    });
   } catch (err) {
     console.error("Download document error:", err);
     return json({ success: false, error: "Internal error" }, 500, cors);

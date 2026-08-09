@@ -19,6 +19,7 @@
   "poll": {
     "intervalMs": 4000,
     "timeoutMs": 300000,
+    "implTimeoutMs": 600000,
     "maxAttempts": 3
   },
   "scanIntervalMs": 2000

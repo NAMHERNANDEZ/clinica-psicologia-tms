@@ -3,6 +3,7 @@ import type { Document, DocumentType } from "../../types";
 export interface DocumentInput {
   patient_id: number;
   document_type: DocumentType;
+  description?: string;
   hash?: string;
   storage_key?: string;
   signed_by?: string;
@@ -54,10 +55,10 @@ export class DocumentRepository {
 
   async create(data: DocumentInput, clinicId: number): Promise<number> {
     const result = await this.env.DB
-      .prepare(`INSERT INTO documents (clinic_id, patient_id, document_type, status, hash, storage_key, signed_by, signed_at, expires_at, metadata)
-        VALUES (?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?)`)
+      .prepare(`INSERT INTO documents (clinic_id, patient_id, document_type, status, description, hash, storage_key, signed_by, signed_at, expires_at, metadata)
+        VALUES (?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?)`)
       .bind(clinicId, data.patient_id, data.document_type,
-        data.hash || null, data.storage_key || null,
+        data.description || null, data.hash || null, data.storage_key || null,
         data.signed_by || null, data.signed_at || null,
         data.expires_at || null, data.metadata || null)
       .run();

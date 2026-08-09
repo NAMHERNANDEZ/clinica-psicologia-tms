@@ -180,6 +180,7 @@ export interface Document {
   document_type: DocumentType;
   status: DocumentStatus;
   version: number;
+  description?: string;
   hash?: string;
   storage_key?: string;
   signed_by?: string;

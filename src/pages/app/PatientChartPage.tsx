@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, FileText, Stethoscope, Pill, ClipboardList, Calendar, Shield, FolderOpen, Activity, AlertTriangle, Brain, ChevronRight, Loader2 } from 'lucide-react';
+import { documentsApi, DOCUMENT_TYPES, DOCUMENT_MAX_SIZE_BYTES, documentTypeLabel, readFileAsBase64, triggerDownload } from '../../lib/api/documents';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -353,7 +354,7 @@ function NotasTab({ clinicalNotes, sessionNotes, patientId }: { clinicalNotes: a
                   {n.is_locked === 1 && <span className="text-amber-400">Bloqueada</span>}
                   {n.signed_by && !n.cosigned_by && <button onClick={() => signNote(n.id)} className="text-violet-400 hover:text-violet-300 font-semibold">Cofirmar</button>}
                   {!n.signed_at && n.is_locked !== 1 && <button onClick={() => signNote(n.id)} className="text-emerald-400 hover:text-emerald-300 font-semibold">Firmar</button>}
-                  <button onClick={() => toggleVersions(n.id)} className="text-blue-400 hover:text-blue-300 font-semibold">{noteVersion[n.id] ? 'Ocultar versiones' : 'Ver versiones'}</button>
+                  <button onClick={() => toggleVersions(n.id)} className="text-blue-400 hover:text-blue-300 font-semibold">{loadingVersion[n.id] ? 'Cargando...' : (noteVersion[n.id] ? 'Ocultar versiones' : 'Ver versiones')}</button>
                 </div>
                 {noteVersion[n.id] && (
                   <div className="mt-2 space-y-1">
@@ -468,27 +469,219 @@ function EscalasTab({ assessments }: { assessments: any[] }) {
   );
 }
 
-function DocumentosTab({ documents }: { documents: any[] }) {
-  if (!documents.length) return <div className="text-slate-500 text-sm py-8 text-center">No hay documentos registrados</div>;
+function DocumentosTab({ documents, patientId, setDocuments }: { documents: any[]; patientId: number; setDocuments: (d: any[]) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [supersedeOf, setSupersedeOf] = useState<any>(null);
+  const [docType, setDocType] = useState('CONSENTIMIENTO_INFORMADO');
+  const [description, setDescription] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const refresh = async () => {
+    try {
+      const list = await documentsApi.list(patientId);
+      setDocuments(list);
+    } catch (e: any) {
+      setError(e?.message || 'Error al cargar documentos');
+    }
+  };
+
+  const allowedForType = (type: string) => {
+    const t = DOCUMENT_TYPES.find(d => d.value === type);
+    return t ? t.allowed : ['application/pdf'];
+  };
+
+  const validateFile = (f: File, type: string): string => {
+    const allowed = allowedForType(type);
+    if (!allowed.includes(f.type)) {
+      return `Tipo de archivo no permitido (${f.type || 'desconocido'}). Permitidos: ${allowed.map(a => a.split('/').pop()).join(', ')}`;
+    }
+    return '';
+  };
+
+  const openNewForm = () => {
+    setSupersedeOf(null);
+    setDocType('CONSENTIMIENTO_INFORMADO');
+    setDescription('');
+    setFile(null);
+    setFileError('');
+    setError('');
+    setShowForm(true);
+  };
+
+  const openSupersedeForm = (d: any) => {
+    setSupersedeOf(d);
+    setDocType(d.document_type);
+    setDescription(d.description || '');
+    setFile(null);
+    setFileError('');
+    setError('');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true); setError(''); setFileError('');
+    try {
+      let filePayload: { name?: string; type?: string; content?: string; size?: number } | undefined;
+      if (file) {
+        const fe = validateFile(file, docType);
+        if (fe) { setFileError(fe); return; }
+        const { base64, sizeBytes } = await readFileAsBase64(file);
+        if (sizeBytes > DOCUMENT_MAX_SIZE_BYTES) {
+          setFileError('Archivo demasiado grande (máx 10MB)');
+          return;
+        }
+        filePayload = { name: file.name, type: file.type, content: base64, size: file.size };
+      }
+      if (supersedeOf) {
+        await documentsApi.supersede(supersedeOf.id, {
+          document_type: docType as any,
+          description: description || undefined,
+          file: filePayload,
+        });
+      } else {
+        await documentsApi.create({
+          patient_id: patientId,
+          document_type: docType as any,
+          description: description || undefined,
+          file: filePayload,
+        });
+      }
+      setShowForm(false); setSupersedeOf(null); setFile(null); setDescription(''); setDocType('CONSENTIMIENTO_INFORMADO');
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al guardar documento');
+    } finally { setSaving(false); }
+  };
+
+  const handleSign = async (d: any) => {
+    if (!window.confirm(`Firmar documento "${documentTypeLabel(d.document_type)}"?`)) return;
+    setBusyId(d.id);
+    try {
+      const signature = btoa(`${d.id}-${Date.now()}-${localStorage.getItem('userId') || 'user'}`);
+      await documentsApi.sign(d.id, { signature });
+      await refresh();
+    } catch (e: any) { setError(e?.message || 'Error al firmar documento'); }
+    finally { setBusyId(null); }
+  };
+
+  const handleDownload = async (d: any) => {
+    setBusyId(d.id);
+    try {
+      const { blob, fileName } = await documentsApi.download(d.id);
+      triggerDownload(blob, fileName);
+    } catch (e: any) { setError(e?.message || 'Error al descargar documento'); }
+    finally { setBusyId(null); }
+  };
+
+  const handleArchive = async (d: any) => {
+    if (!window.confirm(`Archivar documento "${documentTypeLabel(d.document_type)}"? Esta acción no se puede revertir.`)) return;
+    setBusyId(d.id);
+    try {
+      await documentsApi.archive(d.id);
+      await refresh();
+    } catch (e: any) { setError(e?.message || 'Error al archivar documento'); }
+    finally { setBusyId(null); }
+  };
+
+  const selectedAllowed = allowedForType(docType);
+
   return (
-    <div className="space-y-2">
-      {documents.map((d: any) => (
-        <div key={d.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-slate-400" />
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button onClick={openNewForm} className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold">
+          {showForm ? 'Cancelar' : '+ Nuevo documento'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-slate-800/50 rounded-lg border border-teal-500/30 p-4 space-y-3">
+          <h4 className="text-white text-sm font-semibold">
+            {supersedeOf ? `Nueva versión (reemplaza doc #${supersedeOf.id})` : 'Nuevo documento'}
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <span className="text-white text-sm">{d.document_type}</span>
-              {d.description && <span className="text-slate-500 text-xs ml-2">{d.description}</span>}
+              <label className="text-xs text-slate-400 font-semibold">Tipo de documento</label>
+              <select value={docType} onChange={e => { setDocType(e.target.value); setFileError(''); }} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200">
+                {DOCUMENT_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Descripción (opcional)</label>
+              <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej. Consentimiento de TMS v1"
+                className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200" />
             </div>
           </div>
-          <StatusBadge status={d.status} />
+          <div>
+            <label className="text-xs text-slate-400 font-semibold">Archivo adjunto (máx 10MB)</label>
+            <input
+              type="file"
+              onChange={e => { setFile(e.target.files?.[0] || null); setFileError(''); }}
+              className="w-full mt-1 text-sm text-slate-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-teal-500 file:text-white file:text-sm file:font-semibold hover:file:bg-teal-400"
+            />
+            {file && <span className="text-xs text-slate-500 mt-1 inline-block">{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>}
+            <div className="text-xs text-slate-500 mt-1">Formatos permitidos: {selectedAllowed.map(a => a.split('/').pop()).join(', ')}</div>
+            {fileError && <div className="text-red-400 text-sm mt-1">{fileError}</div>}
+          </div>
+          {error && <div className="text-red-400 text-sm">{error}</div>}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setShowForm(false); setSupersedeOf(null); setFile(null); }} className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm">Cancelar</button>
+            <button onClick={handleSubmit} disabled={saving} className="px-4 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold disabled:opacity-50">
+              {saving ? 'Guardando...' : (supersedeOf ? 'Crear nueva versión' : 'Guardar documento')}
+            </button>
+          </div>
         </div>
-      ))}
+      )}
+
+      {!documents.length && !showForm && (
+        <div className="text-slate-500 text-sm py-8 text-center">No hay documentos registrados</div>
+      )}
+
+      <div className="space-y-2">
+        {documents.map((d: any) => (
+          <div key={d.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-white text-sm font-medium">{documentTypeLabel(d.document_type)}</span>
+                  {d.version > 1 && <span className="text-xs text-blue-400 ml-2">v{d.version}</span>}
+                  {d.description && <div className="text-slate-500 text-xs truncate">{d.description}</div>}
+                  <div className="text-slate-500 text-xs mt-0.5">
+                    Creado: {new Date(d.created_at).toLocaleDateString('es-MX')}
+                    {d.signed_by && <span className="ml-2 text-emerald-400">Firmado por {d.signed_by}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <StatusBadge status={d.status} />
+                {(d.status === 'DRAFT' || d.status === 'GENERATED') && (
+                  <button onClick={() => handleSign(d)} disabled={busyId === d.id} className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50">Firmar</button>
+                )}
+                {d.storage_key && (
+                  <button onClick={() => handleDownload(d)} disabled={busyId === d.id} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded disabled:opacity-50">Descargar</button>
+                )}
+                {(d.status !== 'ARCHIVED' && d.status !== 'SUPERSEDED') && (
+                  <>
+                    <button onClick={() => openSupersedeForm(d)} className="px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs rounded">Nueva versión</button>
+                    <button onClick={() => handleArchive(d)} disabled={busyId === d.id} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50">Archivar</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function ConsentimientosTab({ consents, patientId }: { consents: any[]; patientId: number }) {
+function ConsentimientosTab({ consents, patientId, setConsents }: { consents: any[]; patientId: number; setConsents: (d: any[]) => void }) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
@@ -797,8 +990,8 @@ export default function PatientChartPage() {
       {tab === 'tms' && <TmsTab profiles={profiles} tmsSessions={tmsSessionsMap} responses={responses} effects={effects} />}
       {tab === 'medicamentos' && <MedicamentosTab patient={patient} />}
       {tab === 'escalas' && <EscalasTab assessments={assessments} />}
-      {tab === 'documentos' && <DocumentosTab documents={documents} />}
-      {tab === 'consentimientos' && <ConsentimientosTab consents={consents} patientId={id} />}
+      {tab === 'documentos' && <DocumentosTab documents={documents} patientId={id} setDocuments={setDocuments} />}
+      {tab === 'consentimientos' && <ConsentimientosTab consents={consents} patientId={id} setConsents={setConsents} />}
       {tab === 'timeline' && <TimelineTab events={timeline} />}
     </div>
   );
