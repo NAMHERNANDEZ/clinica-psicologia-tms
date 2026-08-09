@@ -1,0 +1,27 @@
+{
+  "updatedAt": "2026-08-09T01:20:00.000Z",
+  "active": {
+    "phase": "12.5",
+    "name": "Documentos avanzados",
+    "status": "typecheck/build/tests PASS - commit pendiente",
+    "next": "commit + funcionalidad restante (adjuntos, firmas digitales en documentos)"
+  },
+  "pending": [
+    { "phase": "12.6", "name": "Seguimiento: tareas clínicas, recordatorios, evolución" },
+    { "phase": "12.7", "name": "Escalas: PHQ-9, GAD-7, BDI, etc." },
+    { "phase": "12.8", "name": "Reportes: evolución, gráficas, exportación" },
+    { "phase": "12.9", "name": "Portal paciente: acceso, citas, documentos, mensajes" },
+    { "phase": "13", "name": "Agentes clínicos IA: investigación, TMS, supervisor, documentación" },
+    { "phase": "14", "name": "Paciente digital: portal con login, citas, recordatorios" },
+    { "phase": "15", "name": "Escalamiento empresarial: multi-clínica" },
+    { "phase": "16", "name": "Ecosistema completo" }
+  ],
+  "done": [
+    "11.0", "11.1", "11.2", "11.2.1", "11.2.2", "11.3", "11.4", "11.5", "11.5.1",
+    "11.6", "11.7", "11.8", "12.1", "12.2", "12.3", "12.4"
+  ],
+  "evergreen": {
+    "clinicUrl": "https://neurocienciaclinica.mx",
+    "workerUrl": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev"
+  }
+}

@@ -42,7 +42,14 @@ export async function updateNote(env: Env, clinicId: number, noteId: number, use
   // Get existing note
   const existing = await env.DB.prepare(
     'SELECT * FROM clinical_notes WHERE id = ? AND clinic_id = ?'
-  ).bind(noteId, clinicId).first();
+  ).bind(noteId, clinicId).first() as {
+    id: number;
+    version: number;
+    is_locked?: number;
+    signed_at?: string;
+    cosigned?: number;
+    status?: string;
+  } | null;
 
   if (!existing) {
     return { success: false, error: 'Nota no encontrada', status: 404 };

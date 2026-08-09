@@ -1,0 +1,52 @@
+{
+  "project": "clinica-psicologia-tms",
+  "updatedAt": "2026-08-09T02:25:00.000Z",
+  "phase": {
+    "current": "12.5",
+    "name": "Documentos avanzados (reparación completada)",
+    "status": "READY_FOR_COMMIT"
+  },
+  "lastCommit": {
+    "hash": "c2b9038",
+    "message": "docs: update state after FASE 12.5 repair"
+  },
+  "uncommittedChanges": {
+    "count": 22,
+    "files": [
+      "AGENTS.md", "PROJECT_STATE.md", "PROJECT_STATE.json", "TASK_QUEUE.json", "SESSION_HANDOFF.md",
+      "bridge/run-task.cjs", "bridge/install.ps1",
+      "worker/package.json", "worker/package-lock.json",
+      "worker/src/index.ts",
+      "worker/src/domains/clinical-chat/routes.ts",
+      "worker/src/domains/clinical-notes/routes.ts",
+      "worker/src/domains/clinical-notes/service.ts",
+      "worker/src/domains/sessions/repository.ts",
+      "worker/src/domains/sessions/service.ts",
+      "worker/test/rbac.test.ts"
+    ],
+    "note": "Correcciones TS FASE 12.5 + vitest + bridge (run-task.cjs, install.ps1) + config persistente."
+  },
+  "build": {
+    "typecheck": "PASS",
+    "wranglerDryRun": "PASS",
+    "tests": "PASS 103/103",
+    "vitestInstalled": true
+  },
+  "bridge": {
+    "status": "RUNNING (pid 864) + auto-start configurado en Startup",
+    "queueDir": "bridge/queue",
+    "resultsDir": "bridge/results",
+    "fixes": ["promptMsgID no-duplicación", "sesión perdida tras reinicio", "sesión colgada (stuck)"],
+    "integration": {
+      "conector": "bridge/run-task.cjs (encola + espera + devuelve resultado)",
+      "e2eReal": "PASS (e2e-real-001 → E2E_OK)",
+      "recoveryReal": "PASS (RUNNING→interrupción→reinicio→RECOVERY_OK, attempts=2)",
+      "autoStart": "PASS (reinicio Windows simulado → bridge procesa tarea)"
+    }
+  },
+  "nextAction": {
+    "label": "Commit FASE 12.5 y configuración persistente",
+    "detail": "1) git add + commit de worker fixes + rbac test + AGENTS/PROJECT_STATE/TASK_QUEUE/SESSION_HANDOFF + bridge/run-task.cjs + bridge/install.ps1. 2) Luego continuar FASE 12.6 según TASK_QUEUE.md y PHASES/12.6.md."
+  },
+  "blockers": []
+}

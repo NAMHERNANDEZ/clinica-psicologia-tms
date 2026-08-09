@@ -28,8 +28,9 @@
     "pipeline:skip-tests": "powershell -File scripts/pipeline.ps1 -SkipTests"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0",
     "@cloudflare/workers-types": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.0",
+    "wrangler": "^3.0.0"
   }
 }

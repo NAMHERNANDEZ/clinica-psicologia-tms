@@ -37,7 +37,7 @@ export async function completeSession(env: Env, clinicId: number, userId: number
     `).bind(session.treatment_id).run();
   }
 
-  triggerCompliance(env, session.patient_id || 0);
+  triggerCompliance(env, (await repo.getPatientIdByTreatment(env, session.treatment_id)) || 0);
   const updatedSession = await repo.getSessionById(env, sessionId);
   return { success: true, data: { session: updatedSession } };
 }
@@ -73,7 +73,7 @@ export async function updateSessionStatus(env: Env, clinicId: number, userId: nu
       `).bind(session.treatment_id).run();
     }
 
-    triggerCompliance(env, session.patient_id || 0);
+    triggerCompliance(env, (await repo.getPatientIdByTreatment(env, session.treatment_id)) || 0);
   }
 
   const updatedSession = await repo.getSessionById(env, sessionId);

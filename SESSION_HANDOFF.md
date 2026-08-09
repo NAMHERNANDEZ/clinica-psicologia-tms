@@ -1,4 +1,40 @@
 # SESSION_HANDOFF.md
+
+## Ultima sesion: 2026-08-08 (FASE 12.5 PASS real + bridge integrado + config persistente)
+
+### Estado al cerrar la sesion
+- **Bridge**: RUNNING, auto-start configurado (Startup shortcut `OpenCodeBridge.lnk`).
+- **FASE 12.5**: typecheck/build/tests PASS — listo para commit (22 archivos sin commit).
+- **Protocolo persistente**: `AGENTS.md` + `PROJECT_STATE.*` + `TASK_QUEUE.json` + `SESSION_HANDOFF.md`.
+
+### Pruebas reales completadas (evidencia)
+| Prueba | Resultado |
+|---|---|
+| Bridge resiliencia (3 casos) | PASS (sesión perdida, no-duplicación, stuck) |
+| E2E real (tarea→bridge→OpenCode→lildax→results) | PASS — `e2e-real-001` → `E2E_OK` |
+| Recuperación real (RUNNING→interrupción→reinicio) | PASS — `RECOVERY_OK`, attempts=2 |
+| Auto-start Windows (reinicio simulado) | PASS — bridge pid 864 procesó `auto-start-003` → `AUTO_OK` |
+| Typecheck worker | PASS (tsc EXIT=0) |
+| Build worker (wrangler dry-run) | PASS (incluye R2 CLINIC_DOCUMENTS_BUCKET) |
+| Tests worker (vitest) | PASS 103/103 |
+
+### Siguiente accion (proxima sesion)
+1. `git add` + commit FASE 12.5 (correcciones TS, vitest, rbac test, bridge, config persistente).
+2. Continuar FASE 12.5 restante (adjuntos, firmas digitales) o pasar a FASE 12.6 segun `TASK_QUEUE.md`.
+
+### Como se usa el bridge (canal automatico)
+- Encolar + esperar resultado: `node bridge\run-task.cjs "prompt" [--id nombre] [--model provider/model]`
+- Resultados en `bridge/results/<id>.json`, logs en `bridge/logs/`.
+- Auto-arranque al iniciar Windows (acceso directo en carpeta Startup).
+
+### Credenciales bridge
+- server lildax local: puerto 4137, password local (ver `bridge/config.json`; no exponer).
+- Ver `bridge/logs/bridge.log` y `bridge/logs/server.log`.
+
+---
+
+## Sesiones anteriores (historial)
+
 ## Ultima sesion: 2026-08-08 (FASE 12.5 reparada y estabilizada)
 
 ## Estado actual

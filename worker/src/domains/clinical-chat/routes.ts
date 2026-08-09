@@ -65,14 +65,14 @@ export async function handleClinicalChatMessage(env: Env, request: Request, cors
       // Extract and save lead if contact info found
       if (response.contact) {
         const c = response.contact;
-        if (c.name || c.phone) {
+        if (c.nombre || c.telefono) {
           try {
             await env.DB.prepare(
               `INSERT INTO leads (nombre, telefono, email, origen, estado, mensaje, clinic_id, fecha_creacion, updated_at)
                VALUES (?, ?, ?, 'chat_ai', 'nuevo', ?, 1, datetime('now'), datetime('now'))`
             ).bind(
-              c.name || null,
-              c.phone || null,
+              c.nombre || null,
+              c.telefono || null,
               c.email || null,
               body.message
             ).run();

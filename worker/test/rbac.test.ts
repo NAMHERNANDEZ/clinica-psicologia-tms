@@ -8,8 +8,18 @@ describe('RBAC', () => {
         'patients:read', 'patients:write', 'patients:delete',
         'therapists:read', 'therapists:write', 'therapists:delete',
         'appointments:read', 'appointments:write', 'appointments:delete',
-        'notes:read', 'notes:write',
-        'dashboard:read', 'audit:read', 'users:write',
+        'tms:read', 'tms:write', 'tms:admin',
+        'clinical:read', 'clinical:write',
+        'reports:read', 'reports:write',
+        'cos:read',
+        'admin:access',
+        'clinical_notes:read', 'clinical_notes:write', 'clinical_notes:delete',
+        'note_templates:read', 'note_templates:write',
+        'sessions:read', 'sessions:write',
+        'templates:read', 'templates:write', 'templates:delete',
+        'timeline:read', 'timeline:write',
+        'treatments:read', 'treatments:write', 'treatments:delete',
+        'documents:read', 'documents:write', 'documents:sign', 'documents:archive',
       ];
 
       adminPermissions.forEach((perm) => {
@@ -21,10 +31,11 @@ describe('RBAC', () => {
   describe('Therapist permissions', () => {
     it('should have limited permissions', () => {
       expect(hasPermission('therapist', 'patients:read')).toBe(true);
-      expect(hasPermission('therapist', 'appointments:read_own')).toBe(true);
-      expect(hasPermission('therapist', 'appointments:write_own')).toBe(true);
-      expect(hasPermission('therapist', 'notes:read')).toBe(true);
-      expect(hasPermission('therapist', 'notes:write')).toBe(true);
+      expect(hasPermission('therapist', 'appointments:read')).toBe(true);
+      expect(hasPermission('therapist', 'clinical_notes:read')).toBe(true);
+      expect(hasPermission('therapist', 'clinical_notes:write')).toBe(true);
+      expect(hasPermission('therapist', 'sessions:read')).toBe(true);
+      expect(hasPermission('therapist', 'treatments:write')).toBe(true);
     });
 
     it('should not have admin permissions', () => {
@@ -38,8 +49,8 @@ describe('RBAC', () => {
 
   describe('Patient permissions', () => {
     it('should have minimal permissions', () => {
-      expect(hasPermission('patient', 'appointments:read_own')).toBe(true);
-      expect(hasPermission('patient', 'patients:read')).toBe(true);
+      expect(hasPermission('patient', 'appointments:read')).toBe(true);
+      expect(hasPermission('patient', 'documents:read')).toBe(true);
     });
 
     it('should not have write permissions', () => {
@@ -47,6 +58,7 @@ describe('RBAC', () => {
       expect(hasPermission('patient', 'appointments:write')).toBe(false);
       expect(hasPermission('patient', 'therapists:read')).toBe(false);
       expect(hasPermission('patient', 'dashboard:read')).toBe(false);
+      expect(hasPermission('patient', 'patients:read')).toBe(false);
     });
   });
 

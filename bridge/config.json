@@ -1,0 +1,25 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 4137,
+    "lildaxPath": "C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@opencode-ai\\cli\\node_modules\\@opencode-ai\\cli-windows-x64\\bin\\lildax.exe",
+    "autoStartServer": true,
+    "startupTimeoutMs": 30000
+  },
+  "auth": {
+    "username": "opencode",
+    "passwordFile": "C:\\Users\\LENOVO\\AppData\\Roaming\\ai.opencode.desktop\\opencode\\password",
+    "fallbackPasswordEnvVar": "OPENCODE_SERVER_PASSWORD"
+  },
+  "model": {
+    "providerID": "opencode",
+    "id": "deepseek-v4-flash-free"
+  },
+  "workdir": "C:/Users/LENOVO/Desktop/clinica-psicologia-tms",
+  "poll": {
+    "intervalMs": 4000,
+    "timeoutMs": 300000,
+    "maxAttempts": 3
+  },
+  "scanIntervalMs": 2000
+}

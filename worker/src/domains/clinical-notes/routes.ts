@@ -1,6 +1,6 @@
 import type { Env, User } from '../../types';
 import { requirePermission } from '../../middleware/require-role';
-import { validateClinicalNote } from './validators';
+import { validateClinicalNote, type ClinicalNoteInput } from './validators';
 import * as service from './service';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
@@ -78,7 +78,7 @@ export async function handleUpdateNote(env: Env, request: Request, user: User, c
     if (!id) return json({ success: false, error: 'ID inválido' }, 400, corsHeaders);
 
     const body = await request.json();
-    const result = await service.updateNote(env, user.clinic_id, id, user.id, body, request.headers.get('CF-Connecting-IP') || 'unknown');
+    const result = await service.updateNote(env, user.clinic_id, id, user.id, body as Partial<ClinicalNoteInput>, request.headers.get('CF-Connecting-IP') || 'unknown');
     if (!result.success) return json(result, result.status || 400, corsHeaders);
     return json(result, 200, corsHeaders);
   } catch (err) {

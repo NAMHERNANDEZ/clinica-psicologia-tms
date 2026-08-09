@@ -45,3 +45,10 @@ export async function getCompletedCount(env: Env, treatmentId: number): Promise<
   `).bind(treatmentId).first() as { count: number } | null;
   return row?.count ?? 0;
 }
+
+export async function getPatientIdByTreatment(env: Env, treatmentId: number): Promise<number | null> {
+  const row = await env.DB.prepare(
+    'SELECT patient_id FROM treatments WHERE id = ?'
+  ).bind(treatmentId).first() as { patient_id: number } | null;
+  return row?.patient_id ?? null;
+}
