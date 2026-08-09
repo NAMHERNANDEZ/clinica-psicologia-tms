@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, FileText, Stethoscope, Pill, ClipboardList, Calendar, Shield, FolderOpen, Activity, AlertTriangle, Brain, ChevronRight, Loader2 } from 'lucide-react';
+import { User, FileText, Stethoscope, Pill, ClipboardList, Calendar, Shield, FolderOpen, Activity, AlertTriangle, Brain, ChevronRight, Loader2, ClipboardCheck } from 'lucide-react';
 import { documentsApi, DOCUMENT_TYPES, DOCUMENT_MAX_SIZE_BYTES, documentTypeLabel, readFileAsBase64, triggerDownload } from '../../lib/api/documents';
+import { followupsApi, FOLLOWUP_TYPES, FOLLOWUP_STATUSES, FOLLOWUP_PRIORITIES, followupTypeLabel, followupStatusLabel, followupPriorityLabel, type FollowupType, type FollowupPriority, type FollowupStatus } from '../../lib/api/followup';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -27,7 +28,7 @@ function extractArray(data: any, key?: string): any[] {
   return [];
 }
 
-type Tab = 'datos' | 'diagnosticos' | 'tratamientos' | 'notas' | 'tms' | 'medicamentos' | 'escalas' | 'documentos' | 'consentimientos' | 'timeline';
+type Tab = 'datos' | 'diagnosticos' | 'tratamientos' | 'notas' | 'tms' | 'medicamentos' | 'escalas' | 'documentos' | 'consentimientos' | 'seguimiento' | 'timeline';
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'datos', label: 'Datos', icon: User },
@@ -39,6 +40,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'escalas', label: 'Escalas', icon: ClipboardList },
   { key: 'documentos', label: 'Documentos', icon: FolderOpen },
   { key: 'consentimientos', label: 'Consentimientos', icon: Shield },
+  { key: 'seguimiento', label: 'Seguimiento', icon: ClipboardCheck },
   { key: 'timeline', label: 'Timeline', icon: Calendar },
 ];
 
@@ -845,6 +847,281 @@ function ConsentimientosTab({ consents, patientId, setConsents }: { consents: an
   );
 }
 
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function FollowupTypeBadge({ type }: { type: string }) {
+  const colors: Record<string, string> = {
+    CONTROL: 'bg-blue-500/20 text-blue-400',
+    REVISION: 'bg-violet-500/20 text-violet-400',
+    TRATAMIENTO: 'bg-teal-500/20 text-teal-400',
+    URGENCIA: 'bg-red-500/20 text-red-400',
+    TELEMEDICINA: 'bg-cyan-500/20 text-cyan-400',
+  };
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${colors[type] || 'bg-slate-500/20 text-slate-400'}`}>{followupTypeLabel(type)}</span>;
+}
+
+function FollowupStatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    PENDIENTE: 'bg-amber-500/20 text-amber-400',
+    EN_PROGRESO: 'bg-blue-500/20 text-blue-400',
+    COMPLETADO: 'bg-emerald-500/20 text-emerald-400',
+    CANCELADO: 'bg-red-500/20 text-red-400',
+    NO_ASISTIO: 'bg-slate-500/20 text-slate-400',
+  };
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-slate-500/20 text-slate-400'}`}>{followupStatusLabel(status)}</span>;
+}
+
+function FollowupPriorityBadge({ priority }: { priority: string }) {
+  const colors: Record<string, string> = {
+    BAJA: 'bg-slate-500/20 text-slate-400',
+    NORMAL: 'bg-blue-500/20 text-blue-400',
+    ALTA: 'bg-orange-500/20 text-orange-400',
+    URGENTE: 'bg-red-500/20 text-red-400',
+  };
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${colors[priority] || 'bg-slate-500/20 text-slate-400'}`}>{followupPriorityLabel(priority)}</span>;
+}
+
+function SeguimientoTab({ followups, patientId, setFollowups }: { followups: any[]; patientId: number; setFollowups: (d: any[]) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [viewing, setViewing] = useState<any>(null);
+  const [type, setType] = useState<FollowupType>('CONTROL');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [priority, setPriority] = useState<FollowupPriority>('NORMAL');
+  const [status, setStatus] = useState<FollowupStatus>('PENDIENTE');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const refresh = async () => {
+    try {
+      const list = await followupsApi.list(patientId);
+      setFollowups(list);
+    } catch (e: any) {
+      setError(e?.message || 'Error al cargar seguimientos');
+    }
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setType('CONTROL');
+    setScheduledAt('');
+    setPriority('NORMAL');
+    setStatus('PENDIENTE');
+    setNotes('');
+    setError('');
+    setShowForm(true);
+  };
+
+  const openEdit = (f: any) => {
+    setEditing(f);
+    setType(f.type);
+    setScheduledAt(toLocalInputValue(f.scheduled_at));
+    setPriority(f.priority || 'NORMAL');
+    setStatus(f.status || 'PENDIENTE');
+    setNotes(f.notes || '');
+    setError('');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!type) { setError('El tipo es obligatorio'); return; }
+    if (!scheduledAt) { setError('La fecha y hora programada son obligatorias'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        type,
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        priority,
+        notes: notes || undefined,
+      };
+      if (editing) {
+        await followupsApi.update(editing.id, { ...payload, status });
+      } else {
+        await followupsApi.create({ patient_id: patientId, ...payload });
+      }
+      setShowForm(false);
+      setEditing(null);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al guardar seguimiento');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleComplete = async (f: any) => {
+    const outcome = window.prompt('Resultado del seguimiento (obligatorio):');
+    if (outcome === null) return;
+    if (!outcome.trim()) { setError('El resultado es obligatorio'); return; }
+    const outcomeNotes = window.prompt('Notas del resultado (opcional):', f.outcome_notes || '');
+    setBusyId(f.id);
+    setError('');
+    try {
+      await followupsApi.complete(f.id, { outcome: outcome.trim(), outcome_notes: outcomeNotes?.trim() || undefined });
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al completar seguimiento');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleCancel = async (f: any) => {
+    if (!window.confirm(`¿Cancelar el seguimiento "${followupTypeLabel(f.type)}" programado para ${new Date(f.scheduled_at).toLocaleString('es-MX')}?`)) return;
+    setBusyId(f.id);
+    setError('');
+    try {
+      await followupsApi.update(f.id, { status: 'CANCELADO' });
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al cancelar seguimiento');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (f: any) => {
+    if (!window.confirm(`¿Eliminar el seguimiento "${followupTypeLabel(f.type)}"? Se marcará como cancelado (soft delete).`)) return;
+    setBusyId(f.id);
+    setError('');
+    try {
+      await followupsApi.remove(f.id);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al eliminar seguimiento');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const isActive = (s: string) => s === 'PENDIENTE' || s === 'EN_PROGRESO';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-medium">Seguimiento clínico</h3>
+        <button onClick={openNew} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg">+ Nuevo seguimiento</button>
+      </div>
+
+      {error && <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</div>}
+
+      {viewing && (
+        <div className="bg-slate-800/50 rounded-lg border border-blue-500/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-white text-sm font-semibold">Detalle del seguimiento</h4>
+            <button onClick={() => setViewing(null)} className="text-slate-400 hover:text-white text-sm">Cerrar</button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <FollowupTypeBadge type={viewing.type} />
+            <FollowupStatusBadge status={viewing.status} />
+            <FollowupPriorityBadge priority={viewing.priority} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div><span className="text-slate-400">Programado:</span> <span className="text-white">{new Date(viewing.scheduled_at).toLocaleString('es-MX')}</span></div>
+            {viewing.completed_at && <div><span className="text-slate-400">Completado:</span> <span className="text-white">{new Date(viewing.completed_at).toLocaleString('es-MX')}</span></div>}
+            {viewing.notes && <div className="md:col-span-2"><span className="text-slate-400">Notas:</span> <span className="text-white">{viewing.notes}</span></div>}
+            {viewing.outcome && <div><span className="text-slate-400">Resultado:</span> <span className="text-emerald-400">{viewing.outcome}</span></div>}
+            {viewing.outcome_notes && <div><span className="text-slate-400">Notas del resultado:</span> <span className="text-white">{viewing.outcome_notes}</span></div>}
+            <div><span className="text-slate-400">Creado:</span> <span className="text-white">{new Date(viewing.created_at).toLocaleString('es-MX')}</span></div>
+            <div><span className="text-slate-400">Actualizado:</span> <span className="text-white">{new Date(viewing.updated_at).toLocaleString('es-MX')}</span></div>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-slate-800/50 rounded-lg border border-violet-500/30 p-4 space-y-3">
+          <h4 className="text-white text-sm font-semibold">{editing ? `Editar seguimiento #${editing.id}` : 'Nuevo seguimiento'}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Tipo</label>
+              <select value={type} onChange={(e) => setType(e.target.value as FollowupType)} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200">
+                {FOLLOWUP_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Fecha y hora programada</label>
+              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 font-semibold">Prioridad</label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value as FollowupPriority)} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200">
+                {FOLLOWUP_PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+            </div>
+            {editing && (
+              <div>
+                <label className="text-xs text-slate-400 font-semibold">Estado</label>
+                <select value={status} onChange={(e) => setStatus(e.target.value as FollowupStatus)} className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200">
+                  {FOLLOWUP_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="md:col-span-2">
+              <label className="text-xs text-slate-400 font-semibold">Notas (opcional)</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Ej. Evaluar respuesta al tratamiento, ajustar dosis..." className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-200" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setShowForm(false); setEditing(null); }} className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm">Cancelar</button>
+            <button onClick={handleSubmit} disabled={saving} className="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50">
+              {saving ? 'Guardando...' : (editing ? 'Guardar cambios' : 'Crear seguimiento')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!followups.length && !showForm && (
+        <div className="text-slate-500 text-sm py-8 text-center">No hay seguimientos registrados</div>
+      )}
+
+      <div className="space-y-2">
+        {followups.map((f: any) => (
+          <div key={f.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <FollowupTypeBadge type={f.type} />
+                  <FollowupStatusBadge status={f.status} />
+                  <FollowupPriorityBadge priority={f.priority} />
+                </div>
+                <div className="text-slate-500 text-xs mt-1 flex gap-4 flex-wrap">
+                  <span>Programado: {new Date(f.scheduled_at).toLocaleString('es-MX')}</span>
+                  {f.completed_at && <span className="text-emerald-400">Completado: {new Date(f.completed_at).toLocaleString('es-MX')}</span>}
+                </div>
+                {f.notes && <div className="text-slate-400 text-xs mt-1">{f.notes}</div>}
+                {f.outcome && <div className="text-xs mt-1"><span className="text-slate-500">Resultado:</span> <span className="text-emerald-400">{f.outcome}</span></div>}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                <button onClick={() => setViewing(f)} className="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs rounded">Ver</button>
+                {f.status !== 'COMPLETADO' && f.status !== 'CANCELADO' && (
+                  <>
+                    <button onClick={() => openEdit(f)} className="px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs rounded">Editar</button>
+                    {isActive(f.status) && (
+                      <button onClick={() => handleComplete(f)} disabled={busyId === f.id} className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50">Completar</button>
+                    )}
+                    {isActive(f.status) && (
+                      <button onClick={() => handleCancel(f)} disabled={busyId === f.id} className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs rounded disabled:opacity-50">Cancelar</button>
+                    )}
+                  </>
+                )}
+                <button onClick={() => handleDelete(f)} disabled={busyId === f.id} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TimelineTab({ events }: { events: any[] }) {
   if (!events.length) return <div className="text-slate-500 text-sm py-8 text-center">No hay eventos en el timeline</div>;
   return (
@@ -884,6 +1161,7 @@ export default function PatientChartPage() {
   const [effects, setEffects] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [consents, setConsents] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
 
@@ -908,25 +1186,27 @@ export default function PatientChartPage() {
         api(`/api/consents?patient_id=${id}`),
         api(`/api/timeline/${id}`),
         api(`/api/assessments/patient/${id}`),
+        api(`/api/followups?patient_id=${id}`),
       ]);
 
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? r.value : null;
 
-      setRecords(extractArray(get(results[1]), 'records'));
-      const allT = extractArray(get(results[2]), 'treatments');
+      setRecords(extractArray(get(results[0]), 'records'));
+      const allT = extractArray(get(results[1]), 'treatments');
       setTreatments(allT.filter((t: any) => t.patient_id === id));
 
-      setClinicalNotes(extractArray(get(results[3]), 'notes'));
-      setSessionNotes(extractArray(get(results[4]), 'notes'));
+      setClinicalNotes(extractArray(get(results[2]), 'notes'));
+      setSessionNotes(extractArray(get(results[3]), 'notes'));
 
-      const profs = extractArray(get(results[5]));
+      const profs = extractArray(get(results[4]), 'profiles');
       setProfiles(profs);
-      setResponses(extractArray(get(results[6])));
-      setEffects(extractArray(get(results[7])));
-      setDocuments(extractArray(get(results[8]), 'documents'));
-      setConsents(extractArray(get(results[9]), 'consents'));
-      setTimeline(extractArray(get(results[10])));
+      setResponses(extractArray(get(results[5])));
+      setEffects(extractArray(get(results[6])));
+      setDocuments(extractArray(get(results[7]), 'documents'));
+      setConsents(extractArray(get(results[8]), 'consents'));
+      setTimeline(extractArray(get(results[9]), 'events'));
       setAssessments(extractArray(get(results[10])));
+      setFollowups(extractArray(get(results[11]), 'followups'));
 
       // Fetch TMS sessions per profile
       const tmsMap: Record<number, any[]> = {};
@@ -992,6 +1272,7 @@ export default function PatientChartPage() {
       {tab === 'escalas' && <EscalasTab assessments={assessments} />}
       {tab === 'documentos' && <DocumentosTab documents={documents} patientId={id} setDocuments={setDocuments} />}
       {tab === 'consentimientos' && <ConsentimientosTab consents={consents} patientId={id} setConsents={setConsents} />}
+      {tab === 'seguimiento' && <SeguimientoTab followups={followups} patientId={id} setFollowups={setFollowups} />}
       {tab === 'timeline' && <TimelineTab events={timeline} />}
     </div>
   );
