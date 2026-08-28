@@ -516,8 +516,7 @@ function EscalasTab({ assessments, patientId, onChange }: { assessments: any[]; 
     setSaving(true);
     setError('');
     try {
-      const score = calculateTotalScore();
-      const interpretation = interpretScale(selectedScale.id, score);
+      console.log(`[EscalasTab] Guardando: scale=${selectedScale.id}, score=${calculateTotalScore()}/${selectedScale.maxScore}`);
       
       const res = await fetch(`${API}/api/assessments`, {
         method: 'POST',
