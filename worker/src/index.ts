@@ -55,6 +55,7 @@ import { handleListLeads, handleGetLead, handleCreateLead, handleUpdateLead, han
 import { extractLeadFromMessage } from './domains/leads/extractor';
 import { handleMarketingOverview, handleMarketingContentGenerate, handleMarketingCampaignGenerate, handleMarketingSeoGenerate, handleMarketingContentList, handleMarketingContentStatus } from './domains/marketing/routes';
 import { handleClinicalChatMessage, handleClinicalChatSessions, handleClinicalChatSessionMessages, handleClinicalChatStats } from './domains/clinical-chat/routes';
+import { handleGetScales, handleGetCutoffs, handleGetAssessmentById, handlePreviewScore } from './domains/assessments/routes';
 
 function generateRequestId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
@@ -447,6 +448,12 @@ export default {
       if (path === '/api/assessments' && method === 'POST') return withCors(() => handleCreateAssessment(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/assessments\/patient\/\d+$/) && method === 'GET') return withCors(() => handleGetAssessmentsByPatient(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/assessments\/patient\/\d+\/\w+$/) && method === 'GET') return withCors(() => handleGetAssessmentsByType(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      
+      // FASE 12.7: ASSESSMENTS SCALES & SCORING
+      if (path === '/api/assessments/scales' && method === 'GET') return withCors(() => handleGetScales(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/assessments\/scales\/[\w]+\/cutoffs$/) && method === 'GET') return withCors(() => handleGetCutoffs(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/assessments\/\d+$/) && method === 'GET') return withCors(() => handleGetAssessmentById(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/assessments/preview' && method === 'POST') return withCors(() => handlePreviewScore(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 5: TMS PROTOCOLS
       if (path === '/api/tms/protocols' && method === 'GET') return withCors(() => handleGetProtocols(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);

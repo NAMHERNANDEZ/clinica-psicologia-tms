@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { User, FileText, Stethoscope, Pill, ClipboardList, Calendar, Shield, FolderOpen, Activity, AlertTriangle, Brain, ChevronRight, Loader2, ClipboardCheck } from 'lucide-react';
 import { documentsApi, DOCUMENT_TYPES, DOCUMENT_MAX_SIZE_BYTES, documentTypeLabel, readFileAsBase64, triggerDownload } from '../../lib/api/documents';
 import { followupsApi, FOLLOWUP_TYPES, FOLLOWUP_STATUSES, FOLLOWUP_PRIORITIES, followupTypeLabel, followupStatusLabel, followupPriorityLabel, type FollowupType, type FollowupPriority, type FollowupStatus } from '../../lib/api/followup';
+import { getAllScales, interpretScale, type ScaleDefinition } from '../../lib/clinicalScales';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -454,19 +455,267 @@ function MedicamentosTab({ patient }: { patient: any }) {
   );
 }
 
-function EscalasTab({ assessments }: { assessments: any[] }) {
-  if (!assessments.length) return <div className="text-slate-500 text-sm py-8 text-center">No hay escalas registradas</div>;
-  return (
-    <div className="space-y-2">
-      {assessments.map((a: any) => (
-        <div key={a.id} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3 flex items-center justify-between">
+function EscalasTab({ assessments, patientId, onChange }: { assessments: any[]; patientId: number; onChange?: () => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [selectedScale, setSelectedScale] = useState<ScaleDefinition | null>(null);
+  const [responses, setResponses] = useState<Record<string, number>>({});
+  const [currentItemIdx, setCurrentItemIdx] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [availableScales, setAvailableScales] = useState<ScaleDefinition[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // Cargar escalas disponibles del backend
+  useEffect(() => {
+    fetch(`${API}/api/assessments/scales`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.success && data.data) {
+          setAvailableScales(data.data);
+        } else {
+          // Fallback: usar escalas locales del frontend
+          setAvailableScales(getAllScales() as any);
+        }
+      })
+      .catch(() => {
+        setAvailableScales(getAllScales() as any);
+      });
+  }, []);
+
+  const openScale = (scale: ScaleDefinition) => {
+    setSelectedScale(scale);
+    setResponses({});
+    setCurrentItemIdx(0);
+    setShowForm(true);
+    setError('');
+  };
+
+  const handleItemResponse = (value: number) => {
+    if (!selectedScale) return;
+    const item = selectedScale.items[currentItemIdx];
+    setResponses(prev => ({ ...prev, [item.id]: value }));
+
+    if (currentItemIdx < selectedScale.items.length - 1) {
+      setCurrentItemIdx(currentItemIdx + 1);
+    }
+  };
+
+  const calculateTotalScore = (): number => {
+    return Object.values(responses).reduce((sum, v) => sum + v, 0);
+  };
+
+  const handleSave = async () => {
+    if (!selectedScale) return;
+    
+    const totalResponses = Object.keys(responses).length;
+    if (totalResponses < selectedScale.items.length) {
+      setError(`Faltan ${selectedScale.items.length - totalResponses} respuestas por completar`);
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const score = calculateTotalScore();
+      const interpretation = interpretScale(selectedScale.id, score);
+      
+      const res = await fetch(`${API}/api/assessments`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          patient_id: patientId,
+          scale_id: selectedScale.id,
+          assessment_type: selectedScale.id,
+          responses: selectedScale.items.map(item => ({
+            scale_id: selectedScale.id,
+            item_id: item.id,
+            value: responses[item.id] || 0,
+          })),
+          administered_at: new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      setShowForm(false);
+      setSelectedScale(null);
+      setResponses({});
+      setCurrentItemIdx(0);
+      if (onChange) onChange();
+    } catch (e: any) {
+      setError(e.message || 'Error al guardar assessment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (showForm && selectedScale) {
+    const currentItem = selectedScale.items[currentItemIdx];
+    const progress = (currentItemIdx / selectedScale.items.length) * 100;
+    const liveScore = calculateTotalScore();
+    const liveInterp = interpretScale(selectedScale.id, liveScore);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <span className="text-white text-sm font-medium">{a.type || a.scale_type}</span>
-            <span className="text-slate-500 text-xs ml-2">{a.administered_at ? new Date(a.administered_at).toLocaleDateString('es-MX') : ''}</span>
+            <h3 className="text-lg font-semibold text-white">{selectedScale.name}</h3>
+            <p className="text-xs text-slate-400">{selectedScale.fullName}</p>
           </div>
-          <span className="text-lg font-bold text-white">{a.total_score ?? a.score}</span>
+          <button onClick={() => { setShowForm(false); setSelectedScale(null); }} 
+            className="text-slate-400 hover:text-white text-sm">
+            ✕ Cancelar
+          </button>
         </div>
-      ))}
+
+        <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="h-2 rounded-full transition-all" 
+            style={{ width: `${progress}%`, backgroundColor: liveInterp.color }} />
+        </div>
+
+        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-6">
+          <div className="text-sm text-slate-400 mb-2">
+            Ítem {currentItemIdx + 1} de {selectedScale.items.length}
+          </div>
+          <div className="text-white text-lg mb-6">{currentItem.text}</div>
+          <div className="grid grid-cols-1 gap-2">
+            {currentItem.options.map(opt => (
+              <button key={opt.value}
+                onClick={() => handleItemResponse(opt.value)}
+                className="bg-slate-700/50 hover:bg-violet-600/30 border border-slate-600 hover:border-violet-500 
+                  rounded-lg p-3 text-left text-white text-sm transition-colors">
+                <span className="text-slate-400 mr-2">{opt.value}</span>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-slate-400">
+            Score actual: <span className="font-bold" style={{ color: liveInterp.color }}>{liveScore} / {selectedScale.maxScore}</span>
+          </span>
+          <span className="text-slate-400">
+            {liveInterp.label}
+          </span>
+        </div>
+
+        {error && <div className="text-red-400 text-sm">{error}</div>}
+
+        {currentItemIdx === selectedScale.items.length - 1 && responses[currentItem?.id] !== undefined && (
+          <button onClick={handleSave} disabled={saving}
+            className="w-full bg-violet-600 hover:bg-violet-500 text-white py-2 rounded-lg disabled:opacity-50">
+            {saving ? 'Guardando...' : 'Finalizar y guardar assessment'}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!assessments.length) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">Aplicar nueva escala</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {availableScales.slice(0, 6).map(scale => (
+              <button key={scale.id} onClick={() => openScale(scale as any)}
+                className="bg-slate-800/50 hover:bg-violet-600/30 border border-slate-700 hover:border-violet-500 
+                  rounded-lg p-3 text-left transition-colors">
+                <div className="text-white text-sm font-medium">{scale.name}</div>
+                <div className="text-xs text-slate-500 mt-1">{scale.condition}</div>
+                <div className="text-[10px] text-slate-600 mt-1">{scale.timeToComplete}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="text-slate-500 text-sm py-8 text-center">No hay escalas registradas aún</div>
+      </div>
+    );
+  }
+
+  // Agrupar por tipo de escala
+  const grouped: Record<string, any[]> = {};
+  for (const a of assessments) {
+    const type = a.assessment_type || a.type || 'other';
+    if (!grouped[type]) grouped[type] = [];
+    grouped[type].push(a);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">Aplicar nueva escala</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {availableScales.slice(0, 6).map(scale => (
+            <button key={scale.id} onClick={() => openScale(scale as any)}
+              className="bg-slate-800/50 hover:bg-violet-600/30 border border-slate-700 hover:border-violet-500 
+                rounded-lg p-3 text-left transition-colors">
+              <div className="text-white text-sm font-medium">{scale.name}</div>
+              <div className="text-xs text-slate-500 mt-1">{scale.condition}</div>
+              <div className="text-[10px] text-slate-600 mt-1">{scale.timeToComplete}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">Historial</h3>
+        <div className="space-y-2">
+          {Object.entries(grouped).map(([type, records]) => {
+            const latest = records[0];
+            const interp = interpretScale(type, latest.score);
+            return (
+              <div key={type} className="bg-slate-800/50 rounded-lg border border-slate-700">
+                <button onClick={() => setExpandedId(expandedId === latest.id ? null : latest.id)}
+                  className="w-full p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="text-white text-sm font-medium">{type.toUpperCase()}</div>
+                      <div className="text-slate-500 text-xs">
+                        {records.length} evaluación{records.length !== 1 ? 'es' : ''} ·
+                        Última: {new Date(latest.administered_at).toLocaleDateString('es-MX')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold" style={{ color: interp.color }}>
+                      {latest.score}/{latest.max_score}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" 
+                      style={{ backgroundColor: interp.color + '20', color: interp.color }}>
+                      {interp.label}
+                    </span>
+                  </div>
+                </button>
+                {expandedId === latest.id && (
+                  <div className="border-t border-slate-700 p-3 space-y-2">
+                    {records.map((r: any) => {
+                      const rInterp = interpretScale(type, r.score);
+                      return (
+                        <div key={r.id} className="flex items-center justify-between text-sm py-1">
+                          <span className="text-slate-400">
+                            {new Date(r.administered_at).toLocaleDateString('es-MX')}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-mono">{r.score}/{r.max_score}</span>
+                            <span className="text-xs" style={{ color: rInterp.color }}>
+                              {rInterp.label}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1269,7 +1518,7 @@ export default function PatientChartPage() {
       {tab === 'notas' && <NotasTab clinicalNotes={clinicalNotes} sessionNotes={sessionNotes} patientId={id} />}
       {tab === 'tms' && <TmsTab profiles={profiles} tmsSessions={tmsSessionsMap} responses={responses} effects={effects} />}
       {tab === 'medicamentos' && <MedicamentosTab patient={patient} />}
-      {tab === 'escalas' && <EscalasTab assessments={assessments} />}
+      {tab === 'escalas' && <EscalasTab assessments={assessments} patientId={id} onChange={loadAll} />}
       {tab === 'documentos' && <DocumentosTab documents={documents} patientId={id} setDocuments={setDocuments} />}
       {tab === 'consentimientos' && <ConsentimientosTab consents={consents} patientId={id} setConsents={setConsents} />}
       {tab === 'seguimiento' && <SeguimientoTab followups={followups} patientId={id} setFollowups={setFollowups} />}
