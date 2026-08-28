@@ -1,41 +1,47 @@
 {
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-08-09T02:42:00.000Z",
+  "updatedAt": "2026-08-28T04:25:00.000Z",
   "phase": {
-    "current": "12.6",
-    "name": "Seguimiento Clinico (followups) — backend completo, frontend pendiente",
-    "status": "BACKEND_DONE"
+    "current": "12.7",
+    "name": "Escalas Clinicas (PHQ-9, GAD-7, BDI-II, PCL-5, AUDIT, DASS-21) - PASS REAL en produccion",
+    "status": "PRODUCTION_PASS"
   },
   "lastCommit": {
-    "hash": "99e0201",
-    "message": "feat: FASE 12.6 Seguimiento Clinico (followups)"
+    "hash": "a33fce0",
+    "message": "FASE 12.7: wire assessments scoring endpoints to index.ts"
   },
   "uncommittedChanges": {
     "count": 0,
     "files": [],
-    "note": "Commit 99e0201 realizado. Restan sin trackear (no relacionados): 00_CORE/, MASTER_LOOP.ps1, OPENCE_EXECUTE_PLAN_CMD.txt, AUTONOMOUS_EXECUTION_PLAN.md, worker/dist-check/, worker/worker/."
+    "note": "Commits a33fce0 y 84e3e1b realizados. Restan sin trackear (no relacionados): $null, .atl/, .opencodeignore, 00_CORE/, AUTONOMOUS_EXECUTION_PLAN.md, MASTER_LOOP.ps1, OPENCE_EXECUTE_PLAN_CMD.txt, XVPN_*.txt, app-errors.txt, bridge/auto-executor.cjs, bridge/results/, build-out.txt, errs.txt, scripts/smoke-test-assessments.cjs, tc.txt, typecheck-out.txt, worker/src/domains/blog/."
   },
   "build": {
-    "typecheck": "PASS",
-    "wranglerDryRun": "PASS",
-    "tests": "PASS 114/114",
-    "vitestInstalled": true
+    "typecheck": "PASS (0 nuevos errores; 18 preexistentes en blog/)",
+    "wranglerDryRun": "PASS (3830.16 KiB / gzip 946.59 KiB)",
+    "viteBuild": "PASS (dist/ generado)",
+    "tests": "PASS 146/146 (32 nuevos de assessments.test.ts)"
+  },
+  "deployment": {
+    "worker": "clinica-psicologia-tms",
+    "version": "b264d9c3",
+    "migracion0034": "APPLIED (6 queries, 26 rows, 7 changes, 83 tablas)",
+    "smokeProduction": "PASS 23/23 (scales, cutoffs, create, score, cutoff info, by patient, detail, preview)"
   },
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",
     "queueDir": "bridge/queue",
     "resultsDir": "bridge/results",
-    "fixes": ["promptMsgID no-duplicación", "sesión perdida tras reinicio", "sesión colgada (stuck)"],
+    "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"],
     "integration": {
       "conector": "bridge/run-task.cjs (encola + espera + devuelve resultado)",
-      "e2eReal": "PASS (e2e-real-001 → E2E_OK)",
-      "recoveryReal": "PASS (RUNNING→interrupción→reinicio→RECOVERY_OK, attempts=2)",
-      "autoStart": "PASS (reinicio Windows simulado → bridge procesa tarea)"
+      "e2eReal": "PASS (e2e-real-001 -> E2E_OK)",
+      "recoveryReal": "PASS (RUNNING->interrupcion->reinicio->RECOVERY_OK, attempts=2)",
+      "autoStart": "PASS (reinicio Windows simulado -> bridge procesa tarea)"
     }
   },
   "nextAction": {
-    "label": "FASE 12.6 frontend (SeguimientoTab en PatientChartPage) o pasar a FASE 12.7",
-    "detail": "Backend FASE 12.6 completo (migracion 0033, dominio followups, endpoints, RBAC, tests). Pendiente: frontend SeguimientoTab + API client, o avanzar a FASE 12.7 (Escalas)."
+    "label": "FASE 12.8 Reportes (evolucion, graficas, exportacion)",
+    "detail": "FASE 12.7 completada con PASS real en produccion. Siguiente: FASE 12.8 (reportes). Tambien pendiente: limpiar archivos basura del workspace y crear RELEASE_12.7.md con evidencia."
   },
   "blockers": []
 }

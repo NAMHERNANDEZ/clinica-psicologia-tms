@@ -2,45 +2,52 @@
 
 Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_STATE.json`.
 
-## Fase actual: FASE 12.5 — Documentos avanzados
+## Fase actual: FASE 12.7 — Escalas Clínicas (PHQ-9, GAD-7, BDI-II, PCL-5, AUDIT, DASS-21)
 
-**Estado: REPARADA y ESTABILIZADA.** Typecheck PASS, build PASS, tests 103/103 PASS.
-Pendiente: commit y completar funcionalidad restante (adjuntos, firmas digitales en documentos).
+**Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN.**
 
-### Qué se hizo en esta sesión
-- Corregidos **9 errores TypeScript** reales que rompían el typecheck de FASE 12.5:
-  - `clinical-chat/routes.ts` — campos `nombre`/`telefono` (no `name`/`phone`).
-  - `clinical-notes/routes.ts` — cast `body` a `Partial<ClinicalNoteInput>`.
-  - `clinical-notes/service.ts` — `existing` tipado (era `{}`).
-  - `sessions/service.ts` + `repository.ts` — `patient_id` derivado del tratamiento (`getPatientIdByTreatment`).
-  - `index.ts` — alias para handlers duplicados de templates (consents vs templates).
-- Instalado **vitest** en worker (tests reales).
-- Actualizados `test/rbac.test.ts` al modelo RBAC real (FASE 12.1 expandió permisos).
-- **Typecheck:** `tsc --noEmit` → EXIT 0.
-- **Build:** `wrangler deploy --dry-run` → EXIT 0 (incluye R2 `CLINIC_DOCUMENTS_BUCKET`).
-- **Tests:** `vitest run` → **103/103 PASS** (EXIT 0).
+### Evidencia real (producida en esta sesión)
+- **Tests worker (vitest)**: 146/146 PASS (32 nuevos de assessments.test.ts).
+- **Typecheck**: 0 nuevos errores (18 errores preexistentes en `blog/`, no relacionados).
+- **Build worker** (`wrangler deploy --dry-run`): PASS — 3830.16 KiB / gzip 946.59 KiB.
+- **Build frontend** (VITE_API_URL): PASS.
+- **Migración 0034 aplicada a D1 remoto**: 6 queries, 26 rows, 7 changes, 83 tablas.
+- **Deploy worker** `clinica-psicologia-tms`: v `b264d9c3`.
+- **Smoke test real en producción** (`scripts/smoke-test-assessments.cjs`): 23/23 PASS.
+
+### Endpoints verificados en producción
+- `GET /api/assessments/scales` → 6 escalas con cutoffs.
+- `GET /api/assessments/scales/:id/cutoffs` → 5 niveles por escala.
+- `POST /api/assessments` con `responses[]` → 201 + score auto, max_score, cutoff.
+- `GET /api/assessments/patient/:id` → assessments del paciente.
+- `GET /api/assessments/patient/:id/:type` → filtrado por escala.
+- `GET /api/assessments/:id` → detail.
+- `POST /api/assessments/preview` → scoring en vivo sin persistir.
+
+### Componentes entregados
+- `worker/src/domains/assessments/{validators,repository,service,routes}.ts` (4 archivos).
+- `worker/migrations/0034_assessments_scales.sql` (DDL + 6 seeds de escalas).
+- `worker/test/assessments.test.ts` (32 tests).
+- `src/pages/app/PatientChartPage.tsx` (EscalasTab enriquecido: 6 escalas, formulario ítem-por-ítem, score en vivo, historial agrupado).
+- `scripts/smoke-test-assessments.cjs` (smoke test runner).
+- `worker/src/index.ts` (wire de endpoints FASE 12.7).
 
 ## Último commit
-- `c2b9038` — docs: update state after FASE 12.5 repair
+- `a33fce0` — FASE 12.7: wire assessments scoring endpoints to index.ts
+- `84e3e1b` — feat: FASE 12.7 Escalas Clinicas — backend completo + EscalasTab enriquecido
 
-## Cambios sin commit (15)
-Correcciones TS de worker + vitest + configuración persistente nueva:
-`AGENTS.md`, `PROJECT_STATE.json`, `TASK_QUEUE.json`, `worker/src/index.ts`,
-`worker/src/domains/{clinical-chat,clinical-notes,sessions}/*`, `worker/test/rbac.test.ts`,
-`worker/package.json`, `worker/package-lock.json`.
-
-## Bridge (comunicación con OpenCode/lildax)
-- Fixes probados y preservados: no-duplicación de prompt (`promptMsgID`),
-  recuperación de sesión perdida, recuperación de sesión colgada (`stuck`).
-- Directorios: `bridge/queue/` (tareas), `bridge/results/` (resultados), `bridge/logs/`.
-- Siguiente: integrar con el flujo real del proyecto (conector) + E2E real + automatización Windows.
+## Cambios sin commit (residuales del workspace, no de FASE 12.7)
+- `$null`, `.atl/`, `00_CORE/`, `.opencodeignore`, `AUTONOMOUS_EXECUTION_PLAN.md`,
+  `MASTER_LOOP.ps1`, `OPENCE_EXECUTE_PLAN_CMD.txt`, `XVPN_*.txt`, `app-errors.txt`,
+  `bridge/auto-executor.cjs`, `bridge/results/`, `build-out.txt`, `errs.txt`,
+  `scripts/smoke-test-assessments.cjs`, `tc.txt`, `typecheck-out.txt`,
+  `worker/src/domains/blog/` (código no tipado, errores preexistentes).
+- Acción recomendada: ignorar o limpiar en próxima sesión (no tocan FASE 12.7).
 
 ## Siguiente acción (nextAction)
-1. Commit FASE 12.5 (correcciones TS + vitest + configuración persistente).
-2. Integración proyecto ↔ bridge.
-3. Prueba end-to-end real.
-4. Prueba de recuperación real.
-5. Automatización Windows (arranque persistente).
+1. FASE 12.8 — Reportes (evolución, gráficas, exportación).
+2. Limpiar archivos basura del workspace.
+3. Crear `RELEASE_12.7.md` con evidencia real.
 
 ## Bloqueadores
 Ninguno.
