@@ -48,6 +48,7 @@ Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_ST
 - `worker/src/index.ts` (wire de endpoints FASE 12.7).
 
 ## Último commit
+- (pendiente) MH-EXPANSION 1.0 — modelo de datos wellbeing + backend domain=wellbeing
 - `a33fce0` — FASE 12.7: wire assessments scoring endpoints to index.ts
 - `84e3e1b` — feat: FASE 12.7 Escalas Clinicas — backend completo + EscalasTab enriquecido
 
@@ -60,9 +61,19 @@ Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_ST
 - Acción recomendada: ignorar o limpiar en próxima sesión (no tocan FASE 12.7).
 
 ## Siguiente acción (nextAction)
-1. FASE 12.8 — Reportes (evolución, gráficas, exportación).
-2. Limpiar archivos basura del workspace.
-3. Crear `RELEASE_12.7.md` con evidencia real.
+1. Commit MH-EXPANSION 1.0 (PRODUCTION_PASS) — modelos wellbeing + backend.
+2. Frontend /mh/assessments (hito FRONTEND: contratos listar/iniciar/preview/completar/resultado).
+3. FASE 12.8 — Reportes.
+4. Limpiar archivos basura del workspace.
 
 ## Bloqueadores
 Ninguno.
+
+## MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING (2026-09-12)
+- Decisión: **OPCIÓN B** — tablas separadas `wellbeing_scales`, `wellbeing_assessments`, `wellbeing_responses` (user-scoped; sin clinic/patient/therapist). No se contamina el modelo clínico; FKs clínicos quedan intactos.
+- Motor de scoring **COMPARTIDO**: `calculateScore`/`interpretScore` con `ALL_SCALE_DEFINITIONS`/`ALL_SCALE_CUTOFFS`. Wellbeing usa `WELLBEING_CUTOFFS` (bandas low/moderate/high, NO severidad clínica).
+- 6 escalas seed: stress-pss4, sleep-sq5, wellbeing-who5, activation-gad2, energy-vas3, focus-cfq3.
+- Rutas: `/api/assessments/wellbeing/{scales,scales/:id/cutoffs,list,preview,/:id}` + POST `/api/assessments/wellbeing`.
+- Aislamiento: user A no lee B (404/list vacío); escala clínica en wellbeing → HTTP 400; rutas clínicas intactas.
+- Producción PASS: 223/223 tests, audit 56/56, migración 0043 (102 tablas), Worker `3bb6dc69-f631-4efa-b843-e46b09eefcc8`.
+- `backup/fase-mh-expansion-2026-09-12/` contiene diff y migración.

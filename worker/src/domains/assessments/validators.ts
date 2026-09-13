@@ -251,6 +251,85 @@ export const SCALE_DEFINITIONS: Record<string, ScaleDefinition> = {
 };
 
 // ============================================
+// WELLBEING SCALE DEFINITIONS (self-reported, short)
+// ============================================
+
+export const WELLBEING_SCALE_DEFINITIONS: Record<string, ScaleDefinition> = {
+  'stress-pss4': {
+    id: 'stress-pss4',
+    name: 'PSS-4',
+    full_name: 'Perceived Stress Scale-4',
+    description: 'Evaluación breve de estrés percibido. 4 ítems, cada uno 0-4.',
+    condition: 'Estrés percibido',
+    max_score: 16,
+    item_count: 4,
+    time_to_complete: '~1 min',
+    source: 'Cohen et al., 1983 (adaptado)',
+  },
+  'sleep-sq5': {
+    id: 'sleep-sq5',
+    name: 'SQ-5',
+    full_name: 'Sleep Quality-5',
+    description: 'Calidad de sueño breve. 5 ítems, cada uno 0-3.',
+    condition: 'Calidad de sueño',
+    max_score: 15,
+    item_count: 5,
+    time_to_complete: '~1 min',
+    source: 'Basado en PSQI abreviado',
+  },
+  'wellbeing-who5': {
+    id: 'wellbeing-who5',
+    name: 'WHO-5',
+    full_name: 'WHO-5 Well-Being Index',
+    description: 'Bienestar emocional general. 5 ítems, cada uno 0-5.',
+    condition: 'Bienestar emocional',
+    max_score: 25,
+    item_count: 5,
+    time_to_complete: '~1 min',
+    source: 'WHO, 1998',
+  },
+  'activation-gad2': {
+    id: 'activation-gad2',
+    name: 'GAD-2',
+    full_name: 'Generalized Anxiety Disorder-2',
+    description: 'Activación/ansiedad cotidiana. 2 ítems, cada uno 0-3.',
+    condition: 'Activación/Ansiedad',
+    max_score: 6,
+    item_count: 2,
+    time_to_complete: '~30 seg',
+    source: 'Kroenke et al., 2007',
+  },
+  'energy-vas3': {
+    id: 'energy-vas3',
+    name: 'VAS-3',
+    full_name: 'Vitality Assessment Scale-3',
+    description: 'Nivel de energía y vitalidad. 3 ítems, cada uno 0-10.',
+    condition: 'Energía/Vitalidad',
+    max_score: 30,
+    item_count: 3,
+    time_to_complete: '~1 min',
+    source: 'Adaptado de SF-36 vitality',
+  },
+  'focus-cfq3': {
+    id: 'focus-cfq3',
+    name: 'CFQ-3',
+    full_name: 'Cognitive Failure Questionnaire-3',
+    description: 'Concentración y fallos cognitivos cotidianos. 3 ítems, cada uno 0-4.',
+    condition: 'Concentración/Foco',
+    max_score: 12,
+    item_count: 3,
+    time_to_complete: '~1 min',
+    source: 'Broadbent et al., 1982 (adaptado)',
+  },
+};
+
+// Combined for lookup
+export const ALL_SCALE_DEFINITIONS = {
+  ...SCALE_DEFINITIONS,
+  ...WELLBEING_SCALE_DEFINITIONS,
+};
+
+// ============================================
 // CUTOFFS (severity thresholds)
 // ============================================
 
@@ -297,6 +376,49 @@ export const SCALE_CUTOFFS: Record<string, ScaleCutoff[]> = {
 };
 
 // ============================================
+// WELLBEING CUTOFFS (wellbeing bands, NOT clinical severity)
+// ============================================
+
+export const WELLBEING_CUTOFFS: Record<string, ScaleCutoff[]> = {
+  'stress-pss4': [
+    { scale_id: 'stress-pss4', min_score: 0, max_score: 4, severity: 'low', label: 'Bajo', color: '#22C55E', recommendation: 'Estrés percibido bajo. Mantén hábitos saludables.' },
+    { scale_id: 'stress-pss4', min_score: 5, max_score: 9, severity: 'moderate', label: 'Moderado', color: '#F59E0B', recommendation: 'Estrés moderado. Considera técnicas de relajación.' },
+    { scale_id: 'stress-pss4', min_score: 10, max_score: 16, severity: 'high', label: 'Alto', color: '#EF4444', recommendation: 'Estrés alto. Prioriza autocuidado y busca apoyo si persiste.' },
+  ],
+  'sleep-sq5': [
+    { scale_id: 'sleep-sq5', min_score: 0, max_score: 5, severity: 'good', label: 'Buena', color: '#22C55E', recommendation: 'Calidad de sueño buena. Mantén tu rutina.' },
+    { scale_id: 'sleep-sq5', min_score: 6, max_score: 10, severity: 'fair', label: 'Regular', color: '#F59E0B', recommendation: 'Calidad de sueño regular. Revisa higiene del sueño.' },
+    { scale_id: 'sleep-sq5', min_score: 11, max_score: 15, severity: 'poor', label: 'Mala', color: '#EF4444', recommendation: 'Calidad de sueño mala. Considera evaluar factores que afecten tu descanso.' },
+  ],
+  'wellbeing-who5': [
+    { scale_id: 'wellbeing-who5', min_score: 21, max_score: 25, severity: 'high', label: 'Alto', color: '#22C55E', recommendation: 'Bienestar alto. Sigue cuidando tu salud mental.' },
+    { scale_id: 'wellbeing-who5', min_score: 13, max_score: 20, severity: 'moderate', label: 'Moderado', color: '#F59E0B', recommendation: 'Bienestar moderado. Pequeños cambios pueden ayudar.' },
+    { scale_id: 'wellbeing-who5', min_score: 0, max_score: 12, severity: 'low', label: 'Bajo', color: '#EF4444', recommendation: 'Bienestar bajo. Considera hablar con un profesional.' },
+  ],
+  'activation-gad2': [
+    { scale_id: 'activation-gad2', min_score: 0, max_score: 1, severity: 'low', label: 'Baja', color: '#22C55E', recommendation: 'Activación baja. Estado de calma.' },
+    { scale_id: 'activation-gad2', min_score: 2, max_score: 3, severity: 'moderate', label: 'Moderada', color: '#F59E0B', recommendation: 'Activación moderada. Técnicas de respiración pueden ayudar.' },
+    { scale_id: 'activation-gad2', min_score: 4, max_score: 6, severity: 'high', label: 'Alta', color: '#EF4444', recommendation: 'Activación alta. Prioriza técnicas de regulación y busca apoyo.' },
+  ],
+  'energy-vas3': [
+    { scale_id: 'energy-vas3', min_score: 21, max_score: 30, severity: 'high', label: 'Alta', color: '#22C55E', recommendation: 'Energía alta. Aprovecha tu vitalidad.' },
+    { scale_id: 'energy-vas3', min_score: 11, max_score: 20, severity: 'moderate', label: 'Moderada', color: '#F59E0B', recommendation: 'Energía moderada. Balancea actividad y descanso.' },
+    { scale_id: 'energy-vas3', min_score: 0, max_score: 10, severity: 'low', label: 'Baja', color: '#EF4444', recommendation: 'Energía baja. Prioriza recuperación y sueño.' },
+  ],
+  'focus-cfq3': [
+    { scale_id: 'focus-cfq3', min_score: 0, max_score: 3, severity: 'good', label: 'Buena', color: '#22C55E', recommendation: 'Concentración buena. Pocos fallos cognitivos.' },
+    { scale_id: 'focus-cfq3', min_score: 4, max_score: 7, severity: 'fair', label: 'Regular', color: '#F59E0B', recommendation: 'Concentración regular. Pausas activas pueden ayudar.' },
+    { scale_id: 'focus-cfq3', min_score: 8, max_score: 12, severity: 'poor', label: 'Mala', color: '#EF4444', recommendation: 'Concentración dificultada. Reduce multitarea y toma descansos.' },
+  ],
+};
+
+// Combined for lookup
+export const ALL_SCALE_CUTOFFS = {
+  ...SCALE_CUTOFFS,
+  ...WELLBEING_CUTOFFS,
+};
+
+// ============================================
 // SCORING HELPER
 // ============================================
 
@@ -305,7 +427,8 @@ export function calculateScore(scaleId: string, responses: ScaleResponseInput[])
   maxScore: number;
   itemCount: number;
 } {
-  const scale = SCALE_DEFINITIONS[scaleId];
+  // Use combined definitions for both clinical and wellbeing
+  const scale = ALL_SCALE_DEFINITIONS[scaleId];
   if (!scale) {
     return { score: 0, maxScore: 100, itemCount: 0 };
   }
@@ -321,7 +444,7 @@ export function calculateScore(scaleId: string, responses: ScaleResponseInput[])
 }
 
 export function interpretScore(scaleId: string, score: number): ScaleCutoff | null {
-  const cutoffs = SCALE_CUTOFFS[scaleId];
+  const cutoffs = ALL_SCALE_CUTOFFS[scaleId];
   if (!cutoffs) return null;
 
   for (const cutoff of cutoffs) {
@@ -335,11 +458,29 @@ export function interpretScore(scaleId: string, score: number): ScaleCutoff | nu
 }
 
 // ============================================
-// VALID SCALE IDS
+// VALID SCALE IDS (clinical + wellbeing)
 // ============================================
 
-export const VALID_SCALE_IDS = Object.keys(SCALE_DEFINITIONS);
+export const VALID_SCALE_IDS = Object.keys(ALL_SCALE_DEFINITIONS);
 
 export function isValidScaleId(scaleId: string): boolean {
   return VALID_SCALE_IDS.includes(scaleId);
+}
+
+// ============================================
+// DOMAIN HELPERS
+// ============================================
+
+export function getScaleDomain(scaleId: string): 'clinical' | 'wellbeing' | 'unknown' {
+  if (scaleId in SCALE_DEFINITIONS) return 'clinical';
+  if (scaleId in WELLBEING_SCALE_DEFINITIONS) return 'wellbeing';
+  return 'unknown';
+}
+
+export function getClinicalScaleIds(): string[] {
+  return Object.keys(SCALE_DEFINITIONS);
+}
+
+export function getWellbeingScaleIds(): string[] {
+  return Object.keys(WELLBEING_SCALE_DEFINITIONS);
 }

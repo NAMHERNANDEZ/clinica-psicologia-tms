@@ -1,9 +1,9 @@
 {
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-12T18:45:00.000Z",
+  "updatedAt": "2026-09-12T22:10:00.000Z",
   "phase": {
-    "current": "FASE MH (Mental Health / bienestar personal)",
-    "name": "Dominio mental-health completo (check-in 30s, motor de recomendacion V1, insights trazables, antes/despues, consentimiento/export/borrado) + UI mobile-first /mh + migracion D1 0042 + deploy produccion + E2E real PASS",
+    "current": "MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING",
+    "name": "Modelo de datos wellbeing (user-scoped, self-reported) + extension backend /api/assessments domain=wellbeing + migracion D1 0043 + deploy produccion + E2E real PASS con aislamiento CLINICAL/WELLBEING",
     "status": "PRODUCTION_PASS_PENDING_COMMIT"
   },
   "lastCommit": {
@@ -11,39 +11,33 @@
     "message": "Stop tracking worker/.dev.vars"
   },
   "uncommittedChanges": {
-    "count": 16,
-    "files": ["worker/src/domains/mental-health/", "worker/migrations/0042_mental_health.sql", "worker/test/mental-health.test.ts", "worker/src/index.ts", "worker/src/types.ts", "worker/wrangler.toml (R2 comentado: R2 no activo en cuenta, ver nota)", "worker/src/frontend-assets.ts", "src/lib/api.ts", "src/App.tsx", "src/pages/mh/"],
-    "note": "FASE MH completa y DESPLEGADA en produccion (worker version 167ab998 + Cloudflare Pages). R2 binding comentado en wrangler.toml porque Cloudflare no tiene R2 habilitado en la cuenta (error 10042/10085); descomentar cuando se active R2 en el dashboard. Commit pendiente."
+    "count": 7,
+    "files": ["worker/migrations/0043_wellbeing_assessments.sql (nuevo)", "worker/src/domains/assessments/validators.ts", "worker/src/domains/assessments/repository.ts", "worker/src/domains/assessments/service.ts", "worker/src/domains/assessments/routes.ts", "worker/src/index.ts", "worker/test/wellbeing-assessments.test.ts (nuevo)", "PROJECT_STATE.json", "PROJECT_STATE.md", "SESSION_HANDOFF.md"],
+    "note": "MH-EXPANSION 1.0: OPCION B (tablas separadas wellbeing) aprobada: 3 tablas wellbeing (wellbeing_scales/wellbeing_assessments/wellbeing_responses) user-scoped sin clinic/patient/therapist; motor de scoring COMpARTIDO (calculateScore/interpretScore/cutoffs reutilizado con WELLBEING_CUTOFFS y bandas no clinicianas); 6 escalas semilla (stress-pss4, sleep-sq5, wellbeing-who5, activation-gad2, energy-vas3, focus-cfq3); rutas /api/assessments/wellbeing/*; provenance user_self_report|imported|system_generated; disclaimer en cada registro. R2 sigue desactivado."
   },
   "build": {
     "typecheck": "PASS (0 errores; tsc --noEmit worker/tsconfig.json)",
-    "wranglerDryRun": "PASS (4028.50 KiB / gzip 989.08 KiB)",
-    "tests": "PASS 204/204 (18 archivos; incluye mental-health 28/28)",
-    "frontendBuild": "PASS (vite build con VITE_API_URL; 8 chunks Mh* generados)"
+    "wranglerDryRun": "PASS (4049.27 KiB / gzip 991.81 KiB)",
+    "tests": "PASS 223/223 (19 archivos; incluye wellbeing-assessments 19/19)",
+    "auditPreDeploy": "PASS 56/56 (scripts/pre-deploy-audit.cjs)",
+    "migracion0043": "APPLIED remoto (7 changes, 32 rows escritas, 6 escalas seed, 102 tablas)"
   },
   "deployment": {
     "worker": "clinica-psicologia-tms",
-    "version": "167ab998-12db-4806-af9f-788b8ff06e3e (deployed esta sesion con FASE MH)",
-    "pages": "PASS deploy Cloudflare Pages clinica-psicologia-tms.pages.dev (bundle index-DZkxWOlF.js en produccion)",
-    "note": "Desplegado y verificado en produccion: SPA /mh servido (worker + pages, 200), chunks MhLayout-B0evBqam.js coinciden local=produccion. R2 binding comentado (Cloudflare R2 no habilitado; descomentar al activar).",
-    "migracion0042": "APPLIED (18 queries, 40 rows escritas, 7 tablas, seed 6 intervenciones)",
-    "smokeProduction": "PASS MH E2E real (registro->login->checkin x6->recomendacion->sesiones breathing x2 delta=-4->validacion rechaza after=11->insights breathing_reduction 0.8 + sleep_activation 0.85->dismiss->consentimientos->journal->export 7328 bytes->persistencia reload->delete account verificado)"
+    "version": "3bb6dc69-f631-4efa-b843-e46b09eefcc8 (deployed esta sesion con MH-EXPANSION 1.0; previo 167ab998 FASE MH)",
+    "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
+    "migracion0043": "APPLIED (wellbeing_scales/wellbeing_assessments/wellbeing_responses + indices user-scoped)",
+    "e2eProduction": "PASS: wellbeing-scales 6, cutoffs stress-pss4/sleep-sq5 3 bandas c/u, preview score=8 band=moderate, create id=1 score=8, list-A=1 list-B=0, detail-A responses=4, B->A 404 aislado, clinical->wellbeing HTTP 400 rechazado, clinical-preview phq9 OK, clinical-scales 6, chat 200, cleanup confirm=1 OK"
   },
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",
     "queueDir": "bridge/queue",
     "resultsDir": "bridge/results",
-    "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"],
-    "integration": {
-      "conector": "bridge/run-task.cjs (encola + espera + devuelve resultado)",
-      "e2eReal": "PASS (e2e-real-001 -> E2E_OK)",
-      "recoveryReal": "PASS (RUNNING->interrupcion->reinicio->RECOVERY_OK, attempts=2)",
-      "autoStart": "PASS (reinicio Windows simulado -> bridge procesa tarea)"
-    }
+    "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"]
   },
   "nextAction": {
-    "label": "Commit de FASE MH (PRODUCTION_PASS), luego continuar roadmap 12.8+",
-    "detail": "FASE MH completada y desplegada con PASS real en produccion (E2E integral). Pendientes: commit del trabajo, RELEASE_FASE_MH.md con evidencia, reactivar R2 en dashboard de Cloudflare y descomentar binding en wrangler.toml para integrar eficiencias de documentos (fase 12.5)."
+    "label": "Commit de MH-EXPANSION 1.0 MODELO DE DATOS WELLBEING (PRODUCTION_PASS), luego frontend /mh/assessments (hito FRONTEND: contratos listar/iniciar/preview/completar/resultado)",
+    "detail": "Backend wellbeing completo y desplegado: 223/223 tests, audit 56/56, E2E produccion PASS con aislamiento user-scoped y cross-domain. Pendientes: commit; UI /mh/assessments (solo contratos/API, no toda la UI) segun roadmap; R2 sigue desactivado (techo Cloudflare)."
   },
   "blockers": []
 }

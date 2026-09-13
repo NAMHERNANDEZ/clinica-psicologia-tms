@@ -59,7 +59,7 @@ import { handleListLeads, handleGetLead, handleCreateLead, handleUpdateLead, han
 import { extractLeadFromMessage } from './domains/leads/extractor';
 import { handleMarketingOverview, handleMarketingContentGenerate, handleMarketingCampaignGenerate, handleMarketingSeoGenerate, handleMarketingContentList, handleMarketingContentStatus } from './domains/marketing/routes';
 import { handleClinicalChatMessage, handleClinicalChatSessions, handleClinicalChatSessionMessages, handleClinicalChatStats } from './domains/clinical-chat/routes';
-import { handleGetScales, handleGetCutoffs, handleGetAssessmentById, handlePreviewScore, handleCreateAssessment as handleCreateScaleAssessment, handleGetAssessmentsByPatient as handleGetScaleAssessmentsByPatient, handleGetAssessmentsByType as handleGetScaleAssessmentsByType } from './domains/assessments/routes';
+import { handleGetScales, handleGetCutoffs, handleGetAssessmentById, handlePreviewScore, handleCreateAssessment as handleCreateScaleAssessment, handleGetAssessmentsByPatient as handleGetScaleAssessmentsByPatient, handleGetAssessmentsByType as handleGetScaleAssessmentsByType, handleGetWellbeingScales, handleGetWellbeingCutoffs, handleCreateWellbeingAssessment, handleListWellbeingAssessments, handleGetWellbeingAssessmentById, handleWellbeingPreviewScore } from './domains/assessments/routes';
 import {
   handleMhHome,
   handleMhCreateCheckin,
@@ -562,6 +562,14 @@ export default {
       if (path.match(/^\/api\/assessments\/scales\/[\w]+\/cutoffs$/) && method === 'GET') return withCors(() => handleGetCutoffs(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/assessments\/\d+$/) && method === 'GET') return withCors(() => handleGetAssessmentById(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/assessments/preview' && method === 'POST') return withCors(() => handlePreviewScore(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+
+      // MH-EXPANSION 1.0: WELLBEING ASSESSMENTS (user-scoped, self-reported)
+      if (path === '/api/assessments/wellbeing/scales' && method === 'GET') return withCors(() => handleGetWellbeingScales(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/assessments\/wellbeing\/scales\/[\w-]+\/cutoffs$/) && method === 'GET') return withCors(() => handleGetWellbeingCutoffs(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/assessments/wellbeing/list' && method === 'GET') return withCors(() => handleListWellbeingAssessments(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/assessments/wellbeing/preview' && method === 'POST') return withCors(() => handleWellbeingPreviewScore(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/assessments/wellbeing' && method === 'POST') return withCors(() => handleCreateWellbeingAssessment(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/assessments\/wellbeing\/\d+$/) && method === 'GET') return withCors(() => handleGetWellbeingAssessmentById(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE MH: MENTAL HEALTH (bienestar personal, user-scoped, desacoplado del dominio clinico TMS)
       if (path === '/api/mh/home' && method === 'GET') return withCors(() => handleMhHome(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);

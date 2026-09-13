@@ -1,6 +1,33 @@
 # SESSION_HANDOFF.md
 
-## Ultima sesion: 2026-09-12 (FASE MH — Mental Health / bienestar personal, DEPLOY PRODUCCION PASS)
+## Ultima sesion: 2026-09-12 (MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING, PRODUCTION_PASS)
+
+- **CONTEXTO**: FASE MH consolidada (`8d2fcc1`). `MH-EXPANSION 1.0` usa `/api/assessments`, R2 sigue desactivado. No se creó un segundo assessment engine.
+- **DECISIÓN**: OPCIÓN B — tablas separadas wellbeing (user-scoped) por FKs clínicos obligatorios (clinic/patient/therapist). Nada clínico modificado.
+- **MIGRACIÓN**: `worker/migrations/0043_wellbeing_assessments.sql` APPLIED remoto (6 escalas seed; 102 tablas; indices (user_id,domain,administered_at); FK user_id→users ON DELETE CASCADE; provenance user_self_report|imported|system_generated; disclaimer por registro).
+- **BACKEND**: `validators.ts` (WELLBEING_SCALE_DEFINITIONS + WELLBEING_CUTOFFS + getScaleDomain; scoring COMUN reutilizado), `repository.ts`, `service.ts`, `routes.ts`, `index.ts` (6 rutas `/api/assessments/wellbeing/*`).
+- **TESTS**: `worker/test/wellbeing-assessments.test.ts` 19/19 (scoring, bandas, aislamiento cross-domain, user-scoping SQL, rechazo escala clínica, regresión clínica). Suite total 223/223. Audit 56/56. Typecheck PASS.
+- **DEPLOY**: Worker `3bb6dc69-f631-4efa-b843-e46b09eefcc8` (previa `167ab998`). Primera deploy tenía bug: regex cutoffs `[\w]+` no matcheaba `stress-pss4` (guion) → corregido a `[\w-]+`, redeployed, cutoffs 3 bandas verificado.
+- **E2E PRODUCCIÓN PASS**: scales 6, cutoffs x2 3 bandas cada, preview score=8 moderate, create id=1 score=8, list A=1 B=0, detail A responses=4, B→A 404 (aislado), clínica→wellbeing 400, preview clínico phq9 OK, clinical-scales 6, chat 200, cleanup confirm=1 OK (usuarios probe limpiados).
+- **BACKUP**: `backup/fase-mh-expansion-2026-09-12/` (diff-backend.diff + 0043 SQL + tests).
+- **COMMIT PENDIENTE** de MH-EXPANSION + estado. Siguiente hito: FRONTEND `/mh/assessments` (contratos listar/iniciar/preview/completar/resultado), luego roadmap 12.8.
+
+## Sesion anterior (historial)
+
+## Ultima sesion previa: 2026-09-12 (FASE MH — CONSOLIDADA CON COMMIT `8d2fcc1`)
+
+- **COMMIT**: `8d2fcc15097c641ab1dbe305e7156298bc816060` (23 archivos, +3424) — FASE MH + estado.
+  Base previa: `ac2162c`. No hubo redeploy (hashes `index-DZkxWOlF.js` / `MhLayout-B0evBqam.js` idénticos
+  antes y después del commit; el runtime desplegado no cambió).
+- Backup verificable: `backup/fase-mh-2026-09-12/` (14 archivos verificados por SHA256, manifest `BACKUP_MANIFEST.sha256`).
+- Revalidación post-commit: typecheck PASS, vitest 204/204 (MH 28/28), dry-run 4028.50 KiB, frontend build PASS,
+  audit 56/56 — todo repetido de cero, no asumido.
+- Regresión runtime producción: health 200, /mh 200, home estable 3/3, checkin+rec, sesión delta −4, journal,
+  export 200, assessments/scales 6, chat 200, security 200, delete OK. Usuarios probe limpiados de D1.
+- Defectos preexistentes documentados (NO regresión MH, código voz WIP nunca desplegado antes de este upload):
+  `GET /api/voice/availability` → 500 "Unexpected end of JSON input" (handler exige POST con body,
+  `worker/src/domains/voice/routes.ts:308 handleCheckAvailability`); `GET /api/calendar/auth` → error 1101
+  (excepción en ruta OAuth). Tratar en una fase de voz/calendar dedicada, no en consolidación MH.
 
 ### Estado al cerrar la sesion
 - **Objetivo completado y desplegado en produccion**: dominio `mental-health` (/api/mh/*) + UI mobile-first
