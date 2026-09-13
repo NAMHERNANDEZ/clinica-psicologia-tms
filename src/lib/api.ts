@@ -634,6 +634,128 @@ export const assessments = {
 };
 
 // ============================================
+// WELLBEING ASSESSMENTS (user-scoped, self-reported, /api/assessments/wellbeing/*)
+// ============================================
+
+export interface WellbeingScaleCutoff {
+  min_score: number;
+  max_score: number;
+  severity: string;
+  label: string;
+  color: string;
+  recommendation?: string;
+}
+
+export interface WellbeingScale {
+  id: string;
+  name: string;
+  full_name: string;
+  description: string;
+  condition: string;
+  max_score: number;
+  item_count: number;
+  time_to_complete: string;
+  source: string;
+  cutoffs: WellbeingScaleCutoff[];
+}
+
+export interface WellbeingAssessmentListItem {
+  id: number;
+  scale_id: string;
+  scale_name: string;
+  score: number;
+  max_score: number;
+  interpretation: string;
+  band: string | null;
+  provenance: string;
+  disclaimer: string;
+  administered_at: string;
+  created_at: string;
+}
+
+export interface WellbeingAssessmentDetail {
+  assessment: {
+    id: number;
+    scale_id: string;
+    scale_name: string;
+    version: string;
+    score: number;
+    max_score: number;
+    interpretation: string;
+    band: string | null;
+    provenance: string;
+    disclaimer: string;
+    administered_at: string;
+    created_at: string;
+  };
+  responses: Array<{ item_id: string; value: number }>;
+}
+
+export interface WellbeingScorePreview {
+  score: number;
+  max_score: number;
+  interpretation: string;
+  severity: string;
+  color: string;
+  recommendation?: string;
+}
+
+export interface WellbeingCreateResult {
+  id: number;
+  scale_id: string;
+  score: number;
+  max_score: number;
+  interpretation: string;
+  band: string | null;
+  disclaimer: string;
+  cutoff?: WellbeingScaleCutoff;
+}
+
+export const wellbeing = {
+  scales: (): Promise<{ success: boolean; data: WellbeingScale[] }> =>
+    request('/api/assessments/wellbeing/scales'),
+
+  list: (): Promise<{ success: boolean; data: WellbeingAssessmentListItem[] }> =>
+    request('/api/assessments/wellbeing/list'),
+
+  detail: (id: number): Promise<{ success: boolean; data: WellbeingAssessmentDetail }> =>
+    request(`/api/assessments/wellbeing/${id}`),
+
+  cutoffs: (scaleId: string): Promise<{ success: boolean; data: WellbeingScaleCutoff[] }> =>
+    request(`/api/assessments/wellbeing/scales/${scaleId}/cutoffs`),
+
+  preview: (scale_id: string, responses: Array<{ item_id: string; value: number }>): Promise<{ success: boolean; data: WellbeingScorePreview }> =>
+    request('/api/assessments/wellbeing/preview', {
+      method: 'POST',
+      body: JSON.stringify({ scale_id, responses }),
+    }),
+
+  complete: (data: {
+    scale_id: string;
+    responses: Array<{ item_id: string; value: number }>;
+    version?: string;
+    provenance?: 'user_self_report' | 'imported' | 'system_generated';
+  }): Promise<{ success: boolean; data: WellbeingCreateResult }> =>
+    request('/api/assessments/wellbeing', {
+      method: 'POST',
+      body: JSON.stringify({ ...data, administered_at: new Date().toISOString() }),
+    }),
+};
+
+/** Chat IA terapeutico real (endpoint público POST /api/chat). Response: { message } */
+export async function sendChatMessage(message: string): Promise<{ message: string; action?: string }> {
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  return data;
+}
+
+// ============================================
 // TIMELINE
 // ============================================
 
