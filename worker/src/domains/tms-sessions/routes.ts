@@ -1,6 +1,8 @@
 import type { Env, User } from '../../types';
 import { validateTmsSession, validateTmsSessionUpdateStatus } from './validators';
 import * as service from './service';
+import { findById as findSessionById } from './repository';
+import { findById as findProfileById } from '../tms-profiles/repository';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
@@ -23,6 +25,12 @@ export async function handleGetProfileSessions(env: Env, request: Request, user:
     const profileId = parseInt(new URL(request.url).pathname.split('/').pop() || '0');
     if (isNaN(profileId) || profileId <= 0) {
       return json({ success: false, error: 'ID de perfil inválido', requestId }, 400, corsHeaders);
+    }
+
+    // IDOR/BOLA: el perfil debe pertenecer a la clínica del usuario autenticado.
+    const profile = await findProfileById(env, profileId);
+    if (!profile || profile.clinic_id !== user.clinic_id) {
+      return json({ success: false, error: 'Perfil no encontrado', requestId }, 404, corsHeaders);
     }
 
     const result = await service.getProfileSessions(env, profileId);
@@ -61,6 +69,12 @@ export async function handleCompleteSession(env: Env, request: Request, user: Us
       return json({ success: false, error: 'session_id requerido', requestId }, 400, corsHeaders);
     }
 
+    // IDOR/BOLA: la sesión debe pertenecer a la clínica del usuario autenticado.
+    const existing = await findSessionById(env, session_id);
+    if (!existing || existing.clinic_id !== user.clinic_id) {
+      return json({ success: false, error: 'Sesión no encontrada', requestId }, 404, corsHeaders);
+    }
+
     const result = await service.completeSession(env, session_id);
     if (!result.success) return json({ ...result, requestId }, (result as { status?: number }).status || 400, corsHeaders);
     return json({ ...result, requestId }, 200, corsHeaders);
@@ -77,6 +91,12 @@ export async function handleUpdateSession(env: Env, request: Request, user: User
     const validation = validateTmsSessionUpdateStatus(body);
     if (!validation.valid) {
       return json({ success: false, error: validation.error, requestId }, 400, corsHeaders);
+    }
+
+    // IDOR/BOLA: la sesión debe pertenecer a la clínica del usuario autenticado.
+    const existing = await findSessionById(env, validation.data.session_id);
+    if (!existing || existing.clinic_id !== user.clinic_id) {
+      return json({ success: false, error: 'Sesión no encontrada', requestId }, 404, corsHeaders);
     }
 
     const result = await service.updateSessionStatus(env, validation.data.session_id, validation.data.status, validation.data.notes);

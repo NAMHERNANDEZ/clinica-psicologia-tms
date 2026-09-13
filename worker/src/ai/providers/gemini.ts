@@ -47,6 +47,10 @@ export async function generateWithGemini(
       temperature: options.temperature ?? 0.7,
       maxOutputTokens: options.maxOutputTokens ?? 1024,
       topP: 0.9,
+      // Evita que el modelo recorte la respuesta visible al agotar el
+      // presupuesto de razonamiento (regresion: respuestas cortadas a media
+      // frase en produccion).
+      thinkingConfig: { thinkingBudget: 128 },
     },
     safetySettings: [
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -112,5 +116,74 @@ export function extractJsonObject<T>(text: string): T | null {
   } catch (err) {
     console.error('[gemini] JSON invalido en respuesta:', err);
     return null;
+  }
+}
+
+export interface GeminiSTTResult {
+  result: string | null;
+  provider: string;
+  error?: string;
+}
+
+/**
+ * Transcripción de audio con Gemini (STT).
+ * Usado como primer proveedor FREE del router de voz TMS.
+ * El audio se envía inline en base64 (inline_data) — sin subir a buckets.
+ */
+export async function geminiSTTRouter(
+  env: Env,
+  audioData: ArrayBuffer,
+  language: string = 'es',
+  mimeType: string = 'audio/wav'
+): Promise<GeminiSTTResult> {
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.includes('TEST') || apiKey.includes('REAL-NEEDED')) {
+    return { result: null, provider: 'gemini', error: 'GEMINI_API_KEY no configurada' };
+  }
+  try {
+    const model = 'gemini-2.5-flash-preview';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const bytes = new Uint8Array(audioData);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    const base64 = btoa(binary);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: `Transcribe exactamente este audio en ${language === 'es' ? 'español' : 'inglés'}. Responde solo con la transcripción, sin comentarios.` },
+              { inline_data: { mime_type: mimeType, data: base64 } },
+            ],
+          },
+        ],
+        generationConfig: { temperature: 0, maxOutputTokens: 300 },
+      }),
+    });
+    if (!response.ok) {
+      return { result: null, provider: `gemini:${model}`, error: `Gemini STT HTTP ${response.status}` };
+    }
+    const data = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const text = (data.candidates?.[0]?.content?.parts ?? [])
+      .map((p) => p.text || '')
+      .join('')
+      .trim();
+    if (!text) {
+      return { result: null, provider: `gemini:${model}`, error: 'transcripción vacía' };
+    }
+    return { result: text, provider: `gemini:${model}` };
+  } catch (err) {
+    console.error('[geminiSTTRouter] error:', err);
+    return { result: null, provider: 'gemini', error: String(err) };
   }
 }

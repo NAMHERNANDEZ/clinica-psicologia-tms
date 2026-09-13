@@ -2,6 +2,10 @@ import type { Env } from './types';
 import { handleHealth } from './health/routes';
 import { getCorsHeaders, isOriginAllowed } from './lib/cors';
 import { checkRateLimit, rateLimitHeaders, getClientIP } from './lib/rate-limit';
+import { handleVoiceChat, handleTTS, handleCheckAvailability, handleCreateAppointment as handleVoiceCreateAppointment } from './domains/voice/routes';
+import { sttRouter } from './routes/voice-provider-router';
+import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth } from './lib/calendar-oauth';
+import { limitChatText } from './lib/input-limits';
 import { authenticate } from './middleware/authenticate';
 import { requireAuth, requireRole } from './middleware/require-role';
 import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe } from './domains/auth/routes';
@@ -180,8 +184,96 @@ export default {
       const path = url.pathname;
       const method = request.method;
 
+      // Rate limit GLOBAL temprano (antes de cualquier ruta pública, incluida
+      // voz, chat, leads y calendario) para proteger cuota de proveedores LLM.
+      const { allowed, remaining } = await checkRateLimit(env, ip, path);
+      if (!allowed) {
+        return jsonError('Rate limit exceeded', 429, { ...corsHeaders, ...rateLimitHeaders(remaining) }, requestId);
+      }
+
       if (path === '/api/health' && method === 'GET') {
         return withCors(() => handleHealth(env, corsHeaders, requestId), corsHeaders, requestId, env, request)
+      }
+
+      // Voice TMS (sin autenticación; módulo público de pre-reserva)
+      if (path === '/api/voice/chat' && method === 'POST') {
+        return withCors(() => handleVoiceChat(env, request, corsHeaders), corsHeaders, requestId, env, request);
+      }
+      if (path === '/api/voice/tts' && method === 'POST') {
+        return withCors(() => handleTTS(env, request, corsHeaders), corsHeaders, requestId, env, request);
+      }
+      if (path === '/api/voice/availability' && method === 'GET') {
+        return withCors(() => handleCheckAvailability(env, request, corsHeaders), corsHeaders, requestId, env, request);
+      }
+      if (path === '/api/voice/appointments' && method === 'POST') {
+        return withCors(() => handleVoiceCreateAppointment(env, request, corsHeaders), corsHeaders, requestId, env, request);
+      }
+
+      // STT (transcripción de audio del paciente)
+      if (path === '/api/chat/stt' && method === 'POST') {
+        return withCors(async () => {
+          try {
+            const form = await request.formData();
+            const audio = form.get('audio');
+            if (audio === null || typeof audio === 'string' || typeof (audio as any)?.arrayBuffer !== 'function') {
+              return jsonError('audio (multipart/form-data) requerido', 400, corsHeaders, requestId);
+            }
+            const mimeType = form.get('mimeType')?.toString() || 'audio/wav';
+            const language = form.get('language')?.toString() || 'es';
+            const buf = await (audio as any).arrayBuffer();
+            const stt = await sttRouter(env, buf, language, mimeType);
+            if (stt.error) {
+              return json({ transcript: '', provider: stt.provider, fallbackUsed: stt.fallbackUsed, error: stt.error }, 500, corsHeaders, requestId);
+            }
+            return json({ transcript: stt.result ?? '', provider: stt.provider, fallbackUsed: stt.fallbackUsed }, 200, corsHeaders, requestId);
+          } catch (err) {
+            console.error(`[${requestId}] /api/chat/stt error:`, err);
+            return jsonError('Error al transcribir audio', 500, corsHeaders, requestId);
+          }
+        }, corsHeaders, requestId, env, request);
+      }
+
+      // Google Calendar OAuth — inicio (sesión admin/terapeuta)
+      if (path === '/api/calendar/auth' && method === 'GET') {
+        return withCors(async () => {
+          const cuser = await authenticate(env, request);
+          const cAuthError = requireAuth(cuser);
+          if (cAuthError) return cAuthError;
+          if (cuser!.role !== 'admin' && cuser!.role !== 'therapist') {
+            return jsonError('Sin permisos para conectar calendario', 403, corsHeaders, requestId);
+          }
+          const nonce = await createOAuthState(env);
+          const state = `clinic-${cuser!.clinic_id}-${nonce}`;
+          const authUrl = getAuthUrl(env, cuser!.clinic_id, state);
+          if (!authUrl) return jsonError('GOOGLE_CLIENT_ID no configurado', 500, corsHeaders, requestId);
+          return Response.redirect(authUrl, 302);
+        }, corsHeaders, requestId, env, request);
+      }
+
+      // Google Calendar OAuth — callback (sin cookie; valida state nonce)
+      if (path === '/api/calendar/callback' && method === 'GET') {
+        const cUrl = new URL(request.url);
+        const code = cUrl.searchParams.get('code') || '';
+        const state = cUrl.searchParams.get('state') || '';
+        const m = state.match(/^clinic-(\d+)-([0-9a-f]{32})$/);
+        if (!code || !m) {
+          return new Response(JSON.stringify({ success: false, error: 'state/code inválidos' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+        const clinicId = parseInt(m[1], 10);
+        const stateValid = await consumeOAuthState(env, m[2]);
+        if (!stateValid) {
+          return new Response(JSON.stringify({ success: false, error: 'state no válido o expirado' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+        const tokens = await exchangeCode(env, code);
+        if (tokens.error || !tokens.access_token) {
+          console.error(`[${requestId}] calendar exchange error:`, tokens.error || 'sin access_token');
+          return new Response(JSON.stringify({ success: false, error: 'Error al intercambiar código OAuth' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+        await storeCalendarAuth(env, clinicId, tokens);
+        const frontUrl = new URL(request.url);
+        frontUrl.pathname = '/admin';
+        frontUrl.search = '?calendar=connected';
+        return Response.redirect(frontUrl.toString(), 302);
       }
 
       // Public chat assistant - no authentication required (patient acquisition)
@@ -196,8 +288,13 @@ export default {
           if (!body.message || typeof body.message !== 'string' || !body.message.trim()) {
             return jsonError('message is required', 400, corsHeaders, requestId);
           }
+          // Anti-abuso: acota el input antes de consumir cuota LLM
+          const safeMessage = limitChatText(body.message);
+          if (!safeMessage) {
+            return jsonError('message is required', 400, corsHeaders, requestId);
+          }
           const secretary = createSecretary('free');
-          const result = await secretary.processMessage(body.message);
+          const result = await secretary.processMessage(safeMessage);
           // Lead capture: if the message contains contact data, save a lead (no clinical data)
           try {
             const extracted = extractLeadFromMessage(body.message);
@@ -219,11 +316,6 @@ export default {
       // Public lead creation - patient submits data via chat/form (no authentication)
       if (path === '/api/leads' && method === 'POST') {
         return withCors(() => handleCreateLead(env, request, corsHeaders, null), corsHeaders, requestId, env, request);
-      }
-
-      const { allowed, remaining } = await checkRateLimit(env, ip, path);
-      if (!allowed) {
-        return jsonError('Rate limit exceeded', 429, { ...corsHeaders, ...rateLimitHeaders(remaining) }, requestId);
       }
 
       if (path === '/api/auth/register' && method === 'POST') return withCors(() => handleRegister(env, request, corsHeaders), corsHeaders, requestId, env, request);

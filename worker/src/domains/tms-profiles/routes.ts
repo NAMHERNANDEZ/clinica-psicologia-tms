@@ -1,6 +1,7 @@
 import type { Env, User } from '../../types';
 import { validateTmsProfile } from './validators';
 import * as service from './service';
+import { findPatientById } from '../patients/repository';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
@@ -14,6 +15,9 @@ export async function handleGetPatientProfiles(env: Env, request: Request, user:
     const segments = url.pathname.split('/');
     const patientId = parseInt(segments[segments.length - 1] || '0');
     if (isNaN(patientId) || patientId <= 0) return json({ success: false, error: 'ID de paciente inválido' }, 400, corsHeaders);
+    // IDOR/BOLA: el paciente debe pertenecer a la clínica del usuario autenticado.
+    const patient = await findPatientById(env, user.clinic_id, patientId);
+    if (!patient) return json({ success: false, error: 'Paciente no encontrado' }, 404, corsHeaders);
 
     const result = await service.getPatientProfiles(env, patientId);
     return json(result, 200, corsHeaders);

@@ -2,6 +2,7 @@ import type { Env, User } from '../../types';
 import { requirePermission } from '../../middleware/require-role';
 import { validateClinicalNote, type ClinicalNoteInput } from './validators';
 import * as service from './service';
+import { findPatientById } from '../patients/repository';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
@@ -27,6 +28,9 @@ export async function handleGetPatientNotes(env: Env, request: Request, user: Us
   try {
     const patientId = extractNoteId(request);
     if (!patientId) return json({ success: false, error: 'patient_id inválido' }, 400, corsHeaders);
+    // IDOR/BOLA: el paciente debe pertenecer a la clínica del usuario autenticado.
+    const patient = await findPatientById(env, user.clinic_id, patientId);
+    if (!patient) return json({ success: false, error: 'Paciente no encontrado' }, 404, corsHeaders);
     const result = await service.getPatientNotes(env, patientId);
     return json(result, 200, corsHeaders);
   } catch (err) {

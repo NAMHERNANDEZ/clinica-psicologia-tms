@@ -12,6 +12,9 @@ export interface Env {
   BACKUPS_BUCKET?: R2Bucket;
   CLINIC_DOCUMENTS_BUCKET?: R2Bucket;
   GEMINI_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+  UNOROUTER_API_KEY?: string;
+  UNOROUTER_BASE_URL?: string;
 }
 
 export interface Clinic {

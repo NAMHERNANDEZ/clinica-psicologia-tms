@@ -5,6 +5,7 @@
 import type { Env, User } from '../../types';
 import * as service from './service';
 import { validateAssessmentInput, validateScaleAssessmentInput, validatePatientId, isValidScaleId } from './validators';
+import { findPatientById } from '../patients/repository';
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
@@ -112,6 +113,12 @@ export async function handleGetAssessmentsByPatient(
       return json({ success: false, error: validation.error, requestId }, 400, corsHeaders);
     }
 
+    // IDOR/BOLA: el paciente debe pertenecer a la clínica del usuario autenticado.
+    const patient = await findPatientById(env, user.clinic_id, patientId);
+    if (!patient) {
+      return json({ success: false, error: 'Paciente no encontrado', requestId }, 404, corsHeaders);
+    }
+
     const result = await service.listAssessmentsByPatient(env, validation.data);
     return json({ ...result, requestId }, result.status || 200, corsHeaders);
   } catch (err) {
@@ -148,6 +155,12 @@ export async function handleGetAssessmentsByType(
 
     if (!assessmentType) {
       return json({ success: false, error: 'assessment_type requerido', requestId }, 400, corsHeaders);
+    }
+
+    // IDOR/BOLA: el paciente debe pertenecer a la clínica del usuario autenticado.
+    const patient = await findPatientById(env, user.clinic_id, patientId);
+    if (!patient) {
+      return json({ success: false, error: 'Paciente no encontrado', requestId }, 404, corsHeaders);
     }
 
     const result = await service.listAssessmentsByType(env, validation.data, assessmentType);
