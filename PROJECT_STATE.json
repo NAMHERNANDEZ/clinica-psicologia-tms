@@ -1,34 +1,33 @@
 {
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-12T22:10:00.000Z",
+  "updatedAt": "2026-09-12T22:40:00.000Z",
   "phase": {
-    "current": "MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING",
-    "name": "Modelo de datos wellbeing (user-scoped, self-reported) + extension backend /api/assessments domain=wellbeing + migracion D1 0043 + deploy produccion + E2E real PASS con aislamiento CLINICAL/WELLBEING",
-    "status": "PRODUCTION_PASS_PENDING_COMMIT"
+    "current": "MH-EXPANSION 1.1 — FRONTEND /mh/assessments",
+    "name": "UI /mh/assessments + /mh/assessments/:scaleId: catalogo+historial (MhAssessmentsPage), flujo completo responder->preview->completar->resultado (MhAssessmentRunPage), wellbeing-questions.ts, api.ts wellbeing, rutas App, tests frontend 18/18, deploy worker a63d0b10 + Pages 069b6e90, E2E produccion PASS + limpieza",
+    "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "71ce73c",
-    "message": "Stop tracking worker/.dev.vars"
+    "hash": "7463c67",
+    "message": "feat(frontend): MH-EXPANSION 1.1 - UI /mh/assessments wellbeing"
   },
   "uncommittedChanges": {
-    "count": 7,
-    "files": ["worker/migrations/0043_wellbeing_assessments.sql (nuevo)", "worker/src/domains/assessments/validators.ts", "worker/src/domains/assessments/repository.ts", "worker/src/domains/assessments/service.ts", "worker/src/domains/assessments/routes.ts", "worker/src/index.ts", "worker/test/wellbeing-assessments.test.ts (nuevo)", "PROJECT_STATE.json", "PROJECT_STATE.md", "SESSION_HANDOFF.md"],
-    "note": "MH-EXPANSION 1.0: OPCION B (tablas separadas wellbeing) aprobada: 3 tablas wellbeing (wellbeing_scales/wellbeing_assessments/wellbeing_responses) user-scoped sin clinic/patient/therapist; motor de scoring COMpARTIDO (calculateScore/interpretScore/cutoffs reutilizado con WELLBEING_CUTOFFS y bandas no clinicianas); 6 escalas semilla (stress-pss4, sleep-sq5, wellbeing-who5, activation-gad2, energy-vas3, focus-cfq3); rutas /api/assessments/wellbeing/*; provenance user_self_report|imported|system_generated; disclaimer en cada registro. R2 sigue desactivado."
+    "count": 2,
+    "files": ["src/pages/Chat.tsx (WIP ajena)", "worker/src/index.ts (WIP secretary ajena)"],
+    "note": "WIP de otra tarea (AI secretary/chat) dejado sin commitear a proposito. MH-EXPANSION 1.1 commitado en 7463c67."
   },
   "build": {
-    "typecheck": "PASS (0 errores; tsc --noEmit worker/tsconfig.json)",
-    "wranglerDryRun": "PASS (4049.27 KiB / gzip 991.81 KiB)",
-    "tests": "PASS 223/223 (19 archivos; incluye wellbeing-assessments 19/19)",
-    "auditPreDeploy": "PASS 56/56 (scripts/pre-deploy-audit.cjs)",
-    "migracion0043": "APPLIED remoto (7 changes, 32 rows escritas, 6 escalas seed, 102 tablas)"
+    "typecheck": "PASS (tsc worker --noEmit 0 errores)",
+    "wranglerDryRun": "PASS (2651.60 KiB / gzip 604.32 KiB)",
+    "tests": "PASS 227/227 (worker) + 18/18 (frontend vitest/RTL)",
+    "frontendBuild": "PASS (vite build, 1603 modules, VITE_API_URL worker prod)"
   },
-  "deployment": {
-    "worker": "clinica-psicologia-tms",
-    "version": "3bb6dc69-f631-4efa-b843-e46b09eefcc8 (deployed esta sesion con MH-EXPANSION 1.0; previo 167ab998 FASE MH)",
+  "deploy": {
+    "worker": "a63d0b10-2161-4b61-b43a-77755853a48d",
+    "pages": "069b6e90.clinica-psicologia-tms.pages.dev",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
-    "migracion0043": "APPLIED (wellbeing_scales/wellbeing_assessments/wellbeing_responses + indices user-scoped)",
-    "e2eProduction": "PASS: wellbeing-scales 6, cutoffs stress-pss4/sleep-sq5 3 bandas c/u, preview score=8 band=moderate, create id=1 score=8, list-A=1 list-B=0, detail-A responses=4, B->A 404 aislado, clinical->wellbeing HTTP 400 rechazado, clinical-preview phq9 OK, clinical-scales 6, chat 200, cleanup confirm=1 OK"
+    "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)"
   },
+  "e2eProduction": "PASS: register->login cookie->scales 6->list 0->preview pss4 score=8/16 moderate->create id=3 score=8->list 1->detail responses=4 score=8->account confirm=1 cleanup True. Assets: MhAssessmentsPage-QM14edIm.js / MhAssessmentRunPage-C-ISsCri.js / index-BZfI5yRE.js / index-Dj-WntZH.css / brain.worker-DufwL8gn.js / index.html = MATCH local",
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",
     "queueDir": "bridge/queue",
@@ -36,8 +35,7 @@
     "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"]
   },
   "nextAction": {
-    "label": "Commit de MH-EXPANSION 1.0 MODELO DE DATOS WELLBEING (PRODUCTION_PASS), luego frontend /mh/assessments (hito FRONTEND: contratos listar/iniciar/preview/completar/resultado)",
-    "detail": "Backend wellbeing completo y desplegado: 223/223 tests, audit 56/56, E2E produccion PASS con aislamiento user-scoped y cross-domain. Pendientes: commit; UI /mh/assessments (solo contratos/API, no toda la UI) segun roadmap; R2 sigue desactivado (techo Cloudflare)."
-  },
-  "blockers": []
+    "label": "Actualizar TASK_QUEUE.json/.md y SESSION_HANDOFF.md con cierre MH-EXPANSION 1.1 (hecho en esta sesion), luego siguiente fase segun TASK_QUEUE (12.6+). WIP ajeno (Chat.tsx / index.ts secretary) queda pendiente de su propia tarea.",
+    "detail": "MH-EXPANSION 1.1 completo: backend wellbeing desplegado (1.0) + frontend /mh/assessments funcional (1.1) + tests 18/18 frontend + E2E produccion real PASS + assets MATCH. Proximo: continuar roadmap TASK_QUEUE."
+  }
 }

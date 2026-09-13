@@ -2,7 +2,19 @@
 
 Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_STATE.json`.
 
-## Fase actual: FASE MH — Mental Health / Bienestar personal
+## Fase actual: MH-EXPANSION 1.1 — FRONTEND /mh/assessments (bienestar)
+
+**Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN (deploy + E2E) + COMMIT `7463c67`.** Backend 1.0 (`1c15dad`) + UI 1.1.
+
+### Evidencia real (producida en esta sesión)
+- **Backend wellbeing (1.0)**: 6 escalas (stress-pss4, sleep-sq5, wellbeing-who5, activation-gad2, energy-vas3, focus-cfq3), scoring común, aislamiento user-scoped, migración 0043 aplicada.
+- **Frontend (1.1)**: `/mh/assessments` (catálogo+historial) y `/mh/assessments/:scaleId` (responder→preview→completar→resultado) + mini chat `/api/chat` + borrador sessionStorage + previene doble submit.
+- **Tests**: worker 227/227 PASS; frontend vitest/RTL 18/18 PASS; typecheck PASS; vite build PASS (1603 modules); wrangler dry-run PASS.
+- **Deploy**: Worker `a63d0b10-2161-4b61-b43a-77755853a48d` + Pages `069b6e90`; assets MATCH local (index.html, JS/CSS wellbeing, brain.worker).
+- **E2E producción PASS**: register→login cookie→scales 6→list 0→preview pss4 8/16 moderate→create id=3 score=8→list 1→detail responses=4→cleanup confirm=1 True.
+- **WIP ajeno sin commitear**: `src/pages/Chat.tsx` y `worker/src/index.ts` (AI secretary).
+
+## Fase previa: FASE MH — Mental Health / Bienestar personal
 
 **Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN (deploy + E2E).**
 

@@ -1,6 +1,19 @@
 # SESSION_HANDOFF.md
 
-## Ultima sesion: 2026-09-12 (MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING, PRODUCTION_PASS)
+## Ultima sesion: 2026-09-12 (MH-EXPANSION 1.1 — FRONTEND /mh/assessments, PRODUCTION_PASS_COMMITTED)
+
+- **COMMIT**: `7463c67` `feat(frontend): MH-EXPANSION 1.1 - UI /mh/assessments wellbeing`.
+- **BACKEND** (commit previo `1c15dad`, MH-EXPANSION 1.0): dominio wellbeing desplegado, 6 escalas, scoring comun, E2E 1.0 PASS.
+- **FRONTEND NUEVO**: `MhAssessmentsPage.tsx` (catalogo + historial user-scoped API real, errores visibles, retry, null-safe), `MhAssessmentRunPage.tsx` (flujo answer->preview->complete->result, borrador sessionStorage, previene doble submit con boton disabled real en fase saving, error real sin mock/demo, mini chat /api/chat), `wellbeing-questions.ts` (contenido 6 escalas, sin scoring en frontend), `api.ts` (+wellbeing client y sendChatMessage), `App.tsx`/`MhLayout.tsx` (rutas y nav).
+- **TESTS FRONTEND NUEVOS**: vitest+RTL+jsdom+jest-dom. `vitest.config.ts` requiere `esbuild.jsx: 'automatic'` (si no: "React is not defined"). 18/18 PASS (wellbeing-questions 6, MhAssessmentsPage 5, MhAssessmentRunPage 7).
+- **BUILD**: typecheck worker PASS, worker tests 227/227, frontend tests 18/18, vite build PASS (1603 modules), wrangler dry-run PASS.
+- **DEPLOY**: Worker `a63d0b10-2161-4b61-b43a-77755853a48d` + Pages `069b6e90.clinica-psicologia-tms.pages.dev`. Assets MATCH local (MhAssessmentsPage-QM14edIm.js, MhAssessmentRunPage-C-ISsCri.js, index-BZfI5yRE.js, index.html, css, brain.worker).
+- **E2E PRODUCCION PASS**: register->login cookie->scales 6->list 0->preview pss4 score=8/16 moderate->create id=3 score=8->list 1->detail responses=4 score=8->account confirm=1 cleanup True.
+- **REGRESIONES CORREGIDAS AQUI**: `scales.length` crash cuando `success:true, data:null` (null-safe en MhAssessmentsPage); duplicacion de interpretacion en resultado; preview ahora visible en fase saving (boton wb-confirm disabled real); tests con queries ambiguas (getAllByText/getAllByRole dentro de wb-preview).
+- **WIP AJENO NO COMMITEADO** (otra tarea, AI secretary/chat): `src/pages/Chat.tsx`, `worker/src/index.ts`. Dejar para su propia tarea.
+- **PROXIMO**: roadmap 12.6+ (ver TASK_QUEUE.json). NOTA: scoring PSS-4 inversion de items 2/4 NO implementado (suma simple) documentado como mejora futura.
+
+## Sesion anterior: 2026-09-12 (MH-EXPANSION 1.0 — MODELO DE DATOS WELLBEING, PRODUCTION_PASS)
 
 - **CONTEXTO**: FASE MH consolidada (`8d2fcc1`). `MH-EXPANSION 1.0` usa `/api/assessments`, R2 sigue desactivado. No se creó un segundo assessment engine.
 - **DECISIÓN**: OPCIÓN B — tablas separadas wellbeing (user-scoped) por FKs clínicos obligatorios (clinic/patient/therapist). Nada clínico modificado.
