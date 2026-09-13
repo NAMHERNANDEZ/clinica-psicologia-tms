@@ -2,18 +2,33 @@
 
 Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_STATE.json`.
 
-## Fase actual: FASE 12.7 — Escalas Clínicas (PHQ-9, GAD-7, BDI-II, PCL-5, AUDIT, DASS-21)
+## Fase actual: FASE MH — Mental Health / Bienestar personal
 
-**Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN.**
+**Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN (deploy + E2E).**
 
 ### Evidencia real (producida en esta sesión)
-- **Tests worker (vitest)**: 146/146 PASS (32 nuevos de assessments.test.ts).
-- **Typecheck**: 0 nuevos errores (18 errores preexistentes en `blog/`, no relacionados).
-- **Build worker** (`wrangler deploy --dry-run`): PASS — 3830.16 KiB / gzip 946.59 KiB.
-- **Build frontend** (VITE_API_URL): PASS.
-- **Migración 0034 aplicada a D1 remoto**: 6 queries, 26 rows, 7 changes, 83 tablas.
-- **Deploy worker** `clinica-psicologia-tms`: v `b264d9c3`.
-- **Smoke test real en producción** (`scripts/smoke-test-assessments.cjs`): 23/23 PASS.
+- **Tests worker (vitest)**: 204/204 PASS (mental-health.test.ts 28/28).
+- **Typecheck worker**: PASS (0 errores).
+- **Build worker** (`wrangler deploy --dry-run`): PASS — 4028.50 KiB / gzip 989.08 KiB.
+- **Build frontend** (VITE_API_URL): PASS — 8 chunks `Mh*` generados.
+- **Migración 0042 aplicada a D1 remoto**: 18 queries, 40 filas, 7 tablas, seed 6 intervenciones.
+- **Deploy worker** `clinica-psicologia-tms`: version `167ab998-12db-4806-af9f-788b8ff06e3e`.
+- **Deploy Cloudflare Pages**: bundle `index-DZkxWOlF.js` (hash = build local).
+- **E2E producción**: registro → login → 6 check-ins → recomendación → 2 sesiones de respiración
+  (delta −4) → rechazo de `after=11` → insights `breathing_reduction` (conf 0.8) +
+  `sleep_activation` (conf 0.85) → dismiss → consentimiento → diario → export (7 328 B) →
+  persistencia tras recarga → delete account verificado. Usuarios/clínicas de prueba limpiados.
+- **R2**: binding comentado en `wrangler.toml` (Cloudflare R2 no habilitado en la cuenta, error
+  10042). Descomentar al activar R2 para fase 12.5 (docs).
+
+### Qué incluye la FASE MH
+- Backend `/api/mh/*`: check-in de 10-30 s (11 estados, intensidad/activación/energía/concentración/sueño),
+  motor de recomendación V1 (seguridad si activación ≥ 9; respiración/relajación/reflexión según estado),
+  sesión antes/después con delta y observación + disclaimer (no diagnóstico), insights trazables por
+  usuario (sueño↔activación, reducción en respiración, sesiones cortas), consentimientos, diario,
+  export JSON, borrado permanente. Todo user-scoped.
+- UI `/mh` mobile-first con 7 pantallas (Hoy, Check-in, Intervenciones + detalle, Insights, Historial,
+  Privacidad).
 
 ### Endpoints verificados en producción
 - `GET /api/assessments/scales` → 6 escalas con cutoffs.

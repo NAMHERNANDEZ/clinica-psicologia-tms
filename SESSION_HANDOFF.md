@@ -1,5 +1,96 @@
 # SESSION_HANDOFF.md
 
+## Ultima sesion: 2026-09-12 (FASE MH — Mental Health / bienestar personal, DEPLOY PRODUCCION PASS)
+
+### Estado al cerrar la sesion
+- **Objetivo completado y desplegado en produccion**: dominio `mental-health` (/api/mh/*) + UI mobile-first
+  `/mh` + migracion D1 `0042_mental_health.sql` + tests 28/28 + E2E real contra produccion PASS.
+- **Backend nuevo** `worker/src/domains/mental-health/`: validators, service (motor de recomendacion V1
+  activacion/energia/sueno/estado, delta antes/despues, insights trazables con disclaimer
+  "no es diagnostico", computeStreak, computeStats), repository (user-scoped SIEMPRE por user_id),
+  routes (home, checkins, trend, interventions, sessions, insights+dismiss, consents, journal,
+  export JSON, delete account). Wiring completo en `worker/src/index.ts` (bloque FASE MH).
+- **UI nueva** `src/pages/mh/`: MhLayout (nav mobile-first, logout, disclaimer pie), Home (prioridades:
+  como estoy / que necesito / que puedo hacer / que aprendi), Checkin (11 estados, 4 sliders,
+  sueno, contexto, nota -> resultado + recomendacion), Intervenciones (catalogo + filtros),
+  IntervencionDetail (flujo antes -> practica con cronometro -> despues -> siguiente + resultado),
+  Insights (open/dismissed), Historial (checkins/sesiones/diario tabs), Privacidad
+  (consentimientos, exportar datos, eliminar datos). Rutas en `src/App.tsx` (ProtectedRoute)
+  y cliente `src/lib/api.ts` (namespace `mh`). `src/pages/mh/*` NO generan errores TS.
+- **Migracion 0042 aplicada en remoto** (18 queries, 40 filas escritas, 7 tablas, seed 6 intervenciones).
+
+### Accion clave: R2 comentado en `worker/wrangler.toml`
+- Cloudflare NO tiene R2 habilitado en la cuenta (errores 10042 "enable R2" / 10085 "bucket not found").
+  El binding activo impedía el deploy. Se comento `[[r2_buckets]]` (linea 12-15) siguiendo la
+  intencion documentada del propio archivo ("descomentar tras activar R2"). DOCS 12.5 quedó
+  funcional en codigo pero NO desplegado (WIP previo sin deploy verificado). Para integrar docs:
+  activar R2 en dashboard y descomentar.
+
+### Evidencia de produccion (E2E real, 2026-09-12)
+| Prueba | Resultado |
+|---|---|
+| Worker deploy `clinica-psicologia-tms` | PASS version `167ab998-12db-4806-af9f-788b8ff06e3e` |
+| Pages deploy `clinica-psicologia-tms.pages.dev` | PASS (bundle `index-DZkxWOlF.js` = hash local exacto) |
+| SPA /mh worker + pages | 200 en ambos |
+| Chunk `MhLayout-B0evBqam.js` | servido por worker Y pages = hash local, contiene MyCalma |
+| Typecheck worker | PASS |
+| Tests worker | PASS 204/204 (18 archivos; mental-health 28/28) |
+| vite build frontend | PASS (8 chunks Mh*) |
+| Pre-deploy audit | PASS 56 checks |
+| E2E API produccion | registro->login->checkins x6->recomendacion->sesiones delta=-4->rechazo after=11->insights conf 0.8/0.85->dismiss->consents->journal->export 7328B->persistencia reload->delete verificado |
+| Limpieza | usuarios/clinicas de prueba E2E borrados de D1 |
+
+### Pendientes
+- Commit de la FASE MH (todo en working tree, listo).
+- RELEASE_FASE_MH.md con la evidencia.
+- Activar R2 y descomentar wrangler.toml para fase 12.5 (docs).
+
+## Ultima sesion: 2026-09-12 (RESTAURACION post-reset — seguridad y consistencia del worker)
+
+### Estado al cerrar la sesion
+- Problema raiz: `git reset` previo perdio cambios NO commiteados sobre archivos trackeados
+  (types.ts, gemini.ts, index.ts, dominios). Los archivos untracked de voz/engine/frontend
+  SOBREVIVIERON; lo que se perdio/corrompio fue el wiring y los guards en trackeados.
+- Restaurado y verificado (7 archivos trackeados modificados, SIN commit):
+  - **Guards IDOR/BOLA por clinica**: assessments (2), clinical-notes (1), tms-profiles (2),
+    tms-sessions (3): fetch previo de la entidad + `X.clinic_id !== user.clinic_id` -> 404.
+  - **index.ts**: rate-limit GLOBAL temprano (antes de rutas publicas), rutas de voz
+    (/api/voice/chat, /tts, /availability, /appointments), STT (/api/chat/stt),
+    OAuth calendario (/api/calendar/auth con sesion admin/therapist + nonce,
+    /api/calendar/callback con consumeOAuthState + exchangeCode + storeCalendarAuth),
+    `limitChatText` en /api/chat (anti-abuso).
+  - **types.ts Env**: props OPENROUTER_API_KEY, UNOROUTER_API_KEY, UNOROUTER_BASE_URL.
+  - **gemini.ts**: `geminiSTTRouter` reimplementado (STT inline base64, modelo flash-preview).
+  - **gtts.ts**: stub corregido (ArrayBuffer real). **realtime-voice.ts**: imports
+    `../../lib/calendar-oauth` corregidos (habian una ruta rota `./calendar-oauth`).
+  - **therapeutic-engine.ts**: interfaz catalog renombrada a TherapeuticStrategy,
+    helper toMove, uniones strategy/phase ampliadas, buildResponse reimplementado
+    (eran 27 errores TS; hoy typecheck limpio).
+
+### Pruebas reales completadas (evidencia)
+| Prueba | Resultado |
+|---|---|
+| Typecheck worker (tsc --noEmit) | PASS (0 errores) |
+| Tests worker (vitest) | PASS 176/176 (17 archivos; incluye idor-regression 7/7 y gemini 8/8) |
+| Build worker (wrangler deploy --dry-run) | PASS (3903.79 KiB / gzip 963.66 KiB) |
+| Deploy | NO realizado (sin instruccion esta sesion) |
+
+### Estado de produccion
+- Worker vivo: `clinica-psicologia-tms` (version observada 8dc3639c).
+- Los cambios de esta sesion estan en working tree — un deploy futuro sin commit los perdera.
+  **ACCION RECOMENDADA: commit + deploy.** Ver `RELEASE` pendiente en `TASK_QUEUE.md`.
+
+### Siguiente accion (proxima sesion)
+1. `git add` de los 7 archivos trackeados modificados + commit (mensaje tipo
+   "fix: IDOR guards por clinica + wiring voz/STT/calendario + rate-limit global").
+2. `wrangler deploy` (si el usuario lo autoriza) y smoke de produccion:
+   login -> paciente -> assessments -> convenio/cross-clinica 404 -> reload.
+3. Continuar fases pendientes segun `TASK_QUEUE.md` (12.8 Reportes ...).
+
+---
+
+## Sesiones anteriores (historial)
+
 ## Ultima sesion: 2026-08-28 (FASE 12.7 PASS real con deploy + smoke)
 
 ### Estado al cerrar la sesion

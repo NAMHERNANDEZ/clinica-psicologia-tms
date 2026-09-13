@@ -60,6 +60,24 @@ import { extractLeadFromMessage } from './domains/leads/extractor';
 import { handleMarketingOverview, handleMarketingContentGenerate, handleMarketingCampaignGenerate, handleMarketingSeoGenerate, handleMarketingContentList, handleMarketingContentStatus } from './domains/marketing/routes';
 import { handleClinicalChatMessage, handleClinicalChatSessions, handleClinicalChatSessionMessages, handleClinicalChatStats } from './domains/clinical-chat/routes';
 import { handleGetScales, handleGetCutoffs, handleGetAssessmentById, handlePreviewScore, handleCreateAssessment as handleCreateScaleAssessment, handleGetAssessmentsByPatient as handleGetScaleAssessmentsByPatient, handleGetAssessmentsByType as handleGetScaleAssessmentsByType } from './domains/assessments/routes';
+import {
+  handleMhHome,
+  handleMhCreateCheckin,
+  handleMhListCheckins,
+  handleMhTrendCheckins,
+  handleMhListInterventions,
+  handleMhGetIntervention,
+  handleMhCreateSession,
+  handleMhListSessions,
+  handleMhListInsights,
+  handleMhDismissInsight,
+  handleMhListConsents,
+  handleMhUpsertConsent,
+  handleMhExport,
+  handleMhDeleteAccount,
+  handleMhListJournal,
+  handleMhCreateJournal,
+} from './domains/mental-health/routes';
 
 function generateRequestId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
@@ -544,6 +562,24 @@ export default {
       if (path.match(/^\/api\/assessments\/scales\/[\w]+\/cutoffs$/) && method === 'GET') return withCors(() => handleGetCutoffs(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path.match(/^\/api\/assessments\/\d+$/) && method === 'GET') return withCors(() => handleGetAssessmentById(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/assessments/preview' && method === 'POST') return withCors(() => handlePreviewScore(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+
+      // FASE MH: MENTAL HEALTH (bienestar personal, user-scoped, desacoplado del dominio clinico TMS)
+      if (path === '/api/mh/home' && method === 'GET') return withCors(() => handleMhHome(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/checkins' && method === 'POST') return withCors(() => handleMhCreateCheckin(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/checkins' && method === 'GET') return withCors(() => handleMhListCheckins(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/checkins/trend' && method === 'GET') return withCors(() => handleMhTrendCheckins(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/interventions' && method === 'GET') return withCors(() => handleMhListInterventions(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/interventions/sessions' && method === 'GET') return withCors(() => handleMhListSessions(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/interventions\/\d+\/sessions$/) && method === 'POST') return withCors(() => handleMhCreateSession(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/interventions\/\d+$/) && method === 'GET') return withCors(() => handleMhGetIntervention(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/insights' && method === 'GET') return withCors(() => handleMhListInsights(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/insights\/\d+\/dismiss$/) && method === 'POST') return withCors(() => handleMhDismissInsight(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/export' && method === 'GET') return withCors(() => handleMhExport(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/account' && method === 'DELETE') return withCors(() => handleMhDeleteAccount(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/consents' && method === 'GET') return withCors(() => handleMhListConsents(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/consents' && method === 'POST') return withCors(() => handleMhUpsertConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/journal' && method === 'GET') return withCors(() => handleMhListJournal(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/journal' && method === 'POST') return withCors(() => handleMhCreateJournal(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 5: TMS PROTOCOLS
       if (path === '/api/tms/protocols' && method === 'GET') return withCors(() => handleGetProtocols(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);

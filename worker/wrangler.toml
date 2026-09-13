@@ -10,9 +10,9 @@ database_name = "clinica-tms-db"
 database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95"
 
 # R2 — descomentar tras activar R2 en Cloudflare Dashboard
-[[r2_buckets]]
-binding = "CLINIC_DOCUMENTS_BUCKET"
-bucket_name = "clinica-tms-documents"
+# [[r2_buckets]]
+# binding = "CLINIC_DOCUMENTS_BUCKET"
+# bucket_name = "clinica-tms-documents"
 
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev"

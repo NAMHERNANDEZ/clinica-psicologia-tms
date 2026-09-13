@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-08-09T01:20:00.000Z",
+  "updatedAt": "2026-09-12T18:45:00.000Z",
   "active": {
-    "phase": "12.5",
-    "name": "Documentos avanzados",
-    "status": "typecheck/build/tests PASS - commit pendiente",
-    "next": "commit + funcionalidad restante (adjuntos, firmas digitales en documentos)"
+    "phase": "MH (Mental Health / bienestar personal)",
+    "name": "Dominio mental-health: check-in 30s, motor de recomendacion V1, insights trazables, sesion antes/despues, consentimiento/export/borrado, UI mobile-first /mh",
+    "status": "PRODUCTION_PASS - worker deployed 167ab998 + Pages deploy (index-DZkxWOlF.js); worker tests 204/204 (mental-health 28/28); migracion 0042 aplicada (7 tablas, seed 6 intervenciones); E2E produccion PASS completo - COMMIT PENDIENTE",
+    "next": "commit FASE MH + RELEASE_FASE_MH.md + reactivar R2 (dashboard) y descomentar binding wrangler.toml para fase 12.5; continuar con roadmap 12.6+"
   },
   "pending": [
     { "phase": "12.6", "name": "Seguimiento: tareas clínicas, recordatorios, evolución" },

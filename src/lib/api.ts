@@ -846,3 +846,146 @@ async function refreshToken(): Promise<boolean> {
     return false;
   }
 }
+
+// ============================================
+// MENTAL HEALTH (bienestar personal, /api/mh/*)
+// ============================================
+
+export interface MhCheckIn {
+  id: number;
+  user_id: number;
+  emotional_state: string;
+  intensity: number;
+  activation: number;
+  energy: number;
+  concentration: number;
+  sleep_hours: number | null;
+  context: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface MhIntervention {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  duration_sec: number;
+  category: string;
+  difficulty: string;
+  instructions: string;
+  before_measurements: string;
+  after_measurements: string;
+  contraindications_or_limits: string | null;
+}
+
+export interface MhSession {
+  id: number;
+  intervention_id: number;
+  before_intensity: number;
+  after_intensity: number;
+  delta: number;
+  completion: number;
+  duration_sec: number | null;
+  feedback: number | null;
+  note: string | null;
+  created_at: string;
+  intervention_slug: string;
+  intervention_title: string;
+  category: string;
+}
+
+export interface MhInsight {
+  id: number;
+  insight_key: string;
+  title: string;
+  body: string;
+  evidence_json: string;
+  observation_count: number;
+  confidence: number;
+  status: string;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface MhConsent {
+  id: number;
+  consent_type: string;
+  granted: number;
+  granted_at: string;
+  revoked_at: string | null;
+}
+
+export interface MhJournalEntry {
+  id: number;
+  content: string;
+  linked_checkin_id: number | null;
+  created_at: string;
+}
+
+export interface MhRecommendation {
+  intervention_slug: string;
+  reason: string;
+  evidence: string[];
+  alternatives: string[];
+  confidence: number;
+  safety: boolean;
+  safety_message: string | null;
+}
+
+export interface MhHomeData {
+  today: { checkin: MhCheckIn; recommendation: MhRecommendation } | null;
+  stats: { streak: number; dayCount: number; checkinsTotal: number; sessionsCompleted: number };
+  insightsPreview: Array<{ id: number; title: string; body: string; confidence: number; last_seen: string }>;
+  interventions: Array<{ id: number; slug: string; title: string; description: string; duration_sec: number; category: string; difficulty: string }>;
+}
+
+export const mh = {
+  home: () => request<{ success: boolean; data: MhHomeData }>('/api/mh/home'),
+
+  createCheckin: (data: {
+    emotional_state: string; intensity: number; activation: number; energy: number;
+    concentration: number; sleep_hours: number | null; context?: string; note?: string;
+  }) => request<{ success: boolean; data: { checkin: MhCheckIn; recommendation: MhRecommendation } }>(
+    '/api/mh/checkins', { method: 'POST', body: JSON.stringify(data) }),
+
+  listCheckins: (limit = 50, from?: string, to?: string) =>
+    request<{ success: boolean; data: MhCheckIn[] }>(`/api/mh/checkins?limit=${limit}${from ? `&from=${encodeURIComponent(from)}` : ''}${to ? `&to=${encodeURIComponent(to)}` : ''}`),
+
+  trend: (limit = 14) => request<{ success: boolean; data: Array<{ id: number; date: string; intensity: number; activation: number; energy: number; concentration: number; emotional_state: string }> }>(
+    `/api/mh/checkins/trend?limit=${limit}`),
+
+  interventions: () => request<{ success: boolean; data: MhIntervention[] }>('/api/mh/interventions'),
+
+  intervention: (id: number) => request<{ success: boolean; data: MhIntervention }>(`/api/mh/interventions/${id}`),
+
+  createSession: (interventionId: number, data: {
+    before_intensity: number; after_intensity: number; completion?: 0 | 1;
+    duration_sec?: number; feedback?: number; note?: string;
+  }) => request<{ success: boolean; data: { session_id: number; delta: number; observation: string; disclaimer: string } }>(
+    `/api/mh/interventions/${interventionId}/sessions`, { method: 'POST', body: JSON.stringify(data) }),
+
+  sessions: (limit = 50) => request<{ success: boolean; data: MhSession[] }>(`/api/mh/interventions/sessions?limit=${limit}`),
+
+  insights: () => request<{ success: boolean; data: MhInsight[] }>('/api/mh/insights'),
+
+  dismissInsight: (id: number) =>
+    request<{ success: boolean; data: { id: number; status: string } }>(`/api/mh/insights/${id}/dismiss`, { method: 'POST' }),
+
+  consents: () => request<{ success: boolean; data: MhConsent[] }>('/api/mh/consents'),
+
+  setConsent: (consent_type: string, granted: boolean) =>
+    request<{ success: boolean; data: { id: number; consent_type: string; granted: boolean } }>(
+      '/api/mh/consents', { method: 'POST', body: JSON.stringify({ consent_type, granted }) }),
+
+  journal: () => request<{ success: boolean; data: MhJournalEntry[] }>('/api/mh/journal'),
+
+  createJournal: (content: string, linked_checkin_id?: number) =>
+    request<{ success: boolean; data: { id: number } }>(
+      '/api/mh/journal', { method: 'POST', body: JSON.stringify({ content, linked_checkin_id: linked_checkin_id ?? null }) }),
+
+  exportData: () => fetch(`${API_BASE}/api/mh/export`, { credentials: 'include' }),
+
+  deleteAccount: () =>
+    request<{ success: boolean; data: { deleted: boolean; message: string } }>('/api/mh/account?confirm=1', { method: 'DELETE' }),
+};

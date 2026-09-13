@@ -1,31 +1,33 @@
 {
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-08-28T04:25:00.000Z",
+  "updatedAt": "2026-09-12T18:45:00.000Z",
   "phase": {
-    "current": "12.7",
-    "name": "Escalas Clinicas (PHQ-9, GAD-7, BDI-II, PCL-5, AUDIT, DASS-21) - PASS REAL en produccion",
-    "status": "PRODUCTION_PASS"
+    "current": "FASE MH (Mental Health / bienestar personal)",
+    "name": "Dominio mental-health completo (check-in 30s, motor de recomendacion V1, insights trazables, antes/despues, consentimiento/export/borrado) + UI mobile-first /mh + migracion D1 0042 + deploy produccion + E2E real PASS",
+    "status": "PRODUCTION_PASS_PENDING_COMMIT"
   },
   "lastCommit": {
-    "hash": "a33fce0",
-    "message": "FASE 12.7: wire assessments scoring endpoints to index.ts"
+    "hash": "71ce73c",
+    "message": "Stop tracking worker/.dev.vars"
   },
   "uncommittedChanges": {
-    "count": 0,
-    "files": [],
-    "note": "Commits a33fce0 y 84e3e1b realizados. Restan sin trackear (no relacionados): $null, .atl/, .opencodeignore, 00_CORE/, AUTONOMOUS_EXECUTION_PLAN.md, MASTER_LOOP.ps1, OPENCE_EXECUTE_PLAN_CMD.txt, XVPN_*.txt, app-errors.txt, bridge/auto-executor.cjs, bridge/results/, build-out.txt, errs.txt, scripts/smoke-test-assessments.cjs, tc.txt, typecheck-out.txt, worker/src/domains/blog/."
+    "count": 16,
+    "files": ["worker/src/domains/mental-health/", "worker/migrations/0042_mental_health.sql", "worker/test/mental-health.test.ts", "worker/src/index.ts", "worker/src/types.ts", "worker/wrangler.toml (R2 comentado: R2 no activo en cuenta, ver nota)", "worker/src/frontend-assets.ts", "src/lib/api.ts", "src/App.tsx", "src/pages/mh/"],
+    "note": "FASE MH completa y DESPLEGADA en produccion (worker version 167ab998 + Cloudflare Pages). R2 binding comentado en wrangler.toml porque Cloudflare no tiene R2 habilitado en la cuenta (error 10042/10085); descomentar cuando se active R2 en el dashboard. Commit pendiente."
   },
   "build": {
-    "typecheck": "PASS (0 nuevos errores; 18 preexistentes en blog/)",
-    "wranglerDryRun": "PASS (3830.16 KiB / gzip 946.59 KiB)",
-    "viteBuild": "PASS (dist/ generado)",
-    "tests": "PASS 146/146 (32 nuevos de assessments.test.ts)"
+    "typecheck": "PASS (0 errores; tsc --noEmit worker/tsconfig.json)",
+    "wranglerDryRun": "PASS (4028.50 KiB / gzip 989.08 KiB)",
+    "tests": "PASS 204/204 (18 archivos; incluye mental-health 28/28)",
+    "frontendBuild": "PASS (vite build con VITE_API_URL; 8 chunks Mh* generados)"
   },
   "deployment": {
     "worker": "clinica-psicologia-tms",
-    "version": "b264d9c3",
-    "migracion0034": "APPLIED (6 queries, 26 rows, 7 changes, 83 tablas)",
-    "smokeProduction": "PASS 23/23 (scales, cutoffs, create, score, cutoff info, by patient, detail, preview)"
+    "version": "167ab998-12db-4806-af9f-788b8ff06e3e (deployed esta sesion con FASE MH)",
+    "pages": "PASS deploy Cloudflare Pages clinica-psicologia-tms.pages.dev (bundle index-DZkxWOlF.js en produccion)",
+    "note": "Desplegado y verificado en produccion: SPA /mh servido (worker + pages, 200), chunks MhLayout-B0evBqam.js coinciden local=produccion. R2 binding comentado (Cloudflare R2 no habilitado; descomentar al activar).",
+    "migracion0042": "APPLIED (18 queries, 40 rows escritas, 7 tablas, seed 6 intervenciones)",
+    "smokeProduction": "PASS MH E2E real (registro->login->checkin x6->recomendacion->sesiones breathing x2 delta=-4->validacion rechaza after=11->insights breathing_reduction 0.8 + sleep_activation 0.85->dismiss->consentimientos->journal->export 7328 bytes->persistencia reload->delete account verificado)"
   },
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",
@@ -40,8 +42,8 @@
     }
   },
   "nextAction": {
-    "label": "FASE 12.8 Reportes (evolucion, graficas, exportacion)",
-    "detail": "FASE 12.7 completada con PASS real en produccion. Siguiente: FASE 12.8 (reportes). Tambien pendiente: limpiar archivos basura del workspace y crear RELEASE_12.7.md con evidencia."
+    "label": "Commit de FASE MH (PRODUCTION_PASS), luego continuar roadmap 12.8+",
+    "detail": "FASE MH completada y desplegada con PASS real en produccion (E2E integral). Pendientes: commit del trabajo, RELEASE_FASE_MH.md con evidencia, reactivar R2 en dashboard de Cloudflare y descomentar binding en wrangler.toml para integrar eficiencias de documentos (fase 12.5)."
   },
   "blockers": []
 }

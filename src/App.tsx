@@ -49,6 +49,14 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminLeadsPage = lazy(() => import('./pages/admin/LeadsPage'));
 const AdminMarketingPage = lazy(() => import('./pages/admin/MarketingPage'));
 const AdminChatPage = lazy(() => import('./pages/admin/ChatPage'));
+const MhLayout = lazy(() => import('./pages/mh/MhLayout'));
+const MhHomePage = lazy(() => import('./pages/mh/MhHomePage'));
+const MhCheckinPage = lazy(() => import('./pages/mh/MhCheckinPage'));
+const MhInterventionsPage = lazy(() => import('./pages/mh/MhInterventionsPage'));
+const MhInterventionDetailPage = lazy(() => import('./pages/mh/MhInterventionDetailPage'));
+const MhInsightsPage = lazy(() => import('./pages/mh/MhInsightsPage'));
+const MhHistoryPage = lazy(() => import('./pages/mh/MhHistoryPage'));
+const MhPrivacyPage = lazy(() => import('./pages/mh/MhPrivacyPage'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -98,6 +106,7 @@ function PublicAIChat() {
   if (
     pathname.startsWith('/app') ||
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/mh') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register')
   ) {
@@ -170,6 +179,17 @@ function App() {
                 <Route path="leads" element={<AdminLeadsPage />} />
                 <Route path="marketing" element={<AdminMarketingPage />} />
                 <Route path="chat" element={<AdminChatPage />} />
+              </Route>
+
+              {/* Mental Health (bienestar personal) — area mobile-first, user-scoped */}
+              <Route path="/mh" element={<ProtectedRoute><MhLayout /></ProtectedRoute>}>
+                <Route index element={<MhHomePage />} />
+                <Route path="checkin" element={<MhCheckinPage />} />
+                <Route path="intervenciones" element={<MhInterventionsPage />} />
+                <Route path="intervenciones/:slug" element={<MhInterventionDetailPage />} />
+                <Route path="insights" element={<MhInsightsPage />} />
+                <Route path="historial" element={<MhHistoryPage />} />
+                <Route path="privacidad" element={<MhPrivacyPage />} />
               </Route>
             </Routes>
           </Suspense>
