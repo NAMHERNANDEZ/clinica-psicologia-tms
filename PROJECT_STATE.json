@@ -1,14 +1,14 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T08:30:00.000Z",
+  "updatedAt": "2026-09-14T09:30:00.000Z",
   "phase": {
-    "current": "VOZ EXISTENTE AUDITADA Y REPARADA (sin reemplazos)",
-    "name": "Stack voz existente reparado: IDs vigentes gemini-3.6-flash (LLM+STT) + fallback 3.5 + contrato STT plano success/text; TTS intacto (fish-audio vivo). Commits 25c3a83+d28f0fa+646534f. Deploy worker 49b4b47c. Smoke prod 29/29, E2E UI Edge 14/14.",
+    "current": "CHAT TABS TEXTO-VOZ (botones en /chat)",
+    "name": "Pestanas Texto|Voz en /chat reutilizando VoiceChat + boton mic en input. Commit f420a94. Deploy worker d3058243 + Pages 0d5ce393. E2E UI Edge 19/19 en /chat con screenshot del boton Iniciar conversacion.",
     "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "646534f",
-    "message": "feat(e2e): STT/TTS/chain vivos en smoke + tramo microfono en Edge"
+    "hash": "eb58395",
+    "message": "feat(e2e): evidencia encuadrada del boton Iniciar conversacion en /chat"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -18,17 +18,17 @@
   "build": {
     "typecheck": "PASS (tsc worker --noEmit 0 errores)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS worker 347/347 (26 archivos, incluye voice-stt-contract 6/6) + frontend 26/26",
-    "frontendBuild": "SKIP (sin cambios frontend esta vez)"
+    "tests": "PASS worker 347/347 + frontend 28/28 (Chat tabs 5/5)",
+    "frontendBuild": "PASS (vite + regen assets; Worker d3058243 + Pages 0d5ce393)"
   },
   "deploy": {
-    "worker": "49b4b47c-527f-4978-b2e7-4a9e23d468d9 (previo eea6ed5b)",
-    "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev (sin cambios)",
+    "worker": "d3058243-b1c9-4067-9084-433dbc18eb83 (previo 49b4b47c)",
+    "pages": "0d5ce393.clinica-psicologia-tms.pages.dev",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS: STT vivo transcribe Hola. (gemini-3.6-flash) con contrato success/text; TTS vivo mp3 57KB; voice/chat voice=true con audio; LLM revivido (gemini-3.6-flash); smoke 29/29; E2E UI Edge 14/14 (incl. tramo microfono con dispositivo falso).",
+  "e2eProduction": "PASS en /chat (ruta pedida): pestanas Texto|Voz visibles sin scroll, Voz muestra Iniciar conversacion + input + enviar (screenshot test-results/e2e-chat-voz-tab.png), mic del input cambia a Voz, texto sigue respondiendo precio. E2E UI Edge 19/19.",
   "chatPricingFix": {
     "commit": "9ba0296",
     "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",

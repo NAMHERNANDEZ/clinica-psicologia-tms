@@ -1,5 +1,13 @@
 # SESSION_HANDOFF.md
 
+## Fix CHAT-TABS-TEXTO-VOZ (2026-09-14, COMMIT f420a94 +eb58395 + DEPLOY worker d3058243 + Pages 0d5ce393 - PASS EN /chat)
+
+- **REPORTE USUARIO (correcto)**: botones de voz no visibles en /chat. Causa: controles solo en /voz + link bajo el fold. /voz existía pero el usuario usa /chat.
+- **FIX (reuso, cero duplicación)**: pestañas Texto|Voz en /chat (Chat.tsx) montando el VoiceChat existente + botón mic en la barra del input que cambia a Voz. Sin tocar backend/voz.
+- **REGLA GLOBAL PERMANENTE DEL USUARIO**: PASS exige flujo exacto pedido + E2E real + producción real + evidencia (SOURCE→BUILD→DEPLOY→RUNTIME→E2E, UI→acción→resultado) en LA MISMA ruta; sin PASS parcial.
+- **EVIDENCIA EN /chat**: tabs visibles sin scroll; Voz muestra "Iniciar conversación" + input + enviar (screenshot test-results/e2e-chat-voz-tab.png verificado visualmente); mic→Voz; texto intacto. Tests frontend 28/28. E2E UI Edge 19/19 en /chat.
+- **PENDIENTE AJENO**: neurocienciaclinica.mx no resuelve DNS desde esta red (verificar DNS/hosting fuera del repo).
+
 ## Fix VOZ-EXISTENTE (2026-09-14, COMMITS 25c3a83+d28f0fa+646534f + DEPLOY worker 49b4b47c - PASS PRODUCCION)
 
 - **PREMISA (correcta)**: no reemplazar nada. Stack existente: VoiceChat + /api/voice/chat + sttRouter/ttsRouter + voice/routes.ts + keys en prod (GEMINI + OPENROUTER presentes).
