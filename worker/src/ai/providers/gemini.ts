@@ -14,7 +14,7 @@ export interface GeminiGenerateResult {
   latencyMs: number;
 }
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-3.6-flash';
 
 /**
  * Cliente real de Google Gemini API.
@@ -141,7 +141,7 @@ export async function geminiSTTRouter(
     return { result: null, provider: 'gemini', error: 'GEMINI_API_KEY no configurada' };
   }
   try {
-    const model = 'gemini-2.5-flash-preview';
+    const model = 'gemini-3.6-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const bytes = new Uint8Array(audioData);

@@ -126,6 +126,44 @@ async function main() {
     check('/voz 200', res2.status === 200, true, `status=${res2.status}`);
   }
 
+  // 9. STT vivo con asset real del repo (usa la implementación existente).
+  console.log('STT live:');
+  {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const wavPath = path.resolve(__dirname, '..', 'tests', 'audio', 'habla-humana-hola.wav');
+    if (!fs.existsSync(wavPath)) {
+      check('stt asset presente', false, true, 'falta tests/audio/habla-humana-hola.wav');
+    } else {
+      const buf = fs.readFileSync(wavPath);
+      const blob = new Blob([buf], { type: 'audio/wav' });
+      const form = new FormData();
+      form.append('audio', blob, 'habla-humana-hola.wav');
+      form.append('language', 'es');
+      form.append('mimeType', 'audio/wav');
+      const res = await fetch(`${BASE}/api/chat/stt`, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      check('stt 200', res.status === 200, true, `status=${res.status} err=${data && data.error}`);
+      check('stt success+text (contrato VoiceChat)', data && data.success === true && typeof data.text === 'string' && data.text.trim().length > 0, true, `body=${JSON.stringify(data).slice(0, 160)}`);
+    }
+  }
+
+  // 10. TTS vivo (implementación existente).
+  console.log('TTS live:');
+  {
+    const r = await post('/api/voice/tts', { text: 'Hola, prueba de voz.' });
+    check('tts 200', r.status === 200, true, `status=${r.status}`);
+    check('tts audio no vacío', r.data && typeof r.data.audio === 'string' && r.data.audio.length > 1000, true);
+  }
+
+  // 11. voice/chat con voice=true trae audio (cadena completa).
+  console.log('Voice chain:');
+  {
+    const r = await post('/api/voice/chat', { message: 'COSTO', sessionId: `smoke-chain-${Date.now()}`, voice: true });
+    check('voice/chat 200', r.status === 200, true, `status=${r.status}`);
+    check('voice/chat con audio TTS', !!(r.data && r.data.audio && r.data.audio.length > 1000), true);
+  }
+
   console.log(`\nTOTAL ${n} checks | FAIL ${failures} | WARN ${warnings}`);
   if (failures > 0) {
     console.log('SMOKE: NO PASS — release bloqueado.');

@@ -3,8 +3,7 @@ import { handleHealth } from './health/routes';
 import { getCorsHeaders, isOriginAllowed } from './lib/cors';
 import { checkRateLimit, rateLimitHeaders, getClientIP } from './lib/rate-limit';
 import { handleVoiceChat, handleTTS, handleCheckAvailability, handleCreateAppointment as handleVoiceCreateAppointment } from './domains/voice/routes';
-import { sttRouter } from './routes/voice-provider-router';
-import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth } from './lib/calendar-oauth';
+import { sttRouter, toSttClientPayload } from './routes/voice-provider-router';import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth } from './lib/calendar-oauth';
 import { authenticate } from './middleware/authenticate';
 import { requireAuth, requireRole } from './middleware/require-role';
 import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe } from './domains/auth/routes';
@@ -249,10 +248,12 @@ export default {
             const language = form.get('language')?.toString() || 'es';
             const buf = await (audio as any).arrayBuffer();
             const stt = await sttRouter(env, buf, language, mimeType);
-            if (stt.error) {
-              return json({ transcript: '', provider: stt.provider, fallbackUsed: stt.fallbackUsed, error: stt.error }, 500, corsHeaders, requestId);
-            }
-            return json({ transcript: stt.result ?? '', provider: stt.provider, fallbackUsed: stt.fallbackUsed }, 200, corsHeaders, requestId);
+            // Contrato plano que lee VoiceChat (success/text top-level).
+            const payload = toSttClientPayload(stt);
+            return new Response(JSON.stringify(payload.body), {
+              status: payload.status,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
           } catch (err) {
             console.error(`[${requestId}] /api/chat/stt error:`, err);
             return jsonError('Error al transcribir audio', 500, corsHeaders, requestId);
