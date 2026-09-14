@@ -30,6 +30,12 @@ export interface AISecretaryAdapter {
   processMessage(message: string, context?: Record<string, unknown>): Promise<AIResponse>;
 }
 
+// Fuente canónica de precios (ÚNICA): también la usa
+// worker/src/domains/voice/booking.ts. No duplicar estos textos.
+export const TMS_PRICE_MESSAGE = `La sesión de Terapia Magnética Transcraneal tiene un costo de:\n\n💰 **$1,500 pesos mexicanos por sesión**\n\nPara conocer si este tratamiento es adecuado para ti, primero se realiza una valoración profesional.`;
+export const THERAPY_PRICE_MESSAGE = `La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.`;
+export const PRICING_BOTH_MESSAGE = `Nuestros precios son:\n\n💰 **Terapia Magnética Transcraneal (TMS): $1,500 MXN por sesión**\n💰 **Terapia Psicológica: $500 MXN por sesión**\n\nSi deseas, puedo ayudarte a solicitar información para agendar una valoración.`;
+
 const KNOWLEDGE_BASE: Record<string, { keywords: string[]; action: AIResponse['action']; template: string; confidence: number; message: string }> = {
   identity: {
     keywords: ['quien eres', 'quién eres', 'que eres', 'qué eres', 'tu nombre', 'eres una persona'],
@@ -43,14 +49,14 @@ const KNOWLEDGE_BASE: Record<string, { keywords: string[]; action: AIResponse['a
     action: 'respond',
     template: 'pricing_tms',
     confidence: 0.95,
-    message: `La sesión de Terapia Magnética Transcraneal tiene un costo de:\n\n💰 **$1,500 pesos mexicanos por sesión**\n\nPara conocer si este tratamiento es adecuado para ti, primero se realiza una valoración profesional.`,
+    message: TMS_PRICE_MESSAGE,
   },
   pricing_psicologia: {
     keywords: ['cuanto cuesta una sesion psicologica', 'cuánto cuesta una sesión psicológica', 'precio psicologia', 'costo psicologia', 'sesion psicologica cuesta'],
     action: 'respond',
     template: 'pricing_psicologia',
     confidence: 0.95,
-    message: `La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.`,
+    message: THERAPY_PRICE_MESSAGE,
   },
   tms_vs_medicamentos: {
     keywords: ['mejor que los medicamentos', 'en vez de medicamentos', 'sin medicamentos', 'medicamentos no funcionan', 'resistente a medicamentos', 'en lugar de pastillas'],
@@ -125,7 +131,7 @@ export class FreeSecretary implements AISecretaryAdapter {
     if (wantsPrice && (lower.includes('tms') || lower.includes('magnetica') || lower.includes('estimulacion'))) {
       return {
         action: 'respond',
-        message: `La sesión de Terapia Magnética Transcraneal tiene un costo de:\n\n💰 **$1,500 pesos mexicanos por sesión**\n\nPara conocer si este tratamiento es adecuado para ti, primero se realiza una valoración profesional.`,
+        message: TMS_PRICE_MESSAGE,
         confidence: 0.95,
         template: 'pricing_tms',
       };
@@ -133,7 +139,7 @@ export class FreeSecretary implements AISecretaryAdapter {
     if (wantsPrice && (lower.includes('psicolog') || lower.includes('terapia') || lower.includes('psiquiatr'))) {
       return {
         action: 'respond',
-        message: `La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.`,
+        message: THERAPY_PRICE_MESSAGE,
         confidence: 0.95,
         template: 'pricing_psicologia',
       };
@@ -179,7 +185,7 @@ export class FreeSecretary implements AISecretaryAdapter {
     if (this.matchesAny(lower, ['precio', 'costo', 'price', 'cuánto', 'honorarios', 'cuanto', 'cuanto cuesta', 'cuánto cuesta'])) {
       return {
         action: 'respond',
-        message: `Nuestros precios son:\n\n💰 **Terapia Magnética Transcraneal (TMS): $1,500 MXN por sesión**\n💰 **Terapia Psicológica: $500 MXN por sesión**\n\nSi deseas, puedo ayudarte a solicitar información para agendar una valoración.`,
+        message: PRICING_BOTH_MESSAGE,
         confidence: 0.9,
         template: 'pricing',
       };

@@ -1,5 +1,7 @@
 import type { Env } from '../../types';
 import { getAccessTokenFromDB } from '../../lib/calendar-oauth';
+// Fuente canónica ÚNICA de precios (definida en lib/ai-secretary.ts).
+import { TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE } from '../../lib/ai-secretary';
 
 // Agendamiento REAL Chat TMS — Google Calendar como fuente de verdad.
 // Sin horarios inventados: los slots derivan de la ventana de atención
@@ -370,9 +372,9 @@ export function extractPricingService(text: string): 'tms' | 'terapia' | null {
   if (t.includes('psicolog') || t.includes('terapia') || t.includes('psiquiatr')) return 'terapia';
   return null;
 }
-const PRICE_TMS = 'La sesión de Terapia Magnética Transcraneal tiene un costo de:\n\n💰 **$1,500 pesos mexicanos por sesión**\n\nPara conocer si este tratamiento es adecuado para ti, primero se realiza una valoración profesional.';
-const PRICE_TERAPIA = 'La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.';
-const PRICE_BOTH = 'Nuestros precios son:\n\n💰 **Terapia Magnética Transcraneal (TMS): $1,500 MXN por sesión**\n💰 **Terapia Psicológica: $500 MXN por sesión**\n\nSi deseas, puedo ayudarte a solicitar información para agendar una valoración.';
+const PRICE_TMS = TMS_PRICE_MESSAGE;
+const PRICE_TERAPIA = THERAPY_PRICE_MESSAGE;
+const PRICE_BOTH = PRICING_BOTH_MESSAGE;
 function pricingReplyFor(text: string, st?: BookingState): string {
   const svc = extractPricingService(text);
   if (svc === 'tms') return PRICE_TMS;
@@ -502,6 +504,20 @@ export function extractTime(text: string): string | null {
   return null;
 }
 
+// Distingue un cambio real de fecha ("y el lunes", "mañana", "22/09")
+// de un nombre de paciente que contiene un día ("Domingo Pérez").
+// El email siempre tiene prioridad y se evalúa antes de llamar aquí.
+const DATE_FILLER = ['pasado manana', 'manana', 'hoy', 'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'proximo', 'proxima', 'este', 'esta', 'el', 'la', 'los', 'las', 'y', 'mejor', 'para', 'de', 'en', 'un', 'una', 'que', 'viene', 'siguiente', 'quiero'];
+export function looksLikeDateChange(text: string): boolean {
+  if (!extractDate(text)) return false;
+  const t = norm(text);
+  if (/(mejor|cambi|otr)/.test(t)) return true;
+  let s = ` ${t} `;
+  const toks = [...DATE_FILLER].sort((a, b) => b.length - a.length);
+  for (const w of toks) s = s.split(` ${w} `).join(' ');
+  s = s.replace(/\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?/g, ' ').replace(/\d{1,2}/g, ' ');
+  return s.replace(/[^a-z]/g, '').length < 4;
+}
 export function extractEmail(text: string): string | null {
   const m = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   return m ? m[0] : null;
@@ -636,8 +652,18 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
   }
   // Slots reales desde Calendar
   if (st.step === 'need_slot') {
+    // CAMBIO DE FECHA (causa raíz 2026-09-14 "Y EL LUNES" → slots del sábado):
+    // una fecha nueva invalida selected_slot + availability anterior y fuerza
+    // una NUEVA consulta a Calendar. Nunca reutilizar slots de otra fecha.
+    const newDate = extractDate(text);
+    if (newDate && newDate !== st.date) {
+      st.date = newDate;
+      st.time = undefined;
+      st.offered_slots = undefined;
+    }
     let slots: Slot[] | undefined;
-    try { slots = st.offered_slots ? JSON.parse(st.offered_slots) as Slot[] : undefined; } catch { slots = undefined; }
+    try { slots = st.offered_slots ? (JSON.parse(st.offered_slots) as Slot[]).filter((s) => s.date === st.date) : undefined; } catch { slots = undefined; }
+    if (!slots || !slots.length) slots = undefined;
     if (!slots) {
       const avail = await getAvailableSlots(env, st.date as string);
       if (!avail.ok) {
@@ -657,7 +683,7 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
       }
       st.offered_slots = JSON.stringify(slots);
       await saveBookingState(env, sessionId, st);
-      return { handled: true, reply: `Estos son los horarios realmente disponibles:\n${formatSlots(slots)}\n¿Cuál prefieres?` };
+      return { handled: true, reply: `Estos son los horarios realmente disponibles para ${prettyDate(st.date as string)}:\n${formatSlots(slots)}\n¿Cuál prefieres?` };
     }
     // El usuario elige un slot ofrecido
     const picked = extractTime(text);
@@ -675,6 +701,21 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
   // Contacto mínimo
   if (st.step === 'need_contact') {
     const email = extractEmail(text);
+    // Cambio de fecha tardío ("mejor el lunes"): descarta la hora elegida y
+    // vuelve a slots con la nueva fecha. El email tiene prioridad: si el
+    // mensaje trae email se trata como contacto. looksLikeDateChange evita
+    // confundir un nombre ("Domingo Pérez") con un día de la semana.
+    if (!email && looksLikeDateChange(text)) {
+      const lateDate = extractDate(text) as string;
+      if (lateDate !== st.date) {
+        st.date = lateDate;
+        st.time = undefined;
+        st.offered_slots = undefined;
+        st.step = 'need_slot';
+        await saveBookingState(env, sessionId, st);
+        return await handleBookingTurn(env, sessionId, text, ip);
+      }
+    }
     if (!st.patient_name) {
       // Espera "Nombre — correo"; si solo hay correo, pide nombre y viceversa
       const nameGuess = email ? text.replace(email, '').replace(/[-–—]/g, ' ').trim() : text.trim();
@@ -714,9 +755,14 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
   // Confirmación explícita + recheck + creación
   if (st.step === 'need_confirm') {
     if (!isAffirmative(text) && !low.includes('confirm')) {
-      // Permite corregir datos antes de confirmar
-      const dt = extractDate(text);
-      const tm = extractTime(text);
+      // Permite corregir datos antes de confirmar. Guardias (causa raíz
+      // 2026-09-14): un contacto ("Domingo Pérez — dom@test.com") contiene
+      // un día de semana y NO es un cambio de fecha. Solo se corrige fecha
+      // ante un cambio real (looksLikeDateChange) y hora ante hora pura.
+      const dt = !extractEmail(text) && looksLikeDateChange(text) ? extractDate(text) : null;
+      const tmRaw = extractTime(text);
+      const hasLetters = /[a-záéíóúñü]/i.test(text);
+      const tm = tmRaw && (!hasLetters || /a\s+las/i.test(text) || looksLikeDateChange(text)) ? tmRaw : null;
       if (dt || tm) {
         if (dt) { st.date = dt; st.time = undefined; st.offered_slots = undefined; st.step = 'need_slot'; }
         else if (tm) { st.time = tm; }
