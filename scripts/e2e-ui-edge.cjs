@@ -22,9 +22,21 @@ function check(name, cond, detail = '') {
 
 async function main() {
   console.log(`E2E UI EDGE -> ${BASE}`);
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  const browser = await chromium.launch({
+    executablePath: EDGE,
+    headless: true,
+    args: [
+      '--use-fake-device-for-media-stream',
+      '--use-fake-ui-for-media-stream',
+      '--autoplay-policy=no-user-gesture-required',
+    ],
+  });
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      permissions: ['microphone'],
+    });
+    const page = await context.newPage();
 
     // 1. /chat: carga, input, enviar COSTO TMS, respuesta con precio.
     console.log('/chat:');
@@ -69,6 +81,25 @@ async function main() {
     // 5. Screenshot evidencia.
     await page.screenshot({ path: 'test-results/e2e-voz.png' });
     check('screenshot guardado', true);
+
+    // 6. Flujo micrófono vivo (dispositivo falso): Iniciar conversación ->
+    // grabación (12s) -> STT real -> transcripción o error honesto, sin crash
+    // ni burbujas vacías. Usa la implementación existente, nada simulado.
+    console.log('/voz mic:');
+    await page.goto(`${BASE}/voz`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.getByRole('button', { name: /iniciar escucha/i }).click();
+    // 12s de grabación + STT real + respuesta: la UI debe reaccionar
+    // (saludo, estado, error honesto o respuesta), nunca crashear.
+    await page.waitForTimeout(75000);
+    const micBody = await page.content();
+    const reacted = /estoy aquí para escucharte|pensando|escuchando|hablando/i.test(micBody)
+      || /no pude transcribir|no se capturó|micrófono|permiso/i.test(micBody);
+    check('mic fluye a estado/resultado sin crash', reacted);
+    const emptyBubbles = await page.evaluate(() => {
+      const ps = [...document.querySelectorAll('p.whitespace-pre-wrap')];
+      return ps.filter((p) => !(p.textContent || '').trim()).length;
+    });
+    check('sin burbujas vacías tras mic', emptyBubbles === 0, `vacías=${emptyBubbles}`);
   } finally {
     await browser.close();
   }
