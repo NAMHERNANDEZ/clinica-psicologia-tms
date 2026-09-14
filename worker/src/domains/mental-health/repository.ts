@@ -313,15 +313,24 @@ export async function exportUserData(env: Env, userId: number) {
      FROM mh_recommendations r JOIN mh_interventions i ON i.id = r.intervention_id
      WHERE r.user_id = ? ORDER BY r.created_at DESC`
   ).bind(userId).all()).results;
-  return { checkins, sessions, insights, consents, journal, recommendations };
+  let cbt_sessions: unknown[] = [];
+  try {
+    const { results } = await env.DB.prepare(`SELECT * FROM mh_cbt_sessions WHERE user_id = ? ORDER BY created_at DESC`).bind(userId).all();
+    cbt_sessions = results;
+  } catch { cbt_sessions = []; }
+  return { checkins, sessions, insights, consents, journal, recommendations, cbt_sessions };
 }
 
 export async function deleteAllUserData(env: Env, userId: number): Promise<void> {
   const tables = [
     'mh_intervention_sessions', 'mh_recommendations', 'mh_insights',
-    'mh_consents', 'mh_journal_entries', 'mh_checkins', 'mh_profiles',
+    'mh_consents', 'mh_journal_entries', 'mh_checkins', 'mh_profiles', 'mh_cbt_sessions',
   ];
   for (const table of tables) {
-    await env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(userId).run();
+    try {
+      await env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(userId).run();
+    } catch {
+      // tabla puede no existir en migraciones viejas — ignorar
+    }
   }
 }

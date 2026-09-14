@@ -5,6 +5,7 @@ import { useState } from 'react';
 const items = [
   { to: '/mh', label: 'Hoy', end: true },
   { to: '/mh/checkin', label: 'Check-in', end: false },
+  { to: '/mh/cbt', label: 'Sesión CBT', end: false },
   { to: '/mh/intervenciones', label: 'Intervenciones', end: false },
   { to: '/mh/assessments', label: 'Evaluaciones', end: false },
   { to: '/mh/insights', label: 'Insights', end: false },

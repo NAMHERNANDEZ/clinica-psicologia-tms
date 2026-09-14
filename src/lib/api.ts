@@ -1111,3 +1111,54 @@ export const mh = {
   deleteAccount: () =>
     request<{ success: boolean; data: { deleted: boolean; message: string } }>('/api/mh/account?confirm=1', { method: 'DELETE' }),
 };
+
+// ============================================
+// CBT — MH-EXPANSION 1.2 (sobre therapeutic-engine)
+// ============================================
+
+export interface CbtSession {
+  id: number;
+  user_id: number;
+  phase: string;
+  status: string;
+  situation: string | null;
+  automatic_thought: string | null;
+  emotion: string | null;
+  emotion_intensity: number | null;
+  behavior: string | null;
+  evidence_for: string | null;
+  evidence_against: string | null;
+  balanced_thought: string | null;
+  experiment: string | null;
+  experiment_outcome: string | null;
+  selected_strategy: string | null;
+  intervention_slug: string | null;
+  intervention_id: number | null;
+  before_score: number | null;
+  after_score: number | null;
+  delta: number | null;
+  insight: string | null;
+  next_step: string | null;
+  linked_checkin_id: number | null;
+  context_json: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const cbt = {
+  list: () => request<{ success: boolean; data: CbtSession[] }>('/api/mh/cbt/sessions'),
+  get: (id: number) => request<{ success: boolean; data: CbtSession }>(`/api/mh/cbt/sessions/${id}`),
+  create: (data: { linked_checkin_id?: number | null; before_score?: number | null; context_json?: string | null }) =>
+    request<{ success: boolean; data: { session: CbtSession; safety?: unknown; disclaimer?: string } }>('/api/mh/cbt/sessions', { method: 'POST', body: JSON.stringify(data) }),
+  patch: (id: number, data: Record<string, unknown>) =>
+    request<{ success: boolean; data: CbtSession }>(`/api/mh/cbt/sessions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  formulate: (id: number, data: Record<string, unknown>) =>
+    request<{ success: boolean; data: CbtSession }>(`/api/mh/cbt/sessions/${id}/formulate`, { method: 'POST', body: JSON.stringify(data) }),
+  strategy: (id: number) =>
+    request<{ success: boolean; data: { session: CbtSession; strategy: { selected_strategy: string; intervention_slug: string; reason: string; alternatives: string[]; confidence: number; disclaimer: string } } }>(`/api/mh/cbt/sessions/${id}/strategy`, { method: 'POST' }),
+  practice: (id: number, experiment?: string) =>
+    request<{ success: boolean; data: CbtSession }>(`/api/mh/cbt/sessions/${id}/practice`, { method: 'POST', body: JSON.stringify({ experiment }) }),
+  reevaluate: (id: number, data: { after_score: number; experiment_outcome?: string }) =>
+    request<{ success: boolean; data: { session: CbtSession; delta: number; insight: string; next_step: string } }>(`/api/mh/cbt/sessions/${id}/reevaluate`, { method: 'POST', body: JSON.stringify(data) }),
+  remove: (id: number) => request<{ success: boolean; data: { deleted: boolean } }>(`/api/mh/cbt/sessions/${id}`, { method: 'DELETE' }),
+};

@@ -59,6 +59,8 @@ const MhHistoryPage = lazy(() => import('./pages/mh/MhHistoryPage'));
 const MhPrivacyPage = lazy(() => import('./pages/mh/MhPrivacyPage'));
 const MhAssessmentsPage = lazy(() => import('./pages/mh/MhAssessmentsPage'));
 const MhAssessmentRunPage = lazy(() => import('./pages/mh/MhAssessmentRunPage'));
+const MhCbtPage = lazy(() => import('./pages/mh/MhCbtPage'));
+const MhCbtSessionPage = lazy(() => import('./pages/mh/MhCbtSessionPage'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -187,6 +189,8 @@ function App() {
               <Route path="/mh" element={<ProtectedRoute><MhLayout /></ProtectedRoute>}>
                 <Route index element={<MhHomePage />} />
                 <Route path="checkin" element={<MhCheckinPage />} />
+                <Route path="cbt" element={<MhCbtPage />} />
+                <Route path="cbt/:id" element={<MhCbtSessionPage />} />
                 <Route path="intervenciones" element={<MhInterventionsPage />} />
                 <Route path="intervenciones/:slug" element={<MhInterventionDetailPage />} />
                 <Route path="insights" element={<MhInsightsPage />} />

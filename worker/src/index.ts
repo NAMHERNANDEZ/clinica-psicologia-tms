@@ -76,6 +76,17 @@ import {
   handleMhListJournal,
   handleMhCreateJournal,
 } from './domains/mental-health/routes';
+import {
+  handleCbtCreateSession,
+  handleCbtListSessions,
+  handleCbtGetSession,
+  handleCbtPatchSession,
+  handleCbtFormulate,
+  handleCbtStrategy,
+  handleCbtPractice,
+  handleCbtReevaluate,
+  handleCbtDeleteSession,
+} from './domains/mental-health/cbt-routes';
 
 function generateRequestId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
@@ -559,6 +570,17 @@ export default {
       if (path === '/api/mh/consents' && method === 'POST') return withCors(() => handleMhUpsertConsent(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/mh/journal' && method === 'GET') return withCors(() => handleMhListJournal(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
       if (path === '/api/mh/journal' && method === 'POST') return withCors(() => handleMhCreateJournal(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+
+      // MH-EXPANSION 1.2: CBT integrado (sobre therapeutic-engine, sin duplicar catálogo)
+      if (path === '/api/mh/cbt/sessions' && method === 'POST') return withCors(() => handleCbtCreateSession(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path === '/api/mh/cbt/sessions' && method === 'GET') return withCors(() => handleCbtListSessions(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+\/strategy$/) && method === 'POST') return withCors(() => handleCbtStrategy(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+\/formulate$/) && method === 'POST') return withCors(() => handleCbtFormulate(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+\/practice$/) && method === 'POST') return withCors(() => handleCbtPractice(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+\/reevaluate$/) && method === 'POST') return withCors(() => handleCbtReevaluate(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+$/) && method === 'GET') return withCors(() => handleCbtGetSession(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+$/) && method === 'PATCH') return withCors(() => handleCbtPatchSession(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
+      if (path.match(/^\/api\/mh\/cbt\/sessions\/\d+$/) && method === 'DELETE') return withCors(() => handleCbtDeleteSession(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
 
       // FASE 5: TMS PROTOCOLS
       if (path === '/api/tms/protocols' && method === 'GET') return withCors(() => handleGetProtocols(env, request, user!, corsHeaders), corsHeaders, requestId, env, request, user!);
