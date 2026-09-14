@@ -1,5 +1,14 @@
 # SESSION_HANDOFF.md
 
+## Fix VOZ-EXISTENTE (2026-09-14, COMMITS 25c3a83+d28f0fa+646534f + DEPLOY worker 49b4b47c - PASS PRODUCCION)
+
+- **PREMISA (correcta)**: no reemplazar nada. Stack existente: VoiceChat + /api/voice/chat + sttRouter/ttsRouter + voice/routes.ts + keys en prod (GEMINI + OPENROUTER presentes).
+- **HALLAZGO 1 (contrato roto)**: /api/chat/stt devolvía {success,data:{transcript}} pero VoiceChat exige {success,text} top-level -> TODA transcripción exitosa se descartaba y la voz quedaba "incompleta". Fix: toSttClientPayload() plano en voice-provider-router (server, aditivo: conserva transcript) + mismo uso en index.ts. Cero cambios frontend. Único consumidor verificado.
+- **HALLAZGO 2 (catálogo podrido, evidencia tail en vivo)**: Gemini STT 404 (gemini-2.5-flash-preview retirado) + OpenRouter STT 403 (modelos harness-only) + LLM 503 (gemini-2.0-flash retirado; Google sugiere gemini-3.6-flash; OpenRouter gemma 429 transitorio). Fix SOLO IDs (misma arquitectura): DEFAULT_MODEL y STT -> gemini-3.6-flash (GA, audio in, docs oficiales) + fallback gemini-3.5-flash ante 503. TTS intacto (fish-audio vivo; gemini-2.5-flash-preview-tts sigue documentado).
+- **TESTS**: voice-stt-contract 6/6 (contrato + router hermético + sin modelos retirados). Suite 347/347. Typecheck PASS.
+- **E2E PRODUCCION (implementación existente)**: STT transcribe real "Hola." (wav del repo) con success/text; TTS mp3 57KB; voice/chat voice=true con audio; LLM revivido (HOLA 200); mic Edge con dispositivo falso -> flujo sin crash ni burbujas vacías. Smoke 29/29, UI Edge 14/14.
+- **PROXIMO**: MH-EXPANSION 1.2 (CBT); fase 2 externa: challenge con codigo, recordatorios 24/48h, no-show.
+
 ## Fix CRISIS-SAFETY + VOZ UI + MATRIZ (2026-09-14, COMMITS f1dc857+495eab4+4147dc5 + DEPLOY worker eea6ed5b + Pages 16588592 - PASS PRODUCCION)
 
 - **INCIDENTE CRITICO**: "kme quiero matar" -> horarios. Causa doble: (1) looksLikeCrisis no matcheaba ("quiero matar" separado no contiene "matarme"); con booking state residual need_slot reenviaba slots. (2) assessSafety+buildCrisisResponse existian pero MUERTOS (solo los usa un .bak); ningun path vivo los llamaba; crisis dependia de LLM FREE (caido -> 503 -> fallback secretary sin crisis).

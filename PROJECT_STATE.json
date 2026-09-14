@@ -1,14 +1,14 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T07:30:00.000Z",
+  "updatedAt": "2026-09-14T08:30:00.000Z",
   "phase": {
-    "current": "CRISIS-SAFETY + VOZ UI + MATRIZ E2E",
-    "name": "Incidente critico kme-quiero-matar->horarios CERRADO: detector tolerante + crisisGate determinista server-side en /api/voice/chat + /api/chat + secretary (reusa safety-router/crisis-handler, sin LLM); ruta /voz montada + link; matriz chat-matrix 43/43; frontend 26/26; gate pre-deploy; smoke prod 21/21; E2E UI Edge 12/12. Deploy worker eea6ed5b + Pages 16588592.",
+    "current": "VOZ EXISTENTE AUDITADA Y REPARADA (sin reemplazos)",
+    "name": "Stack voz existente reparado: IDs vigentes gemini-3.6-flash (LLM+STT) + fallback 3.5 + contrato STT plano success/text; TTS intacto (fish-audio vivo). Commits 25c3a83+d28f0fa+646534f. Deploy worker 49b4b47c. Smoke prod 29/29, E2E UI Edge 14/14.",
     "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "4147dc5",
-    "message": "feat(e2e): UI real Edge /chat+/voz + screenshot evidencia"
+    "hash": "646534f",
+    "message": "feat(e2e): STT/TTS/chain vivos en smoke + tramo microfono en Edge"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -18,17 +18,17 @@
   "build": {
     "typecheck": "PASS (tsc worker --noEmit 0 errores)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS worker 341/341 (25 archivos, incluye chat-matrix 43/43) + frontend 26/26 (incluye VoiceChat 5/5 + Chat 3/3)",
-    "frontendBuild": "PASS (vite 38s; regen frontend-assets.ts 97 assets; Worker eea6ed5b + Pages 16588592)"
+    "tests": "PASS worker 347/347 (26 archivos, incluye voice-stt-contract 6/6) + frontend 26/26",
+    "frontendBuild": "SKIP (sin cambios frontend esta vez)"
   },
   "deploy": {
-    "worker": "8a30a7f4-aa05-428d-9247-dc2058b0f6ff (previo 2977dfa5)",
+    "worker": "49b4b47c-527f-4978-b2e7-4a9e23d468d9 (previo eea6ed5b)",
     "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev (sin cambios)",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS: crisis kme-quiero-matar->safety-deterministic sin slots (voice+secretary); smoke 21/21; E2E UI Edge 12/12 (/chat precio+link /voz, /voz controles+respuesta, screenshot); /voz 200.",
+  "e2eProduction": "PASS: STT vivo transcribe Hola. (gemini-3.6-flash) con contrato success/text; TTS vivo mp3 57KB; voice/chat voice=true con audio; LLM revivido (gemini-3.6-flash); smoke 29/29; E2E UI Edge 14/14 (incl. tramo microfono con dispositivo falso).",
   "chatPricingFix": {
     "commit": "9ba0296",
     "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",
