@@ -385,6 +385,24 @@ describe('ciclo de vida solicitud -> verificacion -> confirmacion -> cita', () =
     expect((sixth as { code?: string }).code).toBe('identity_limit');
   });
 
+  it('domingo se rechaza en solicitud (días Lun–Sáb)', async () => {
+    const sunday = (() => {
+      const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' });
+      const d = new Date(Date.now() + 24 * 3600 * 1000);
+      for (let i = 0; i < 10; i++) {
+        const s = fmt.format(d);
+        if (new Date(s + 'T12:00:00Z').getUTCDay() === 0) return s;
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      throw new Error('sin domingo futuro');
+    })();
+    const r = await createBookingRequest(ctx.env, {
+      sessionId: 's-dom', ip: '127.0.0.1', apptType: 'TMS', modality: 'presencial',
+      date: sunday, time: '10:00', name: 'Domingo Test', email: 'domingo@x.com', phone: '2311442998',
+    });
+    expect(r.ok).toBe(false);
+  });
+
   it('mover hold a slot libre ok; a slot ocupado falla y conserva anterior', async () => {
     const id = await verifiedReq(ctx, { name: 'Mueve', email: 'mueve@x.com', phone: '2311442955', date, time: '09:00', sid: 's-mv' });
     const other = await verifiedReq(ctx, { name: 'Segunda Persona', email: 'otro@x.com', phone: '2311442966', date, time: '11:00', sid: 's-mv2' });

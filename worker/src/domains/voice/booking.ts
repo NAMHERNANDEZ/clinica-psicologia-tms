@@ -574,6 +574,9 @@ export async function createBookingRequest(env: Env, input: RequestInput): Promi
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(input.date) && input.date >= clinicToday();
   const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(input.time);
   if (!dateOk || !timeOk) return { ok: false, code: 'invalid_request', error: 'Fecha u horario inválidos.' };
+  if (!CLINIC_SCHEDULE.days.includes(weekdayOf(input.date))) {
+    return { ok: false, code: 'invalid_request', error: 'Ese día no hay atención (Lun–Sáb). Elige otro día.' };
+  }
   if (!isPlausiblePatientName(input.name)) return { ok: false, code: 'invalid_contact', error: 'Necesito el nombre real del paciente.' };
   if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(input.email)) return { ok: false, code: 'invalid_contact', error: 'El correo no tiene un formato válido.' };
   const phone = normalizePhoneMX(input.phone);
@@ -663,6 +666,7 @@ export async function updateBookingRequestSlot(env: Env, id: number, date: strin
   const req = await getBookingRequest(env, id);
   if (!req || (req.status !== 'requested' && req.status !== 'verified')) return { ok: false, code: 'invalid_request' };
   if (req.date === date && req.time === time) return { ok: true };
+  if (!CLINIC_SCHEDULE.days.includes(weekdayOf(date))) return { ok: false, code: 'invalid_request', error: 'Ese día no hay atención (Lun–Sáb).' };
   if (await slotBlockedByOthers(env, date, time, id)) return { ok: false, code: 'slot_taken' };
   const claimed = await claimSlot(env, date, time, (req.session_id || `req-${id}`).slice(0, 80), id);
   if (!claimed) return { ok: false, code: 'slot_taken' };
