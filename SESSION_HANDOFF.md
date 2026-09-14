@@ -1,5 +1,15 @@
 # SESSION_HANDOFF.md
 
+## Fix forense CHAT-PRICING-MODALITY (2026-09-14, COMMIT 9ba0296 + DEPLOY b66adb6d - PASS PRODUCCION)
+
+- **ROOT CAUSE (probada, no asumida)**: looksLikeBooking incluia 'consulta'/'valoraci' -> CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad. Y wantsBooking con state residual != idle -> COSTO caia en need_slot -> horarios. Sin prioridad PRICING.
+- **FIX (backend)**: looksLikePricing+extractPricingService+pricingReplyFor en booking.ts antes de booking, sin mutar state. TMS=presencial automatico. Misma regla en ai-secretary.ts (fallback /api/chat). Precios canonicos: TMS $1,500 / psico $500.
+- **TESTS**: chat-pricing-modality 21/21. Suite 271/271. Typecheck PASS. Dry-run PASS.
+- **DEPLOY**: Worker b66adb6d (sin cambios frontend). booking.ts vivia untracked y se commiteo en esta unidad; voice/routes.ts y resto de voice/ SIGUEN untracked (skew parcial preexistente, fuera de alcance).
+- **E2E PRODUCCION PASS**: COSTO/CUANTO/PRECIO->precios; COSTO TMS y CUANTO LA CONSULTA TMS->$1,500; COSTO TERAPIA->$500; AGENDAR TMS->fecha directo + slots reales Calendar 19-sep; AGENDAR PSICOLOGIA->pregunta modalidad; switch booking->COSTO->precio->retoma slots; /api/chat->pricing_tms; /chat 200; 0 burbujas vacias; 0 <svg.
+- **SVG**: no reproducido (respuestas texto plano). Guard en tests: ninguna respuesta contiene <svg.
+- **PROXIMO**: MH-EXPANSION 1.2 (CBT) + decidir commit del resto de voice/ untracked.
+
 ## Reconciliación SECRETARY (2026-09-12, COMMIT 6705a07 + DEPLOY d20f53b8 — SKEW CERRADO)
 
 - **Commit unidad independiente**: `6705a07` (index.ts + secretary/routes.ts + Chat.tsx + secretary-chat.test.ts). Fuera: migraciones 0038/0039, chat-ai-regression, evidence/bak (otras tareas).

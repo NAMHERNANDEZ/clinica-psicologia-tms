@@ -1,14 +1,14 @@
-{
+﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-12T23:05:00.000Z",
+  "updatedAt": "2026-09-14T02:05:00.000Z",
   "phase": {
-    "current": "SECRETARY-RECONCILIACION — commit independiente + deploy reproducible",
-    "name": "Secretary /api/chat commiteado como unidad propia (6705a07): handleChat en dominio propio, contrato plano, fix burbujas vacias. Cadena reproducible completa + deploy d20f53b8 + Pages f39ed4d8 + E2E PASS. Skew a63d0b10-vs-HEAD CERRADO.",
-    "status": "PRODUCTION_PASS_COMMITTED_REPRODUCIBLE"
+    "current": "CHAT-PRICING-MODALITY â€” PRICING>AVAILABILITY + TMS siempre presencial",
+    "name": "Fix forense chat (9ba0296): COSTO nunca entra a availability; CUANTO LA CONSULTA TMS responde precio; TMS=presencial automatico; terapia si pregunta modalidad. Deploy b66adb6d + E2E produccion PASS. voice/routes.ts y resto de voice/ siguen untracked (skew parcial preexistente).",
+    "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "6705a07",
-    "message": "refactor(chat): Secretary /api/chat a dominio propio con contrato plano"
+    "hash": "9ba0296",
+    "message": "fix(chat): PRICING>AVAILABILITY + TMS siempre presencial"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -16,19 +16,25 @@
     "note": "Secretary reconciliado en 6705a07. MH-EXPANSION 1.1 en 7463c67. Resto WIP pertenece a otras tareas."
   },
   "build": {
-    "typecheck": "PASS (tsc worker --noEmit 0 errores, arbol 6705a07)",
+    "typecheck": "PASS (tsc worker --noEmit 0 errores, arbol 9ba0296)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS 227/227 (worker, incluye secretary-chat 4/4) + 18/18 (frontend)",
-    "frontendBuild": "PASS (vite build; regen frontend-assets.ts SIN diff = bytes identicos -> reproducibilidad probada; Pages subio 0 archivos)"
+    "tests": "PASS 271/271 (worker, 22 archivos, incluye chat-pricing-modality 21/21)",
+    "frontendBuild": "SKIP (sin cambios frontend; assets intactos)"
   },
   "deploy": {
-    "worker": "d20f53b8-02a5-4440-a6f9-ca3fd2fceacc",
-    "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev",
+    "worker": "b66adb6d-5b2e-47c0-86c3-f8378328aed0 (previo d20f53b8-02a5-4440-a6f9-ca3fd2fceacc)",
+    "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev (sin cambios)",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS (deploy d20f53b8): chat flat 200 action=respond len=322 sin data anidada (identico a a63d0b10) + MH register->login->scales 6->list 0->preview 8/16-moderate->create id4 score8->list 1->detail 4 resp->cleanup True. Assets 5/5 MATCH (mismos hashes que a63d0b10).",
+  "e2eProduction": "PASS (deploy b66adb6d): COSTO/CUANTO/PRECIO->ambos precios sin horarios; COSTO TMS y CUANTO LA CONSULTA TMS->$1,500 sin modalidad; COSTO TERAPIA->$500; QUIERO AGENDAR TMS->pregunta fecha directo (presencial auto) + el sabado->slots reales Calendar 19-sep; QUIERO AGENDAR PSICOLOGIA->pregunta modalidad; switch agendar->COSTO->precio ctx->quiero agendar->retoma slots; /api/chat CUANTO LA CONSULTA TMS->pricing_tms; /chat 200; sin <svg en respuestas.",
+  "chatPricingFix": {
+    "commit": "9ba0296",
+    "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",
+    "files": ["worker/src/domains/voice/booking.ts", "worker/src/lib/ai-secretary.ts", "worker/test/chat-pricing-modality.test.ts"],
+    "rule": "PRICING > AVAILABILITY; TMS siempre presencial; pricing no muta booking state"
+  },
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",
     "queueDir": "bridge/queue",
@@ -36,7 +42,7 @@
     "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"]
   },
   "nextAction": {
-    "label": "MH-EXPANSION 1.2 (CBT integrado) desbloqueado para diseno y deploy: repo y produccion reconciliados (HEAD == runtime).",
-    "detail": "Cierre global: MH BASE + MH-EXPANSION 1.0 + 1.1 + SECRETARY = PASS reproducible. STT 500 = config voz preexistente (sin keys), fuera de alcance."
+    "label": "MH-EXPANSION 1.2 (CBT integrado) sigue desbloqueado; decidir commit del resto de voice/ untracked.",
+    "detail": "Cierre chat-pricing PASS b66adb6d. Pendiente ajeno: voice/routes.ts y resto de voice/ siguen untracked (base del booking que produccion ya ejecuta). STT 500 = config voz preexistente (sin keys), fuera de alcance."
   }
 }
