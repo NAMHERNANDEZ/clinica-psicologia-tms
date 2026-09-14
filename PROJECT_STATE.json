@@ -1,14 +1,14 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T04:30:00.000Z",
+  "updatedAt": "2026-09-14T06:00:00.000Z",
   "phase": {
-    "current": "CHAT-BOOKING-DATE-CHANGE — fecha nueva invalida slots viejos",
-    "name": "Fix booking date-change (0148f2e): need_slot/need_contact/need_confirm detectan fecha nueva, limpian slot, nueva consulta Calendar; fuente canonica de precios en ai-secretary.ts. Deploy e88a829f + E2E produccion PASS (crear+cancelar real).",
+    "current": "BOOKING-INTEGRITY — solicitud->verificacion->confirmacion",
+    "name": "Anti-abuso reservas (ec1a14b+20ba858): booking_requests con estados, telefono requerido+MX, 1pend+1act por identidad, holds 15min con expiracion, flagging, gate Calendar en backend, API directa pending->confirm, sweeper en cron. Migracion 0045. Deploy 8a30a7f4 + E2E produccion PASS.",
     "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "0148f2e",
-    "message": "fix(chat): cambio de fecha invalida slots viejos + fuente canonica de precios"
+    "hash": "20ba858",
+    "message": "fix(booking): solicitudes solo en dias de atencion Lun-Sab"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -16,19 +16,19 @@
     "note": "Secretary reconciliado en 6705a07. MH-EXPANSION 1.1 en 7463c67. Resto WIP pertenece a otras tareas."
   },
   "build": {
-    "typecheck": "PASS (tsc worker --noEmit 0 errores, arbol 0148f2e)",
+    "typecheck": "PASS (tsc worker --noEmit 0 errores)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS 282/282 (worker, 23 archivos, incluye booking-date-change 11/11 + chat-pricing-modality 21/21)",
-    "frontendBuild": "SKIP (sin cambios frontend; assets intactos)"
+    "tests": "PASS 298/298 (worker, 24 archivos, incluye booking-integrity 15/15)",
+    "frontendBuild": "SKIP (sin cambios frontend)"
   },
   "deploy": {
-    "worker": "e88a829f-8e34-4466-826e-c12607389ea5 (previo b66adb6d)",
+    "worker": "8a30a7f4-aa05-428d-9247-dc2058b0f6ff (previo 2977dfa5)",
     "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev (sin cambios)",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS (deploy e88a829f): TMS->sabado slots 19-sep->Y EL LUNES->slots lunes 14-sep fechados (0 replay sabado); 14:00 ocupado rechazado; 15:00->contacto->confirm->evento real creado->cancelado OK; terapia en linea->sabado->mejor el lunes->slots lunes; COSTO/CUANTO LA CONSULTA TMS intactos; /chat 200.",
+  "e2eProduction": "PASS (deploy 8a30a7f4): chat TMS->sabado->slot->nombre+email+telefono->solicitud 15min->confirm->evento real->cancelado (D1 request #1 cancelled, #2 verified expira solo); API directa pending (sin evento) + duplicado 429 identity_limit; domingo rechazado; Y EL LUNES + pricing intactos.",
   "chatPricingFix": {
     "commit": "9ba0296",
     "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",

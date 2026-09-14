@@ -1,5 +1,16 @@
 # SESSION_HANDOFF.md
 
+## Fix BOOKING-INTEGRITY (2026-09-14, COMMITS ec1a14b+20ba858 + DEPLOY 8a30a7f4 - PASS PRODUCCION)
+
+- **OBJETIVO**: "crear cita" -> solicitud -> verificacion -> confirmacion -> cita. Un "si" ya no crea evento directo.
+- **AUDIT PREVIO**: rate_limits sin DDL en repo (existe en prod; caps de booking estaban vivos solo a medias); automation = notificaciones internas, SIN canal de envio externo (Twilio/Resend/SMTP inexistentes) -> codigos por SMS/email quedan FASE 2 documentada; appointments exige patient_id/therapist NOT NULL y reminders leen appointments -> recordatorios 24/48h para chat quedan FASE 2 (requieren linkage + canal); /api/voice/appointments sin consumidores frontend -> contrato evolucionado a pending->confirm.
+- **SCHEMA (migracion 0045, aplicada remoto via execute --file; journal D1 casi vacio, precedente 0042-44)**: rate_limits (IF NOT EXISTS, igual a prod) + booking_requests (requested/verified/confirmed/cancelled/expired/flagged, hashes, TTL, auditoria) + request_id en claims y sessions. OJO: `migrations apply` falla en 005 preexistente (duplicate column) -> usar execute --file.
+- **MOTOR**: telefono MX requerido; 1 pendiente + 1 activa por identidad (hashes SHA-256); rafaga sesion 5/dia; flagging (3 nombres/telefono, 3 cancelaciones -> REVIEW_REQUIRED); holds 15min excluidos de availability + lazy expiry + sweeper en cron; flip atomico verified->confirmed (doble si); gate requestId en createBookingEvent (chat + directa); directa en 2 pasos con match de contacto; solo dias Lun-Sab.
+- **TESTS**: booking-integrity 15/15 (ciclo, gate, caps, TTL, sweeper, flagging, rafaga, move-hold, directa x3, chat telefono, domingo). Suite 298/298. Typecheck PASS. Raices halladas por tests: verify se autobloqueaba (exclusion own-request) y el hold propio chocaba con su PK en confirm (ownLiveHold + flip).
+- **E2E PRODUCCION PASS**: chat completo -> evento real -> cancel (D1 #1 cancelled con auditoria); directa pending sin evento + duplicado 429; domingo rechazado; date-change y pricing intactos. Residuo: request #2 (domingo, pre-fix) expira solo sin evento.
+- **FASE 2 (bloqueadores externos)**: challenge con codigo (requiere proveedor envio + keys), recordatorios 24/48h (requieren linkage appointments + canal), escalamiento no-show (requiere registro de asistencia por staff).
+- **PROXIMO**: MH-EXPANSION 1.2 (CBT) + decidir commit del resto de voice/ untracked (routes.ts base ya commiteada en ec1a14b por necesidad).
+
 ## Fix BOOKING-DATE-CHANGE (2026-09-14, COMMIT 0148f2e + DEPLOY e88a829f - PASS PRODUCCION)
 
 - **ROOT CAUSE**: need_slot jamas extraia fecha del mensaje y reenviaba offered_slots cacheados (Y EL LUNES -> slots del sabado). Segunda raiz hallada por tests: need_confirm corregia fecha con cualquier texto con dia de semana (Domingo Perez -> cambiaba fecha a domingo en el mismo turno del contacto).
