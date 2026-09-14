@@ -141,47 +141,55 @@ export async function geminiSTTRouter(
     return { result: null, provider: 'gemini', error: 'GEMINI_API_KEY no configurada' };
   }
   try {
-    const model = 'gemini-3.6-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // Modelos multimodales GA vigentes con entrada de audio (2026-09).
+    // Se prueban en orden; el 3.6 puede responder 503 por saturación.
+    const models = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+    let lastError = 'sin intentos';
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-    const bytes = new Uint8Array(audioData);
-    let binary = '';
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    const base64 = btoa(binary);
+      const bytes = new Uint8Array(audioData);
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const base64 = btoa(binary);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: `Transcribe exactamente este audio en ${language === 'es' ? 'español' : 'inglés'}. Responde solo con la transcripción, sin comentarios.` },
-              { inline_data: { mime_type: mimeType, data: base64 } },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0, maxOutputTokens: 300 },
-      }),
-    });
-    if (!response.ok) {
-      return { result: null, provider: `gemini:${model}`, error: `Gemini STT HTTP ${response.status}` };
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: `Transcribe exactamente este audio en ${language === 'es' ? 'español' : 'inglés'}. Responde solo con la transcripción, sin comentarios.` },
+                { inline_data: { mime_type: mimeType, data: base64 } },
+              ],
+            },
+          ],
+          generationConfig: { temperature: 0, maxOutputTokens: 300 },
+        }),
+      });
+      if (!response.ok) {
+        lastError = `Gemini STT HTTP ${response.status} (${model})`;
+        continue;
+      }
+      const data = (await response.json()) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      const text = (data.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text || '')
+        .join('')
+        .trim();
+      if (!text) {
+        lastError = `transcripción vacía (${model})`;
+        continue;
+      }
+      return { result: text, provider: `gemini:${model}` };
     }
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = (data.candidates?.[0]?.content?.parts ?? [])
-      .map((p) => p.text || '')
-      .join('')
-      .trim();
-    if (!text) {
-      return { result: null, provider: `gemini:${model}`, error: 'transcripción vacía' };
-    }
-    return { result: text, provider: `gemini:${model}` };
+    return { result: null, provider: 'gemini', error: lastError };
   } catch (err) {
     console.error('[geminiSTTRouter] error:', err);
     return { result: null, provider: 'gemini', error: String(err) };
