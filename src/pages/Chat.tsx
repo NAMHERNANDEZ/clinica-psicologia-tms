@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Calendar, Phone, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Send, Bot, User, Calendar, Phone, Clock, Mic } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const RAW_URL = import.meta.env.VITE_API_URL;
@@ -262,7 +263,16 @@ export default function Chat() {
           </div>
 
           {/* Quick Actions */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/voz"
+              className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            >
+              <Mic className="w-5 h-5 text-teal-500" />
+              <span className="text-sm font-medium text-navy-900">
+                {language === 'es' ? 'Hablar por voz' : 'Talk by voice'}
+              </span>
+            </Link>
             <button
               onClick={() => setInputValue(language === 'es' ? 'Quiero agendar una cita' : 'I want to schedule an appointment')}
               className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"

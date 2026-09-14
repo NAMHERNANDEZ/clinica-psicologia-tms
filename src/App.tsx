@@ -23,6 +23,7 @@ const Terms = lazy(() => import('./pages/Terms'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Chat = lazy(() => import('./pages/Chat'));
+const VoiceChat = lazy(() => import('./components/VoiceChat'));
 const DashboardRouter = lazy(() => import('./pages/DashboardRouter'));
 const ReceptionDashboard = lazy(() => import('./pages/app/ReceptionDashboard'));
 const TherapistDashboard = lazy(() => import('./pages/app/TherapistDashboard'));
@@ -139,6 +140,7 @@ function App() {
               <Route path="/faq" element={<><Header /><main className="flex-grow"><FAQ /></main><Footer /><WhatsAppButton /></>} />
               <Route path="/contacto" element={<><Header /><main className="flex-grow"><Contact /></main><Footer /><WhatsAppButton /></>} />
               <Route path="/chat" element={<><Header /><main className="flex-grow"><Chat /></main><Footer /><WhatsAppButton /></>} />
+              <Route path="/voz" element={<><Header /><main className="flex-grow"><section className="py-8 bg-slate-50 min-h-[calc(100vh-300px)]"><div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-[600px]"><VoiceChat /></div></section></main><Footer /><WhatsAppButton /></>} />
               <Route path="/privacidad" element={<><Header /><main className="flex-grow"><Privacy /></main><Footer /><WhatsAppButton /></>} />
               <Route path="/terminos" element={<><Header /><main className="flex-grow"><Terms /></main><Footer /><WhatsAppButton /></>} />
               <Route path="/login" element={<Login />} />

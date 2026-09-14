@@ -2,6 +2,7 @@
 import { checkCalendarAvailability, createCalendarAppointment, type AppointmentData } from '../../ai/services/realtime-voice';
 import { ttsRouter } from '../../routes/voice-provider-router';
 import { generateWithGemini } from '../../ai/providers/gemini';
+import { crisisGate } from '../../ai/services/crisis-handler';
 import { handleBookingTurn } from './booking';
 import { getClientIP } from '../../lib/rate-limit';
 import { limitChatText } from '../../lib/input-limits';
@@ -190,6 +191,30 @@ export async function handleVoiceChat(env: Env, request: Request, corsHeaders: R
     const sessionId = body.sessionId || `chat_${Date.now().toString(36)}`;
     const isVoice = body.voice ?? true;
     const llmPrimary = body.llm === 'openrouter' ? 'openrouter' : 'gemini';
+
+    // SAFETY GATE (prioridad máxima, server-side, determinista, sin LLM):
+    // crisis NUNCA entra a booking/Calendar/pricing. Respuesta inmediata 200.
+    const gate = crisisGate(body.message);
+    if (gate.crisis) {
+      addToSessionHistory(sessionId, 'user', body.message);
+      addToSessionHistory(sessionId, 'assistant', gate.message);
+      let crisisAudio: string | undefined;
+      let crisisMime: string | undefined;
+      if (isVoice) {
+        try {
+          const spoken = await callVoiceTTS(env, gate.message);
+          if (spoken) { crisisAudio = spoken.audio; crisisMime = spoken.audioMime; }
+        } catch { /* texto manda: jamás 503 ante crisis */ }
+      }
+      return json({
+        success: true,
+        message: gate.message,
+        audio: crisisAudio,
+        audioMime: crisisMime,
+        provider: 'safety-deterministic',
+        crisis: true,
+      }, 200, corsHeaders);
+    }
 
     // Build conversation history
     const history = getSessionHistory(sessionId);

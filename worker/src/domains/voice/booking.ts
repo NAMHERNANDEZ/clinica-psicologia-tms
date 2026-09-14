@@ -2,6 +2,8 @@ import type { Env } from '../../types';
 import { getAccessTokenFromDB } from '../../lib/calendar-oauth';
 // Fuente canónica ÚNICA de precios (definida en lib/ai-secretary.ts).
 import { TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE } from '../../lib/ai-secretary';
+// Detector de crisis tolerante (una sola fuente de verdad, sin duplicar).
+import { assessSafety } from '../../ai/services/safety-router';
 
 // Agendamiento REAL Chat TMS — Google Calendar como fuente de verdad.
 // Sin horarios inventados: los slots derivan de la ventana de atención
@@ -790,7 +792,13 @@ export async function countBookingCreate(env: Env, ip: string): Promise<void> {
 const CRISIS_WORDS = ['suicid', 'matarme', 'matar me', 'quitarme la vida', 'autolesi', 'hacerme daño', 'emergencia'];
 export function looksLikeCrisis(text: string): boolean {
   const t = text.toLowerCase();
-  return CRISIS_WORDS.some((w) => t.includes(w));
+  if (CRISIS_WORDS.some((w) => t.includes(w))) return true;
+  // Tier-1 tolerante (typos/acentos/mayúsculas): una sola fuente de verdad.
+  try {
+    return assessSafety(text).level === 'EMERGENCIA';
+  } catch {
+    return false;
+  }
 }
 
 const BOOK_WORDS = ['cita', 'agendar', 'agenda', 'reservar', 'reserva', 'appointment', 'consulta', 'valoraci'];

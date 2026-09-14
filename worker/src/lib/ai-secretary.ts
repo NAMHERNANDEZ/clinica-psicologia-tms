@@ -1,3 +1,5 @@
+import { crisisGate } from '../ai/services/crisis-handler';
+
 export interface AIResponse {
   action: 'respond' | 'clarify' | 'create_appointment' | 'transfer_human';
   message: string;
@@ -110,6 +112,11 @@ export class FreeSecretary implements AISecretaryAdapter {
   }
 
   async processMessage(message: string): Promise<AIResponse> {
+    // SAFETY GATE primero (defensa en profundidad; las rutas ya lo aplican).
+    const gate = crisisGate(message);
+    if (gate.crisis) {
+      return { action: 'transfer_human', message: gate.message, confidence: 1, template: 'crisis' };
+    }
     const lower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     // Knowledge base rules (specific first)

@@ -1,6 +1,7 @@
 import type { Env } from '../../types';
 import { limitChatText } from '../../lib/input-limits';
 import { createSecretary } from '../../lib/ai-secretary';
+import { crisisGate } from '../../ai/services/crisis-handler';
 import { extractLeadFromMessage } from '../leads/extractor';
 import { handleCreateLead } from '../leads/routes';
 
@@ -30,6 +31,23 @@ export async function handleChat(env: Env, request: Request, corsHeaders: Record
   const safeMessage = limitChatText(body.message);
   if (!safeMessage) {
     return jsonError('message is required', 400, corsHeaders, requestId);
+  }
+  // SAFETY GATE (prioridad máxima, determinista): crisis NUNCA entra a
+  // secretary/booking. Contrato plano igual que el resto de respuestas.
+  const gate = crisisGate(safeMessage);
+  if (gate.crisis) {
+    return new Response(JSON.stringify({
+      success: true,
+      action: 'transfer_human',
+      message: gate.message,
+      template: 'crisis',
+      confidence: 1,
+      crisis: true,
+      requestId,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
   }
   const secretary = createSecretary('free');
   const result = await secretary.processMessage(safeMessage);
