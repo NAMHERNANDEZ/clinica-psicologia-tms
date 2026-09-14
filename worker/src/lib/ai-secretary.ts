@@ -118,6 +118,27 @@ export class FreeSecretary implements AISecretaryAdapter {
       }
     }
 
+    // Pricing con servicio combinado (ej. "cuanto la consulta TMS"):
+    // PRICING > BOOKING. Va ANTES de appointment porque "consulta" también
+    // es palabra de booking. TMS nunca pregunta modalidad (siempre presencial).
+    const wantsPrice = lower.includes('cuanto') || lower.includes('precio') || lower.includes('costo') || lower.includes('cuesta') || lower.includes('tarifa') || lower.includes('vale');
+    if (wantsPrice && (lower.includes('tms') || lower.includes('magnetica') || lower.includes('estimulacion'))) {
+      return {
+        action: 'respond',
+        message: `La sesión de Terapia Magnética Transcraneal tiene un costo de:\n\n💰 **$1,500 pesos mexicanos por sesión**\n\nPara conocer si este tratamiento es adecuado para ti, primero se realiza una valoración profesional.`,
+        confidence: 0.95,
+        template: 'pricing_tms',
+      };
+    }
+    if (wantsPrice && (lower.includes('psicolog') || lower.includes('terapia') || lower.includes('psiquiatr'))) {
+      return {
+        action: 'respond',
+        message: `La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.`,
+        confidence: 0.95,
+        template: 'pricing_psicologia',
+      };
+    }
+
     // Appointment request (capture 6 fields)
     if (this.matchesAny(lower, ['agendar', 'cita', 'appointment', 'reservar', 'booking', 'quiero una cita', 'quiere una cita', 'solicitar cita'])) {
       return {
