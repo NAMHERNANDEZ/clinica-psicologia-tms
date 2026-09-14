@@ -2,7 +2,11 @@
 
 Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_STATE.json`.
 
-## Fase actual: MH-EXPANSION 1.1 — FRONTEND /mh/assessments (bienestar)
+## Fase actual: SECRETARY-RECONCILIACIÓN + MH-EXPANSION 1.2 siguiente
+
+**Estado: SKEW `a63d0b10 ≠ HEAD` CERRADO.** Secretary commiteado (`6705a07`) + deploy reproducible `d20f53b8` verificado idéntico. MH-EXPANSION 1.2 (CBT integrado) desbloqueado.
+
+## Fase previa: MH-EXPANSION 1.1 — FRONTEND /mh/assessments (bienestar)
 
 **Estado: COMPLETADA CON PASS REAL EN PRODUCCIÓN (deploy + E2E) + COMMIT `7463c67`.** Backend 1.0 (`1c15dad`) + UI 1.1.
 
