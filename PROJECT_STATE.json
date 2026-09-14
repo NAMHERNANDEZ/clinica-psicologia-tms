@@ -1,14 +1,14 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T02:05:00.000Z",
+  "updatedAt": "2026-09-14T04:30:00.000Z",
   "phase": {
-    "current": "CHAT-PRICING-MODALITY â€” PRICING>AVAILABILITY + TMS siempre presencial",
-    "name": "Fix forense chat (9ba0296): COSTO nunca entra a availability; CUANTO LA CONSULTA TMS responde precio; TMS=presencial automatico; terapia si pregunta modalidad. Deploy b66adb6d + E2E produccion PASS. voice/routes.ts y resto de voice/ siguen untracked (skew parcial preexistente).",
+    "current": "CHAT-BOOKING-DATE-CHANGE — fecha nueva invalida slots viejos",
+    "name": "Fix booking date-change (0148f2e): need_slot/need_contact/need_confirm detectan fecha nueva, limpian slot, nueva consulta Calendar; fuente canonica de precios en ai-secretary.ts. Deploy e88a829f + E2E produccion PASS (crear+cancelar real).",
     "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "9ba0296",
-    "message": "fix(chat): PRICING>AVAILABILITY + TMS siempre presencial"
+    "hash": "0148f2e",
+    "message": "fix(chat): cambio de fecha invalida slots viejos + fuente canonica de precios"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -16,24 +16,30 @@
     "note": "Secretary reconciliado en 6705a07. MH-EXPANSION 1.1 en 7463c67. Resto WIP pertenece a otras tareas."
   },
   "build": {
-    "typecheck": "PASS (tsc worker --noEmit 0 errores, arbol 9ba0296)",
+    "typecheck": "PASS (tsc worker --noEmit 0 errores, arbol 0148f2e)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS 271/271 (worker, 22 archivos, incluye chat-pricing-modality 21/21)",
+    "tests": "PASS 282/282 (worker, 23 archivos, incluye booking-date-change 11/11 + chat-pricing-modality 21/21)",
     "frontendBuild": "SKIP (sin cambios frontend; assets intactos)"
   },
   "deploy": {
-    "worker": "b66adb6d-5b2e-47c0-86c3-f8378328aed0 (previo d20f53b8-02a5-4440-a6f9-ca3fd2fceacc)",
+    "worker": "e88a829f-8e34-4466-826e-c12607389ea5 (previo b66adb6d)",
     "pages": "f39ed4d8.clinica-psicologia-tms.pages.dev (sin cambios)",
     "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS (deploy b66adb6d): COSTO/CUANTO/PRECIO->ambos precios sin horarios; COSTO TMS y CUANTO LA CONSULTA TMS->$1,500 sin modalidad; COSTO TERAPIA->$500; QUIERO AGENDAR TMS->pregunta fecha directo (presencial auto) + el sabado->slots reales Calendar 19-sep; QUIERO AGENDAR PSICOLOGIA->pregunta modalidad; switch agendar->COSTO->precio ctx->quiero agendar->retoma slots; /api/chat CUANTO LA CONSULTA TMS->pricing_tms; /chat 200; sin <svg en respuestas.",
+  "e2eProduction": "PASS (deploy e88a829f): TMS->sabado slots 19-sep->Y EL LUNES->slots lunes 14-sep fechados (0 replay sabado); 14:00 ocupado rechazado; 15:00->contacto->confirm->evento real creado->cancelado OK; terapia en linea->sabado->mejor el lunes->slots lunes; COSTO/CUANTO LA CONSULTA TMS intactos; /chat 200.",
   "chatPricingFix": {
     "commit": "9ba0296",
     "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",
     "files": ["worker/src/domains/voice/booking.ts", "worker/src/lib/ai-secretary.ts", "worker/test/chat-pricing-modality.test.ts"],
     "rule": "PRICING > AVAILABILITY; TMS siempre presencial; pricing no muta booking state"
+  },
+  "chatDateChangeFix": {
+    "commit": "0148f2e",
+    "rootCause": "need_slot jamas extraia fecha del mensaje y reenviaba offered_slots cacheados (Y EL LUNES->slots sabado). need_confirm corregia fecha con cualquier texto con dia (Domingo Perez->cambio a domingo).",
+    "files": ["worker/src/domains/voice/booking.ts", "worker/src/lib/ai-secretary.ts", "worker/test/booking-date-change.test.ts"],
+    "rule": "fecha nueva = selected_date nueva + slot null + availability invalidada + nueva consulta Calendar; looksLikeDateChange distingue fecha real de nombre; precios con fuente canonica unica en ai-secretary.ts"
   },
   "bridge": {
     "status": "RUNNING + auto-start configurado en Startup",

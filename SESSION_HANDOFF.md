@@ -1,5 +1,13 @@
 # SESSION_HANDOFF.md
 
+## Fix BOOKING-DATE-CHANGE (2026-09-14, COMMIT 0148f2e + DEPLOY e88a829f - PASS PRODUCCION)
+
+- **ROOT CAUSE**: need_slot jamas extraia fecha del mensaje y reenviaba offered_slots cacheados (Y EL LUNES -> slots del sabado). Segunda raiz hallada por tests: need_confirm corregia fecha con cualquier texto con dia de semana (Domingo Perez -> cambiaba fecha a domingo en el mismo turno del contacto).
+- **FIX (backend)**: need_slot actualiza fecha + limpia slot/slots ante fecha nueva + filtro offered_slots por fecha + respuesta con fecha explicita; need_contact redirige cambio tardio a need_slot (email tiene prioridad; looksLikeDateChange protege nombres); need_confirm solo corrige fecha ante cambio real y hora ante hora pura. Precios: fuente canonica unica exportada en ai-secretary.ts (TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE).
+- **TESTS**: booking-date-change 11/11 (sabado->lunes, repetido, proximo/este, explicitas, manana, slot->cambio, terapia conserva modalidad, Domingo Perez contacto/nombre, looksLikeDateChange). Suite 282/282. Typecheck PASS. Dry-run PASS.
+- **E2E PRODUCCION PASS**: TMS -> sabado slots 19-sep -> Y EL LUNES -> slots lunes 14-sep fechados (0 replay); 14:00 ocupado rechazado por Calendar real; 15:00 -> contacto -> confirm -> evento real creado -> cancelado OK (sin residuo); terapia en linea -> sabado -> mejor el lunes -> slots lunes; pricing intacto. Semantica documentada: dia de semana = proxima ocurrencia desde hoy America/Mexico_City (hoy->+7).
+- **PROXIMO**: MH-EXPANSION 1.2 (CBT) + decidir commit del resto de voice/ untracked.
+
 ## Fix forense CHAT-PRICING-MODALITY (2026-09-14, COMMIT 9ba0296 + DEPLOY b66adb6d - PASS PRODUCCION)
 
 - **ROOT CAUSE (probada, no asumida)**: looksLikeBooking incluia 'consulta'/'valoraci' -> CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad. Y wantsBooking con state residual != idle -> COSTO caia en need_slot -> horarios. Sin prioridad PRICING.
