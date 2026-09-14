@@ -46,16 +46,20 @@ interface Ctx {
   env: any;
   state: Record<string, any>;
   queryDates: string[];
+  requests: Map<number, any>;
+  reqSeq: number;
 }
 
 function makeCtx(): Ctx {
-  const ctx: Ctx = { env: null as any, state: {}, queryDates: [] };
+  const ctx: Ctx = { env: null as any, state: {}, queryDates: [], requests: new Map(), reqSeq: 0 };
   ctx.env = {
     DB: {
       prepare: (sql: string) => ({
         bind: (...args: any[]) => ({
           first: async () => {
             if (sql.startsWith('SELECT step, appt_type')) return ctx.state[args[0]] ?? null;
+            if (sql.startsWith('SELECT status, expires_at, date, time FROM booking_requests WHERE id = ?')) return ctx.requests.get(args[0]) ?? null;
+            if (sql.startsWith('SELECT * FROM booking_requests WHERE id = ?')) return ctx.requests.get(args[0]) ?? null;
             if (sql.includes('FROM calendar_auth')) {
               return {
                 access_token: 'tok-test',
@@ -69,8 +73,30 @@ function makeCtx(): Ctx {
           },
           run: async () => {
             if (sql.startsWith('INSERT INTO booking_sessions')) {
-              const [sid, step, appt_type, modality, date, time, patient_name, email, phone, offered_slots, event_id] = args;
-              ctx.state[sid] = { step, appt_type, modality, date, time, patient_name, email, phone, offered_slots, event_id };
+              const [sid, step, appt_type, modality, date, time, patient_name, email, phone, offered_slots, event_id, request_id] = args;
+              ctx.state[sid] = { step, appt_type, modality, date, time, patient_name, email, phone, offered_slots, event_id, request_id };
+            }
+            if (sql.startsWith('INSERT INTO booking_requests')) {
+              const [session_id, ip, appt_type, modality, date, time, patient_name, email, phone, email_hash, phone_hash, status, verification_status, expires_at] = args;
+              const id = ++ctx.reqSeq;
+              ctx.requests.set(id, { id, clinic_id: 1, session_id, ip, appt_type, modality, date, time, patient_name, email, phone, email_hash, phone_hash, status, verification_status, expires_at, verified_at: null, confirmed_at: null, cancelled_at: null, calendar_event_id: null, cancel_reason: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+              return { meta: { last_row_id: id } };
+            }
+            if (sql.startsWith('UPDATE booking_requests')) {
+              const m = sql.match(/SET (.+) WHERE/i);
+              const row = ctx.requests.get(args[args.length - 1]);
+              if (m && row) {
+                let bi = 0;
+                for (const part of m[1].split(',')) {
+                  const t = part.trim();
+                  let cm = t.match(/^(\w+)\s*=\s*\?$/);
+                  if (cm) { row[cm[1]] = args[bi++]; continue; }
+                  cm = t.match(/^(\w+)\s*=\s*'([^']*)'$/);
+                  if (cm) { row[cm[1]] = cm[2]; continue; }
+                  cm = t.match(/^(\w+)\s*=\s*datetime\('now'\)$/);
+                  if (cm) { row[cm[1]] = new Date().toISOString(); continue; }
+                }
+              }
             }
             return {};
           },
@@ -222,7 +248,7 @@ describe('booking date change: fecha nueva invalida slots viejos', () => {
   it('"Domingo Pérez" con email sigue siendo contacto, no fecha', async () => {
     await driveTmsToSaturday(ctx, 'd-nom', sat);
     await handleBookingTurn(ctx.env, 'd-nom', '10:00', '127.0.0.1');
-    const r = await handleBookingTurn(ctx.env, 'd-nom', 'Domingo Pérez — domingo@test.com', '127.0.0.1');
+    const r = await handleBookingTurn(ctx.env, 'd-nom', 'Domingo Pérez — domingo@test.com — 2311442901', '127.0.0.1');
     expect(ctx.state['d-nom'].patient_name).toBe('Domingo Pérez');
     expect(ctx.state['d-nom'].date).toBe(sat);
     expect(r.reply || '').toMatch(/confirma/i);

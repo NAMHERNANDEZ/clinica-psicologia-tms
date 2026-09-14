@@ -778,6 +778,16 @@ export default {
       console.error(`[${requestId}] Reminders failed:`, err);
     }
 
+    // Booking integrity sweep: expira solicitudes pendientes (15 min) y
+    // libera sus holds + purga claims muertos (anti-abuso, sin otro backend).
+    try {
+      const { sweepBookingRequests } = await import('./domains/voice/booking');
+      const swept = await sweepBookingRequests(env);
+      console.log(`[${requestId}] Booking sweep: expired=${swept.expired} claimsPurged=${swept.claimsPurged}`);
+    } catch (err) {
+      console.error(`[${requestId}] Booking sweep failed:`, err);
+    }
+
     // Hourly compliance check (every hour)
     try {
       const repo = new ComplianceRepository(env);
