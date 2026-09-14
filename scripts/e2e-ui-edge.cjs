@@ -53,10 +53,26 @@ async function main() {
     check('chat sin horarios', !/horarios disponibles/i.test(chatBody));
     check('chat sin svg literal', !/<svg><|>\s*svg\s*</i.test(chatBody));
 
-    // 2. /chat enlaza a /voz.
+    // 2. /chat enlaza a /voz + pestañas Texto|Voz con controles reales.
     const vozLink = page.getByRole('link', { name: /hablar por voz/i });
     await vozLink.waitFor({ state: 'visible', timeout: 20000 });
     check('chat enlaza /voz', (await vozLink.getAttribute('href')) === '/voz');
+    const tabTexto = page.getByRole('tab', { name: /texto/i });
+    const tabVoz = page.getByRole('tab', { name: /voz/i });
+    await tabVoz.waitFor({ state: 'visible', timeout: 10000 });
+    check('chat pestaña Texto visible', await tabTexto.isVisible());
+    check('chat pestaña Voz visible', await tabVoz.isVisible());
+    await tabVoz.click();
+    const listenBtn = page.getByRole('button', { name: /iniciar escucha/i });
+    await listenBtn.waitFor({ state: 'visible', timeout: 10000 });
+    check('chat pestaña Voz muestra controles de voz', true);
+    await listenBtn.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: 'test-results/e2e-chat-voz-tab.png' });
+    check('screenshot pestaña Voz guardado', true);
+    await tabTexto.click();
+    await page.getByPlaceholder(/escribe tu mensaje/i).waitFor({ state: 'visible', timeout: 10000 });
+    check('volver a Texto funciona', true);
 
     // 3. /voz: controles de voz montados y visibles.
     console.log('/voz:');
