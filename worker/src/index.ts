@@ -5,7 +5,6 @@ import { checkRateLimit, rateLimitHeaders, getClientIP } from './lib/rate-limit'
 import { handleVoiceChat, handleTTS, handleCheckAvailability, handleCreateAppointment as handleVoiceCreateAppointment } from './domains/voice/routes';
 import { sttRouter } from './routes/voice-provider-router';
 import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth } from './lib/calendar-oauth';
-import { limitChatText } from './lib/input-limits';
 import { authenticate } from './middleware/authenticate';
 import { requireAuth, requireRole } from './middleware/require-role';
 import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe } from './domains/auth/routes';
@@ -54,9 +53,8 @@ import { generateWhatsAppUrl, renderAppointmentReminder } from './lib/whatsapp';
 import { executeAllRules } from './compliance/engine/rule-executor';
 import { ComplianceRepository } from './compliance/repository/compliance-repository';
 import { logComplianceEvent } from './compliance/audit';
-import { createSecretary } from './lib/ai-secretary';
+import { handleChat } from './domains/secretary/routes';
 import { handleListLeads, handleGetLead, handleCreateLead, handleUpdateLead, handleUpdateLeadEstado, handleDeleteLead, handleAddLeadNote, handleGetLeadStats } from './domains/leads/routes';
-import { extractLeadFromMessage } from './domains/leads/extractor';
 import { handleMarketingOverview, handleMarketingContentGenerate, handleMarketingCampaignGenerate, handleMarketingSeoGenerate, handleMarketingContentList, handleMarketingContentStatus } from './domains/marketing/routes';
 import { handleClinicalChatMessage, handleClinicalChatSessions, handleClinicalChatSessionMessages, handleClinicalChatStats } from './domains/clinical-chat/routes';
 import { handleGetScales, handleGetCutoffs, handleGetAssessmentById, handlePreviewScore, handleCreateAssessment as handleCreateScaleAssessment, handleGetAssessmentsByPatient as handleGetScaleAssessmentsByPatient, handleGetAssessmentsByType as handleGetScaleAssessmentsByType, handleGetWellbeingScales, handleGetWellbeingCutoffs, handleCreateWellbeingAssessment, handleListWellbeingAssessments, handleGetWellbeingAssessmentById, handleWellbeingPreviewScore } from './domains/assessments/routes';
@@ -296,34 +294,7 @@ export default {
 
       // Public chat assistant - no authentication required (patient acquisition)
       if (path === '/api/chat' && method === 'POST') {
-        return withCors(async () => {
-          let body: { message?: string };
-          try {
-            body = await request.json() as { message?: string };
-          } catch {
-            return jsonError('Invalid JSON body', 400, corsHeaders, requestId);
-          }
-          if (!body.message || typeof body.message !== 'string' || !body.message.trim()) {
-            return jsonError('message is required', 400, corsHeaders, requestId);
-          }
-          // Anti-abuso: acota el input antes de consumir cuota LLM
-          const safeMessage = limitChatText(body.message);
-          if (!safeMessage) {
-            return jsonError('message is required', 400, corsHeaders, requestId);
-          }
-          const secretary = createSecretary('free');
-          const result = await secretary.processMessage(safeMessage);
-          // Lead capture: if the message contains contact data, save a lead (no clinical data)
-          try {
-            const extracted = extractLeadFromMessage(body.message);
-            if (extracted) {
-              await handleCreateLead(env, new Request(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify({ ...extracted, origen: 'chat' }) }), corsHeaders, null);
-            }
-          } catch (err) {
-            console.error('Lead capture error (non-blocking):', err);
-          }
-          return json({ action: result.action, message: result.message, template: result.template, confidence: result.confidence }, 200, corsHeaders, requestId);
-        }, corsHeaders, requestId, env, request);
+        return withCors(() => handleChat(env, request, corsHeaders, requestId), corsHeaders, requestId, env, request);
       }
 
       // FASE 11.8: CLINICAL CHAT AI - public message endpoint (no auth)

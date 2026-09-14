@@ -1,22 +1,67 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Calendar, Phone, Clock } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { appointments } from '../lib/api';
 
 const RAW_URL = import.meta.env.VITE_API_URL;
 if (!RAW_URL) throw new Error('VITE_API_URL no esta definida. Configurala antes del build.');
 try { new URL(RAW_URL); } catch { throw new Error('VITE_API_URL invalida: ' + RAW_URL); }
 const API_BASE = RAW_URL;
 
-async function sendChatMessage(message: string): Promise<{ message: string; action?: string; appointment?: { patient_name: string; phone: string; date: string; time: string } }> {
-  const res = await fetch(`${API_BASE}/api/chat`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
-  });
-  if (!res.ok) throw new Error('Chat error');
-  return res.json();
+function getChatSessionId(): string {
+  try {
+    const existing = localStorage.getItem('chat_session_id');
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    localStorage.setItem('chat_session_id', id);
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+// Motor real: booking con Calendar real vía /api/voice/chat (no inventa slots).
+// Para conversación general usa LLM terapéutico; si el LLM está caído (503),
+// hace fallback al secretary estático /api/chat (templates, sin LLM) para que
+// un "HOLA" siempre tenga respuesta real incluso con el proveedor caído.
+// Contrato plano en ambos: { message, ... } con message en top level.
+async function sendChatMessage(message: string, sessionId: string): Promise<{ message: string; action?: string; appointment?: { date: string; time: string; modality: string; eventId: string } }> {
+  // 1) Intentar motor principal (booking + LLM)
+  try {
+    const res = await fetch(`${API_BASE}/api/voice/chat`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, sessionId, voice: false }),
+    });
+    const data = await res.json();
+    if (res.ok) return data;
+    // 503 = LLM no disponible -> fallback a secretary estático (no oculta error de booking, solo LLM)
+    if (res.status === 503) {
+      const fb = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const fj = await fb.json();
+      if (fb.ok && typeof fj.message === 'string' && fj.message.length > 0) return fj;
+    }
+    throw new Error((data as any).error || `HTTP ${res.status}`);
+  } catch (e: any) {
+    // Error de red en voice -> intentar secretary una vez
+    if (e.message && e.message.includes('HTTP 503')) throw e;
+    try {
+      const fb = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const fj = await fb.json();
+      if (fb.ok && typeof fj.message === 'string' && fj.message.length > 0) return fj;
+    } catch {}
+    throw e;
+  }
 }
 
 interface Message {
@@ -64,7 +109,7 @@ export default function Chat() {
     setIsTyping(true);
 
     try {
-      const response = await sendChatMessage(inputValue);
+      const response = await sendChatMessage(inputValue, getChatSessionId());
 
       const aiMessage: Message = {
         id: messages.length + 2,
@@ -74,31 +119,6 @@ export default function Chat() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-
-      if (response.action === 'create_appointment' && response.appointment) {
-        try {
-          await appointments.create({ patient_id: 0, therapist_id: 0, date: response.appointment.date, time: response.appointment.time, duration: 30, status: 'scheduled', patient_name: response.appointment.patient_name });
-          const confirmMessage: Message = {
-            id: messages.length + 3,
-            text: language === 'es'
-              ? '✅ Cita creada exitosamente. Recibirás un recordatorio antes de tu cita.'
-              : '✅ Appointment created successfully. You will receive a reminder before your appointment.',
-            isUser: false,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, confirmMessage]);
-        } catch {
-          const errorMessage: Message = {
-            id: messages.length + 3,
-            text: language === 'es'
-              ? '❌ Error al crear la cita. Por favor, intenta de nuevo.'
-              : '❌ Error creating appointment. Please try again.',
-            isUser: false,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        }
-      }
     } catch {
       const errorMessage: Message = {
         id: messages.length + 2,
