@@ -1,14 +1,14 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T06:00:00.000Z",
+  "updatedAt": "2026-09-14T07:30:00.000Z",
   "phase": {
-    "current": "BOOKING-INTEGRITY — solicitud->verificacion->confirmacion",
-    "name": "Anti-abuso reservas (ec1a14b+20ba858): booking_requests con estados, telefono requerido+MX, 1pend+1act por identidad, holds 15min con expiracion, flagging, gate Calendar en backend, API directa pending->confirm, sweeper en cron. Migracion 0045. Deploy 8a30a7f4 + E2E produccion PASS.",
+    "current": "CRISIS-SAFETY + VOZ UI + MATRIZ E2E",
+    "name": "Incidente critico kme-quiero-matar->horarios CERRADO: detector tolerante + crisisGate determinista server-side en /api/voice/chat + /api/chat + secretary (reusa safety-router/crisis-handler, sin LLM); ruta /voz montada + link; matriz chat-matrix 43/43; frontend 26/26; gate pre-deploy; smoke prod 21/21; E2E UI Edge 12/12. Deploy worker eea6ed5b + Pages 16588592.",
     "status": "PRODUCTION_PASS_COMMITTED"
   },
   "lastCommit": {
-    "hash": "20ba858",
-    "message": "fix(booking): solicitudes solo en dias de atencion Lun-Sab"
+    "hash": "4147dc5",
+    "message": "feat(e2e): UI real Edge /chat+/voz + screenshot evidencia"
   },
   "uncommittedChanges": {
     "count": 0,
@@ -18,8 +18,8 @@
   "build": {
     "typecheck": "PASS (tsc worker --noEmit 0 errores)",
     "wranglerDryRun": "PASS",
-    "tests": "PASS 298/298 (worker, 24 archivos, incluye booking-integrity 15/15)",
-    "frontendBuild": "SKIP (sin cambios frontend)"
+    "tests": "PASS worker 341/341 (25 archivos, incluye chat-matrix 43/43) + frontend 26/26 (incluye VoiceChat 5/5 + Chat 3/3)",
+    "frontendBuild": "PASS (vite 38s; regen frontend-assets.ts 97 assets; Worker eea6ed5b + Pages 16588592)"
   },
   "deploy": {
     "worker": "8a30a7f4-aa05-428d-9247-dc2058b0f6ff (previo 2977dfa5)",
@@ -28,7 +28,7 @@
     "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
     "reproducibleDesdeHEAD": true
   },
-  "e2eProduction": "PASS (deploy 8a30a7f4): chat TMS->sabado->slot->nombre+email+telefono->solicitud 15min->confirm->evento real->cancelado (D1 request #1 cancelled, #2 verified expira solo); API directa pending (sin evento) + duplicado 429 identity_limit; domingo rechazado; Y EL LUNES + pricing intactos.",
+  "e2eProduction": "PASS: crisis kme-quiero-matar->safety-deterministic sin slots (voice+secretary); smoke 21/21; E2E UI Edge 12/12 (/chat precio+link /voz, /voz controles+respuesta, screenshot); /voz 200.",
   "chatPricingFix": {
     "commit": "9ba0296",
     "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",

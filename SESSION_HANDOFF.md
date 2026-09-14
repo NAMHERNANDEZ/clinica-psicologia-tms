@@ -1,5 +1,14 @@
 # SESSION_HANDOFF.md
 
+## Fix CRISIS-SAFETY + VOZ UI + MATRIZ (2026-09-14, COMMITS f1dc857+495eab4+4147dc5 + DEPLOY worker eea6ed5b + Pages 16588592 - PASS PRODUCCION)
+
+- **INCIDENTE CRITICO**: "kme quiero matar" -> horarios. Causa doble: (1) looksLikeCrisis no matcheaba ("quiero matar" separado no contiene "matarme"); con booking state residual need_slot reenviaba slots. (2) assessSafety+buildCrisisResponse existian pero MUERTOS (solo los usa un .bak); ningun path vivo los llamaba; crisis dependia de LLM FREE (caido -> 503 -> fallback secretary sin crisis).
+- **FIX (reuso, sin duplicar)**: safety-router endurecido (normalizacion + frases/compactos tolerantes + isEmergency; assessSafety lo usa primero); looksLikeCrisis delega; crisisGate() unico en crisis-handler (reusa buildCrisisResponse, sin LLM, politica repo: sin lista de telefonos); gates ANTES de booking en /api/voice/chat (200 safety-deterministic + TTS best-effort, jamas 503), /api/chat (transfer_human plano) y FreeSecretary. Orden: CRISIS > SESSION > PRICING > BOOKING > LLM.
+- **VOZ UI**: VoiceChat existia completo pero SIN MONTAR en ninguna ruta -> nueva ruta publica /voz (App.tsx) + link "Hablar por voz" en /chat. Evidencia visual: screenshot test-results/e2e-voz.png (boton Iniciar conversacion, input, enviar, burbuja precio).
+- **MATRIZ**: worker chat-matrix 43/43 (crisis 16 variantes + 10 negativas, voice/secretary/multiturno, pricing/booking/date, no-silent-fallback 503, no-burbujas-vacias, no-svg); frontend VoiceChat 5/5 + Chat 3/3; scripts/smoke-chat-matrix.cjs (prod 21/21) + scripts/pre-deploy-gate.cjs (tsc+suites, bloquea release) + scripts/e2e-ui-edge.cjs (Edge sistema, 12/12).
+- **E2E PRODUCCION PASS**: crisis voice+secretary determinista sin slots; smoke 21/21; UI Edge 12/12; /voz 200. STT/TTS en vivo requieren keys (gap preexistente tipo STT); matriz prueba ruteo por transcript + contratos; TTS crisis es best-effort sin caida.
+- **PROXIMO**: MH-EXPANSION 1.2 (CBT); fase 2 con bloqueadores externos: challenge con codigo, recordatorios 24/48h, no-show; resto voice/ untracked ya commiteado lo necesario.
+
 ## Fix BOOKING-INTEGRITY (2026-09-14, COMMITS ec1a14b+20ba858 + DEPLOY 8a30a7f4 - PASS PRODUCCION)
 
 - **OBJETIVO**: "crear cita" -> solicitud -> verificacion -> confirmacion -> cita. Un "si" ya no crea evento directo.
