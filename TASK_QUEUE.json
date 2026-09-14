@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-09-12T22:40:00.000Z",
+  "updatedAt": "2026-09-12T23:05:00.000Z",
   "active": {
-    "phase": "MH-EXPANSION 1.1 — FRONTEND /mh/assessments",
-    "name": "UI /mh/assessments: catalogo+historial (MhAssessmentsPage) y flujo completo responder->preview->completar->resultado (MhAssessmentRunPage) sobre backend wellbeing 1.0",
-    "status": "PRODUCTION_PASS_COMMITTED - worker deployed a63d0b10 (+Pages 069b6e90); worker tests 227/227 + frontend tests 18/18 PASS; E2E produccion PASS (scales 6, preview/create/detail persistido, limpieza probe); assets MATCH local; commit 7463c67",
-    "next": "Siguiente fase segun roadmap 12.6+ (seguimiento clinc) o 12.7 (escalas PHQ-9/GAD-7/BDI). WIP ajeno: src/pages/Chat.tsx y worker/src/index.ts (secretary) quedan sin commitear para su propia tarea."
+    "phase": "MH-EXPANSION 1.2 — CBT INTEGRADO (siguiente)",
+    "name": "Conectar assessment wellbeing -> resultado -> therapeutic-engine -> formulacion/intervencion -> MH intervention before/after -> insight. Sin crear otro motor terapeutico. Repo y produccion reconciliados: diseno y deploy desbloqueados.",
+    "status": "READY - HEAD == runtime (secretary 6705a07 + deploy d20f53b8 verificados reproducibles)",
+    "next": "Disenar 1.2: contrato resultado->area relevante->therapeutic-engine->intervencion->before/after->insight"
   },
   "pending": [
     { "phase": "MH-EXPANSION 2", "name": "Wellbeing: gateway/bienestar continuo (recordatorios, evolucion) si aplica" },
@@ -21,7 +21,7 @@
     "11.0", "11.1", "11.2", "11.2.1", "11.2.2", "11.3", "11.4", "11.5", "11.5.1",
     "11.6", "11.7", "11.8", "12.1", "12.2", "12.3", "12.4",
     "MH",
-    "MH-EXPANSION 1.0", "MH-EXPANSION 1.1"
+    "MH-EXPANSION 1.0", "MH-EXPANSION 1.1", "SECRETARY-RECONCILIACION"
   ],
   "evergreen": {
     "clinicUrl": "https://neurocienciaclinica.mx",

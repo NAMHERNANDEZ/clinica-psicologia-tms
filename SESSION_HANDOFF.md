@@ -1,5 +1,22 @@
 # SESSION_HANDOFF.md
 
+## Reconciliación SECRETARY (2026-09-12, COMMIT 6705a07 + DEPLOY d20f53b8 — SKEW CERRADO)
+
+- **Commit unidad independiente**: `6705a07` (index.ts + secretary/routes.ts + Chat.tsx + secretary-chat.test.ts). Fuera: migraciones 0038/0039, chat-ai-regression, evidence/bak (otras tareas).
+- **Reproducibilidad probada**: typecheck PASS, 227/227, 18/18, build PASS, regen frontend-assets.ts SIN diff, dry-run PASS, Pages subió 0 archivos (bytes idénticos).
+- **Runtime d20f53b8**: chat flat 200 idéntico (322 chars, sin data anidada) + MH E2E completo PASS + cleanup + assets 5/5 MATCH con mismos hashes.
+- **Cierre global**: producción == HEAD. MH-EXPANSION 1.2 desbloqueado para diseño y deploy.
+
+## Cierre forense SECRETARY REFACTOR (2026-09-12, sin commit — WIP independiente)
+
+- **Inventario**: `worker/src/index.ts` (M, 3 hunks: solo imports + body `/api/chat` → delega a `handleChat`); `worker/src/domains/secretary/routes.ts` (?? untracked, única definición de `handleChat`, reutiliza `lib/ai-secretary.ts` + `domains/leads/*` trackeados); `src/pages/Chat.tsx` (M: voice-first `/api/voice/chat` + fallback plano `/api/chat`, valida `fj.message` no vacío).
+- **No duplicación**: un solo `handleChat`, un solo `createSecretary`. `frontend/` es árbol legacy divergente (26 tracked, último toque `a3fe270`; dist stale sin chunks Mh; no cableado a wrangler/Pages que usan root dist) → inerte, NO borrar (flag para limpieza dedicada).
+- **Delta real vs HEAD**: fix de burbujas vacías — el `json()` viejo anidaba `{success:true,data:{action,message...}}` pero el frontend lee `message` en top-level; el refactor devuelve plano `{success,message,...}`. Producción verificado: `/api/chat` 200 real (action=respond, 322 chars).
+- **Impacto MH: NINGUNO**. Diff no toca `/api/mh/*` ni `/api/assessments/wellbeing/*`. Evidencia: worker 227/227, frontend 18/18, E2E wellbeing PASS sobre el mismo deploy `a63d0b10`, assets 6/6 MATCH.
+- **STT 500 clasificado**: con multipart válido responde `provider:none`, error explícito "STT FREE no disponible (Gemini + OpenRouter FREE)" → falta de keys, dominio voz preexistente, ruta intacta en el diff. `calendar/auth` 401 = comportamiento esperado sin auth (ruta intacta).
+- **SKEW COMMIT/DEPLOY (riesgo)**: producción `a63d0b10` SÍ ejecuta el refactor (build desde working tree con archivo untracked). HEAD no lo contiene → un deploy futuro desde checkout limpio REVERTIRÍA `/api/chat` al envelope anidado. REGLA: commitear la tarea secretary por separado ANTES de cualquier nuevo deploy; no redesplegar hasta entonces. Producción actual queda INTACTA.
+- **1.2 (CBT)**: vía libre — MH limpio, therapeutic-engine no tocado por este WIP.
+
 ## Ultima sesion: 2026-09-12 (MH-EXPANSION 1.1 — FRONTEND /mh/assessments, PRODUCTION_PASS_COMMITTED)
 
 - **COMMIT**: `7463c67` `feat(frontend): MH-EXPANSION 1.1 - UI /mh/assessments wellbeing`.
