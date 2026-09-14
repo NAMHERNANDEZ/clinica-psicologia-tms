@@ -89,15 +89,20 @@ async function main() {
     check('terapia pregunta modalidad', /presencial/i.test(r.data && r.data.message || ''));
   }
 
-  // 6. Cambio de fecha real.
+  // 6. Cambio de fecha real (agnóstico a la fecha actual: el lunes
+  // resuelve según America/Mexico_City; lo crítico es fecha NUEVA fechada).
   console.log('Date change:');
   {
     const sid = `smoke-d-${Date.now()}`;
     await post('/api/voice/chat', { message: 'QUIERO AGENDAR TMS', sessionId: sid, voice: false });
     const s1 = await post('/api/voice/chat', { message: 'el sabado', sessionId: sid, voice: false });
-    check('slots sábado', /19 de septiembre/i.test(s1.data && s1.data.message || ''));
+    const m1 = (s1.data && s1.data.message) || '';
+    const satMatch = m1.match(/Sábado, (\d{1,2} de \w+)/i);
+    check('slots sábado fechados', !!satMatch && /horarios realmente disponibles para Sábado/i.test(m1));
     const s2 = await post('/api/voice/chat', { message: 'Y EL LUNES', sessionId: sid, voice: false });
-    check('slots lunes (no sábado)', /14 de septiembre/i.test(s2.data && s2.data.message || '') && !/19 de septiembre/i.test(s2.data && s2.data.message || ''));
+    const m2 = (s2.data && s2.data.message) || '';
+    check('slots lunes fechados (nueva fecha)', /horarios realmente disponibles para Lunes/i.test(m2));
+    check('sin replay del sábado', !satMatch || !m2.includes(satMatch[0]));
   }
 
   // 7. Voz general: 200 con LLM o 503 explícito (jamás éxito falso ni slots).
