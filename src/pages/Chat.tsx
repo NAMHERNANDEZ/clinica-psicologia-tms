@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Bot, User, Calendar, Phone, Clock, Mic } from 'lucide-react';
+import { Send, Bot, User, Calendar, Phone, Clock, Mic, MessageSquareText } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import VoiceChat from '../components/VoiceChat';
 
 const RAW_URL = import.meta.env.VITE_API_URL;
 if (!RAW_URL) throw new Error('VITE_API_URL no esta definida. Configurala antes del build.');
@@ -77,6 +78,9 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  // Pestañas Texto|Voz: los controles de voz viven en /chat, sin scroll.
+  // Reutiliza el VoiceChat existente (cero duplicación).
+  const [mode, setMode] = useState<'texto' | 'voz'>('texto');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -180,6 +184,40 @@ export default function Chat() {
       {/* Chat Container */}
       <section className="py-8 bg-slate-50 min-h-[calc(100vh-300px)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Pestañas Texto | Voz */}
+          <div className="flex gap-2 mb-4" role="tablist" aria-label={language === 'es' ? 'Modo de chat' : 'Chat mode'}>
+            <button
+              role="tab"
+              aria-selected={mode === 'texto'}
+              onClick={() => setMode('texto')}
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                mode === 'texto'
+                  ? 'bg-teal-500 text-white shadow'
+                  : 'bg-white text-navy-900 shadow-sm hover:shadow-md'
+              }`}
+            >
+              <MessageSquareText className="w-4 h-4" />
+              <span>{language === 'es' ? 'Texto' : 'Text'}</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === 'voz'}
+              onClick={() => setMode('voz')}
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                mode === 'voz'
+                  ? 'bg-teal-500 text-white shadow'
+                  : 'bg-white text-navy-900 shadow-sm hover:shadow-md'
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+              <span>{language === 'es' ? 'Voz' : 'Voice'}</span>
+            </button>
+          </div>
+          {mode === 'voz' ? (
+            <div className="h-[600px]">
+              <VoiceChat />
+            </div>
+          ) : (
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             {/* Chat Messages */}
             <div className="h-[500px] overflow-y-auto p-6 space-y-4">
@@ -252,6 +290,14 @@ export default function Chat() {
                   disabled={isTyping}
                 />
                 <button
+                  onClick={() => setMode('voz')}
+                  className="px-4 py-3 bg-white hover:bg-slate-50 text-teal-600 border border-teal-500/40 rounded-xl transition-colors"
+                  aria-label={language === 'es' ? 'Hablar por voz' : 'Talk by voice'}
+                  title={language === 'es' ? 'Hablar por voz' : 'Talk by voice'}
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+                <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isTyping}
                   className="px-4 py-3 bg-teal-500 hover:bg-teal-400 disabled:bg-teal-300 text-white rounded-xl transition-colors"
@@ -261,6 +307,7 @@ export default function Chat() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Quick Actions */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">

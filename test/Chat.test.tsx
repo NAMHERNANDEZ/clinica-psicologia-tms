@@ -28,6 +28,20 @@ describe('Chat page', () => {
     expect(screen.getByPlaceholderText(/escribe tu mensaje/i)).toBeInTheDocument();
   });
 
+  it('muestra pestañas Texto y Voz sin scroll', () => {
+    renderChat();
+    expect(screen.getByRole('tab', { name: /texto/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /voz/i })).toBeInTheDocument();
+  });
+
+  it('botón mic en el input cambia a Voz con controles', async () => {
+    renderChat();
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.click(screen.getByRole('button', { name: /hablar por voz/i }));
+    expect(await screen.findByRole('button', { name: /iniciar escucha/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /escribe tu mensaje/i })).toBeInTheDocument();
+  });
+
   it('enlaza a la UI de voz /voz', () => {
     renderChat();
     const link = screen.getByRole('link', { name: /hablar por voz/i });
