@@ -16,6 +16,12 @@ export interface GeminiGenerateResult {
 
 const DEFAULT_MODEL = 'gemini-3.6-flash';
 
+// Fallback multi-modelo: 3.6 es el primario GA pero responde 503/429 por
+// saturacion frecuente. Se prueban en orden y se usa el primero que responda,
+// exactamente como ya hace geminiSTTRouter (regresion: LLM de texto 503
+// mientras STT funcionaba con 3.5).
+const TEXT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+
 /**
  * Cliente real de Google Gemini API.
  * La API key se lee de Cloudflare Secrets (env.GEMINI_API_KEY), NUNCA del codigo.
@@ -31,71 +37,79 @@ export async function generateWithGemini(
     return null;
   }
 
-  const model = options.model || DEFAULT_MODEL;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const models = options.model ? [options.model] : TEXT_MODELS;
+  let lastError = 'sin intentos';
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-  const t0 = Date.now();
+    const t0 = Date.now();
 
-  const requestBody = {
-    contents: [
-      ...(options.system
-        ? [{ role: 'user', parts: [{ text: options.system }] }]
-        : []),
-      { role: 'user', parts: [{ text: options.prompt }] },
-    ],
-    generationConfig: {
-      temperature: options.temperature ?? 0.7,
-      maxOutputTokens: options.maxOutputTokens ?? 1024,
-      topP: 0.9,
-      // Evita que el modelo recorte la respuesta visible al agotar el
-      // presupuesto de razonamiento (regresion: respuestas cortadas a media
-      // frase en produccion).
-      thinkingConfig: { thinkingBudget: 128 },
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-    ],
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[gemini] API error ${response.status}: ${errorText}`);
-      return null;
-    }
-
-    const data = await response.json() as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-      }>;
-      promptFeedback?: { blockReason?: string };
+    const requestBody = {
+      contents: [
+        ...(options.system
+          ? [{ role: 'user', parts: [{ text: options.system }] }]
+          : []),
+        { role: 'user', parts: [{ text: options.prompt }] },
+      ],
+      generationConfig: {
+        temperature: options.temperature ?? 0.7,
+        maxOutputTokens: options.maxOutputTokens ?? 1024,
+        topP: 0.9,
+        // Evita que el modelo recorte la respuesta visible al agotar el
+        // presupuesto de razonamiento (regresion: respuestas cortadas a media
+        // frase en produccion). Si un modelo lo rechaza, se reintenta con el
+        // siguiente (la config se prueba por modelo dentro del bucle).
+        thinkingConfig: { thinkingBudget: 128 },
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      ],
     };
 
-    if (data.promptFeedback?.blockReason) {
-      console.error(`[gemini] Prompt bloqueado: ${data.promptFeedback.blockReason}`);
-      return null;
-    }
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
 
-    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('')?.trim();
-    if (!text) {
-      console.warn('[gemini] Respuesta vacia desde la API.');
-      return null;
-    }
+      if (!response.ok) {
+        lastError = `Gemini API HTTP ${response.status} (${model})`;
+        console.error(`[gemini] API error ${response.status} (${model}): ${(await response.text()).slice(0, 200)}`);
+        continue;
+      }
 
-    return { text, model, latencyMs: Date.now() - t0 };
-  } catch (err) {
-    console.error('[gemini] Excepcion al llamar a la API:', err);
-    return null;
+      const data = await response.json() as {
+        candidates?: Array<{
+          content?: { parts?: Array<{ text?: string }> };
+        }>;
+        promptFeedback?: { blockReason?: string };
+      };
+
+      if (data.promptFeedback?.blockReason) {
+        lastError = `Prompt bloqueado (${model}): ${data.promptFeedback.blockReason}`;
+        console.error(`[gemini] Prompt bloqueado (${model}): ${data.promptFeedback.blockReason}`);
+        continue;
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('')?.trim();
+      if (!text) {
+        lastError = `respuesta vacía (${model})`;
+        console.warn(`[gemini] Respuesta vacia desde la API (${model}).`);
+        continue;
+      }
+
+      return { text, model, latencyMs: Date.now() - t0 };
+    } catch (err) {
+      lastError = `excepción ${(err as Error).message} (${model})`;
+      console.error(`[gemini] Excepcion al llamar a la API (${model}):`, err);
+    }
   }
+  console.error(`[gemini] todos los modelos fallaron: ${lastError}`);
+  return null;
 }
 
 /**
