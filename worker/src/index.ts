@@ -166,7 +166,10 @@ function securityHeaders(): Record<string, string> {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'",
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    // microphone=(self): el chat de voz (/chat pestaña Voz, /voz) graba con
+    // getUserMedia en el mismo origen. Con microphone=() el navegador lo
+    // denegaba y el flujo de voz quedaba incompleto (causa raíz 2026-09-14).
+    'Permissions-Policy': 'camera=(), microphone=(self), geolocation=(), interest-cohort=()',
   };
 }
 
@@ -335,9 +338,11 @@ export default {
           const body = asset.isBase64
             ? Uint8Array.from(atob(asset.content), c => c.charCodeAt(0))
             : asset.content;
+          // Assets con hash en el nombre: inmutables (el HTML es no-store,
+          // así que un bundle nuevo siempre trae URLs nuevas: sin stale).
           return new Response(body, {
             status: 200,
-            headers: { 'Content-Type': asset.contentType, ...corsHeaders },
+            headers: { 'Content-Type': asset.contentType, 'Cache-Control': 'public, max-age=31536000, immutable', ...corsHeaders },
           });
         }
         // SPA: serve index.html for all other routes

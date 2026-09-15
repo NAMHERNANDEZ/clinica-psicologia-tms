@@ -104,13 +104,22 @@ async function main() {
     console.log('/voz mic:');
     await page.goto(`${BASE}/voz`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.getByRole('button', { name: /iniciar escucha/i }).click();
-    // 12s de grabación + STT real + respuesta: la UI debe reaccionar
-    // (saludo, estado, error honesto o respuesta), nunca crashear.
-    await page.waitForTimeout(75000);
+    // Grabación REAL (dispositivo falso): el estado debe llegar a
+    // "Escuchando" — si el mic sigue bloqueado por política, falla aquí.
+    try {
+      await page.getByText(/escuchando/i).first().waitFor({ state: 'visible', timeout: 30000 });
+      check('mic graba (estado Escuchando)', true);
+    } catch {
+      check('mic graba (estado Escuchando)', false, 'sin estado listening: mic bloqueado');
+    }
+    // 12s de grabación + STT real + respuesta: sin crash ni burbujas vacías,
+    // y SIN banner de permiso denegado.
+    await page.waitForTimeout(60000);
     const micBody = await page.content();
     const reacted = /estoy aquí para escucharte|pensando|escuchando|hablando/i.test(micBody)
-      || /no pude transcribir|no se capturó|micrófono|permiso/i.test(micBody);
+      || /no pude transcribir|no se capturó/i.test(micBody);
     check('mic fluye a estado/resultado sin crash', reacted);
+    check('mic NO denegado por política', !/permiso de micrófono denegado|microphone.*denied/i.test(micBody));
     const emptyBubbles = await page.evaluate(() => {
       const ps = [...document.querySelectorAll('p.whitespace-pre-wrap')];
       return ps.filter((p) => !(p.textContent || '').trim()).length;

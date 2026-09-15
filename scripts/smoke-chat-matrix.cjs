@@ -117,13 +117,17 @@ async function main() {
     }
   }
 
-  // 8. /chat page viva.
+  // 8. /chat page viva + headers de caché/seguridad correctos.
   console.log('Pages:');
   {
     const res = await fetch(`${BASE}/chat`, { method: 'HEAD' });
     check('/chat 200', res.status === 200, true, `status=${res.status}`);
     const res2 = await fetch(`${BASE}/voz`, { method: 'HEAD' });
     check('/voz 200', res2.status === 200, true, `status=${res2.status}`);
+    const pp = res2.headers.get('permissions-policy') || '';
+    check('mic permitido (self)', /microphone=\(self\)/.test(pp), true, `permissions-policy=${pp}`);
+    const cc = (res2.headers.get('cache-control') || '').toLowerCase();
+    check('html no-store', cc.includes('no-store'), true, `cache-control=${cc}`);
   }
 
   // 9. STT vivo con asset real del repo (usa la implementación existente).
