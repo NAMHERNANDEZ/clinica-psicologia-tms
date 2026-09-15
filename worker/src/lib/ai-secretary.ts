@@ -38,6 +38,12 @@ export const TMS_PRICE_MESSAGE = `La sesión de Terapia Magnética Transcraneal 
 export const THERAPY_PRICE_MESSAGE = `La sesión de psicología tiene un costo de:\n\n💰 **$500 pesos mexicanos por sesión**\n\nDurante la consulta se realiza una valoración del motivo de atención y se establece un plan de trabajo.`;
 export const PRICING_BOTH_MESSAGE = `Nuestros precios son:\n\n💰 **Terapia Magnética Transcraneal (TMS): $1,500 MXN por sesión**\n💰 **Terapia Psicológica: $500 MXN por sesión**\n\nSi deseas, puedo ayudarte a solicitar información para agendar una valoración.`;
 
+// Fuente canónica de HORARIOS y UBICACIÓN (ÚNICA, misma fuente para texto y voz):
+// la usa FreeSecretary (texto en /api/chat) y el motor de voz en booking.ts.
+// No duplicar estos textos. Datos reales de la clínica.
+export const HOURS_MESSAGE = `Nuestros horarios de atención son:\n\n${DEFAULT_CONFIG.hours}\n\nAtendemos con cita previa para brindar una atención personalizada.\n\n¿Deseas solicitar una cita?`;
+export const LOCATION_MESSAGE = `Nuestra clínica se encuentra ubicada en:\n\n📍 **5 de Febrero esquina con Benito Juárez**\n📍 **Xiutetelco Centro**\n\nAtendemos con cita previa para brindar una atención personalizada.\n\nSi deseas, puedo ayudarte a solicitar una valoración.`;
+
 const KNOWLEDGE_BASE: Record<string, { keywords: string[]; action: AIResponse['action']; template: string; confidence: number; message: string }> = {
   identity: {
     keywords: ['quien eres', 'quién eres', 'que eres', 'qué eres', 'tu nombre', 'eres una persona'],
@@ -165,7 +171,7 @@ export class FreeSecretary implements AISecretaryAdapter {
     if (this.matchesAny(lower, ['horario', 'hours', 'abren', 'cierran', 'schedule', 'horarios'])) {
       return {
         action: 'respond',
-        message: `Nuestros horarios de atención son:\n\n${this.config.hours}\n\nAtendemos con cita previa para brindar una atención personalizada.\n\n¿Deseas solicitar una cita?`,
+        message: HOURS_MESSAGE,
         confidence: 0.95,
         template: 'hours',
       };
@@ -174,7 +180,7 @@ export class FreeSecretary implements AISecretaryAdapter {
     if (this.matchesAny(lower, ['ubicación', 'dirección', 'location', 'donde', 'dónde', 'mapa', 'address', 'ubican'])) {
       return {
         action: 'respond',
-        message: `Nuestra clínica se encuentra ubicada en:\n\n📍 **5 de Febrero esquina con Benito Juárez**\n📍 **Xiutetelco Centro**\n\nAtendemos con cita previa para brindar una atención personalizada.\n\nSi deseas, puedo ayudarte a solicitar una valoración.`,
+        message: LOCATION_MESSAGE,
         confidence: 0.95,
         template: 'location',
       };

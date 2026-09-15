@@ -1,7 +1,7 @@
 import type { Env } from '../../types';
 import { getAccessTokenFromDB } from '../../lib/calendar-oauth';
 // Fuente canónica ÚNICA de precios (definida en lib/ai-secretary.ts).
-import { TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE } from '../../lib/ai-secretary';
+import { TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE, HOURS_MESSAGE, LOCATION_MESSAGE } from '../../lib/ai-secretary';
 // Detector de crisis tolerante (una sola fuente de verdad, sin duplicar).
 import { assessSafety } from '../../ai/services/safety-router';
 
@@ -839,6 +839,24 @@ function pricingReplyFor(text: string, st?: BookingState): string {
   return PRICE_BOTH;
 }
 
+// ---------- DATOS CANÓNICOS (HORARIOS / UBICACIÓN) ----------
+// Requisito de producto: UNA SOLA LÓGICA texto/voz. FreeSecretary (texto en
+// /api/chat) responde HORARIOS/UBICACIÓN con HOURS_MESSAGE/LOCATION_MESSAGE;
+// el motor de voz debe responder IGUAL y de forma determinista (sin depender
+// de la variabilidad del LLM, que daba preámbulos sin los datos reales).
+// Regla: los facts canónicos NO mutan el booking state y NO llaman Calendar.
+const LOCATION_WORDS = ['ubicacion', 'direccion', 'location', 'donde', 'mapa', 'address', 'ubican', 'donde estan', 'como llego', 'cerca de'];
+const HOURS_WORDS = ['horario', 'horarios', 'hours', 'abren', 'cierran', 'schedule', 'a que hora', 'que hora atienden'];
+export function looksLikeFacts(text: string): 'location' | 'hours' | null {
+  const t = norm(text);
+  if (HOURS_WORDS.some((w) => t.includes(w))) return 'hours';
+  if (LOCATION_WORDS.some((w) => t.includes(w))) return 'location';
+  return null;
+}
+function factsReplyFor(text: string): string {
+  return looksLikeFacts(text) === 'hours' ? HOURS_MESSAGE : LOCATION_MESSAGE;
+}
+
 const CANCEL_WORDS = ['cancelar', 'cancela', 'anular', 'anula'];
 export function looksLikeCancel(text: string): boolean {
   const t = text.toLowerCase();
@@ -1064,6 +1082,14 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
   // después "quiero agendar" retoma el booking donde quedó).
   if (looksLikePricing(text)) {
     return { handled: true, reply: pricingReplyFor(text, st) };
+  }
+
+  // DATOS CANÓNICOS (HORARIOS/UBICACIÓN): determinista, misma fuente que
+  // texto; no muta booking state ni llama Calendar. Si el paciente estaba en
+  // mid-booking y pregunta datos de la clínica, responde y el flujo sigue.
+  const facts = looksLikeFacts(text);
+  if (facts) {
+    return { handled: true, reply: factsReplyFor(text) };
   }
 
   // Cancelación de reserva activa o solicitud pendiente
