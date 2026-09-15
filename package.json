@@ -11,6 +11,11 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "audit": "node scripts/pre-deploy-audit.cjs",
+    "gate": "node scripts/pre-deploy-gate.cjs",
+    "smoke:chat": "node scripts/smoke-chat-matrix.cjs",
+    "e2e:ui": "node scripts/e2e-ui-edge.cjs",
+    "e2e:repeat": "node scripts/e2e-repeat.cjs",
+    "release:verify": "node scripts/pre-deploy-gate.cjs && node scripts/smoke-chat-matrix.cjs && node scripts/e2e-ui-edge.cjs && node scripts/e2e-repeat.cjs",
     "deploy": "node scripts/pre-deploy-audit.cjs && vite build && wrangler pages deploy dist --project-name clinica-psicologia-tms"
   },
   "dependencies": {
