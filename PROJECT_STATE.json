@@ -1,10 +1,10 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-14T09:30:00.000Z",
+  "updatedAt": "2026-09-15T02:00:00.000Z",
   "phase": {
-    "current": "CHAT TABS TEXTO-VOZ (botones en /chat)",
-    "name": "Pestanas Texto|Voz en /chat reutilizando VoiceChat + boton mic en input. Commit f420a94. Deploy worker d3058243 + Pages 0d5ce393. E2E UI Edge 19/19 en /chat con screenshot del boton Iniciar conversacion.",
-    "status": "PRODUCTION_PASS_COMMITTED"
+    "current": "CIERRE TOTAL (1 item bloqueado por auth deploy)",
+    "name": "Mic-policy microphone=(self)+immutable (f159841) COMMITTEADO y verificado en local (wrangler dev header OK) pero SIN desplegar: OAuth Cloudflare expirado, sin token disponible. Resto verificado repetido en prod: repeat 39/39, UI 19-21 (solo falla mic-denied pendiente del deploy), smoke 29/29.",
+    "status": "BLOCKED_DEPLOY_AUTH"
   },
   "lastCommit": {
     "hash": "eb58395",

@@ -1,5 +1,14 @@
 # SESSION_HANDOFF.md
 
+## CIERRE TOTAL (2026-09-15: todo verificado salvo 1 deploy bloqueado por auth)
+
+- **BLOQUEADOR ÚNICO (humano inevitable)**: `wrangler deploy` falla con OAuth expirado (400) y no hay CLOUDFLARE_API_TOKEN (env vacío, .dev.vars solo tiene GEMINI). Commits f159841 (mic-policy+immutable) y 4cd2d49 (release chain) listos. ACCIÓN HUMANA: `wrangler login` en su terminal O crear API token (dash.cloudflare.com) como CLOUDFLARE_API_TOKEN. Luego: `wrangler deploy --config worker/wrangler.toml` + `node scripts/smoke-chat-matrix.cjs` + `node scripts/e2e-ui-edge.cjs`.
+- **FIX PENDIENTE DE DEPLOY (verificado en local vía wrangler dev)**: Permissions-Policy microphone=(self) — causa raíz del mic muerto en workers.dev (Pages nunca tuvo el header); header confirmado en servidor local. Immutable en /assets/*.
+- **VERIFICADO REPETIDO EN PROD (deploy actual)**: e2e-repeat 39/39 (5 cargas, 5 inferencias, 5 crisis, 3 fechas, multiturno, abuse); smoke 29/29; UI Edge 20/21 (solo falla mic-denied = el fix pendiente); gate 347+28.
+- **DOMINIO**: neurocienciaclinica.mx = NXDOMAIN global vía DoH 1.1.1.1 (no existe en DNS público; nada en repo lo apunta: wrangler.toml sin routes). Registrador-side, fuera de acceso técnico. Producción canónica: workers.dev (+ Pages).
+- **RELEASE CHAIN** (package.json): gate -> smoke:chat -> e2e:ui -> e2e:repeat = `npm run release:verify`.
+- **REGLA GLOBAL PERMANENTE**: PASS = flujo exacto pedido + E2E real + producción + evidencia en la misma ruta. Estado honesto actual: NO RELEASE-CLOSURE-PASS hasta desplegar f159841 y re-verificar mic.
+
 ## Fix CHAT-TABS-TEXTO-VOZ (2026-09-14, COMMIT f420a94 +eb58395 + DEPLOY worker d3058243 + Pages 0d5ce393 - PASS EN /chat)
 
 - **REPORTE USUARIO (correcto)**: botones de voz no visibles en /chat. Causa: controles solo en /voz + link bajo el fold. /voz existía pero el usuario usa /chat.
