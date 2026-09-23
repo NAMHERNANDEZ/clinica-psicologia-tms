@@ -1068,6 +1068,43 @@ export interface BookingTurn {
 
 const ASK_TYPE = 'Claro. Puedo ayudarte a programar tu cita. ¿Qué tipo de atención necesitas? (Valoración inicial, Seguimiento, TMS, Psicología, Pareja/familiar u Otro)';
 
+// ---------- CONTINUACIÓN POR PASO ----------
+// CAUSA RAÍZ (2026-09-22): `wantsBooking` incluía "st.step != idle" a secas,
+// haciendo que preguntas generales ("¿qué es el lóbulo?") mid-booking fueran
+// tratadas como booking y dispararan slots/Calendar.
+// Regla: si el mensaje NO es una intención de info/preocupación explícita,
+// continúa booking por estado residual (el paciente mid-booking da datos,
+// expresa una respuesta corta, o cambia paso con una frase inconclusa).
+// Solo sale si el mensaje ES detectado como pregunta de información clínica.
+
+const GENERAL_INFO_MARKERS: RegExp = new RegExp([
+  '^\\s*¿?\\s*(qu[eé]|c[oó]mo|para\\s+qu[eé]|por\\s+qu[eé]|cu[aá]nd[o]?|cu[aá]l\\b|d[oó]nd[e]?|c[oó]mo\\s+funciona|c[oó]mo\\s+es|qu[eé]\\s+es|qu[eé]\\s+hacen?|qu[eé]\\s+son|hay\\s+curas?)\\b',
+  'tiene\\s+que\\s+ver\\s+con',
+  '^¡?[¿]\\S+\\?+$',
+  '^\\s*(qu[eé]\\s+es|qu[eé]\\s+son|c[oó]mo)\\b',
+  'significa$',
+  'h[aá]blame\\b',
+  'expl[ií]came\\b',
+  'me\\s+puedes\\s+decir',
+  '^\\s*[¿¡]\\s*qu[eé]',
+].join('|'), 'i');
+
+function looksLikeGeneralInfoOrQuestion(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (GENERAL_INFO_MARKERS.test(t)) return true;
+  if (/\?$/.test(t)) return true;
+  return false;
+}
+
+function isStuckContinuation(wantsBookingFresh: boolean, text: string, st: BookingState): boolean {
+  if (wantsBookingFresh) return true;
+  if (!st.step || st.step === 'idle' || st.step === 'done') return false;
+  // Salir de booking SOLO si es una pregunta de información explícita.
+  // En caso contrario, seguir el paso actual (payload corto = likely continuation).
+  return !looksLikeGeneralInfoOrQuestion(text);
+}
+
 export async function handleBookingTurn(env: Env, sessionId: string, rawText: string, ip: string): Promise<BookingTurn> {
   const text = rawText.trim();
   if (!text) return { handled: false };
@@ -1111,7 +1148,9 @@ export async function handleBookingTurn(env: Env, sessionId: string, rawText: st
     return { handled: true, reply: 'De acuerdo, no programamos nada. Si cambias de opinión, dime "quiero una cita".' };
   }
 
-  const wantsBooking = looksLikeBooking(text) || (st.step !== 'idle' && st.step !== 'done');
+  const wantsBookingRaw = looksLikeBooking(text);
+  const isStuckContinuationResult = isStuckContinuation(wantsBookingRaw, text, st);
+  const wantsBooking = isStuckContinuationResult;
   if (!wantsBooking) return { handled: false };
 
   // Prefill desde el primer mensaje
