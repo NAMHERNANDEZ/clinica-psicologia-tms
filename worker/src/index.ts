@@ -3,10 +3,10 @@ import { handleHealth } from './health/routes';
 import { getCorsHeaders, isOriginAllowed } from './lib/cors';
 import { checkRateLimit, rateLimitHeaders, getClientIP } from './lib/rate-limit';
 import { handleVoiceChat, handleTTS, handleCheckAvailability, handleCreateAppointment as handleVoiceCreateAppointment } from './domains/voice/routes';
-import { sttRouter, toSttClientPayload } from './routes/voice-provider-router';import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth } from './lib/calendar-oauth';
+import { sttRouter, toSttClientPayload } from './routes/voice-provider-router';import { createOAuthState, consumeOAuthState, getAuthUrl, exchangeCode, storeCalendarAuth, calendarConnected } from './lib/calendar-oauth';
 import { authenticate } from './middleware/authenticate';
 import { requireAuth, requireRole } from './middleware/require-role';
-import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe } from './domains/auth/routes';
+import { handleRegister, handleLogin, handleRefresh, handleLogout, handleGetMe, handleAdminResetPassword } from './domains/auth/routes';
 import { handleListPatients, handleGetPatient, handleCreatePatient, handleUpdatePatient, handleDeletePatient } from './domains/patients/routes';
 import { handleListTherapists, handleGetTherapist, handleCreateTherapist, handleUpdateTherapist, handleDeleteTherapist } from './domains/therapists/routes';
 import { handleListAppointments, handleGetAppointment, handleCreateAppointment, handleUpdateAppointment, handleDeleteAppointment } from './domains/appointments/routes';
@@ -263,8 +263,24 @@ export default {
           }
         }, corsHeaders, requestId, env, request);
       }
+      // Google Calendar OAuth — estado de conexion (admin/therapist)
+      if (path === '/api/calendar/status' && method === 'GET') {
+        return withCors(async () => {
+          const cuser = await authenticate(env, request);
+          const cerr = requireAuth(cuser);
+          if (cerr) return cerr;
+          const ok = await calendarConnected(env, cuser!.clinic_id);
+          return json({ success: true, connected: ok }, 200, corsHeaders, requestId);
+        }, corsHeaders, requestId, env, request);
+      }
 
       // Google Calendar OAuth — inicio (sesión admin/terapeuta)
+      // CAUSA RAÍZ (2026-09-30): con request Fetch sin cookies elauthenticate()
+      // fallaba después, y la excepción no volvía meaningful. The handler
+      // wrapped via withCors remove unhandled errors caught inside the
+      // getOAuthState which proactive the logics and errors follow the
+      // handler signature with fallback durability switching that handles
+      // exception paths as JSON in a consistent way. Surfaces 500s as debug.
       if (path === '/api/calendar/auth' && method === 'GET') {
         return withCors(async () => {
           const cuser = await authenticate(env, request);
@@ -273,11 +289,24 @@ export default {
           if (cuser!.role !== 'admin' && cuser!.role !== 'therapist') {
             return jsonError('Sin permisos para conectar calendario', 403, corsHeaders, requestId);
           }
-          const nonce = await createOAuthState(env);
-          const state = `clinic-${cuser!.clinic_id}-${nonce}`;
-          const authUrl = getAuthUrl(env, cuser!.clinic_id, state);
-          if (!authUrl) return jsonError('GOOGLE_CLIENT_ID no configurado', 500, corsHeaders, requestId);
-          return Response.redirect(authUrl, 302);
+          try {
+            const nonce = await createOAuthState(env);
+            const state = `clinic-${cuser!.clinic_id}-${nonce}`;
+            const authUrl = getAuthUrl(env, cuser!.clinic_id, state);
+            if (!authUrl) return jsonError('GOOGLE_CLIENT_ID no configurado', 500, corsHeaders, requestId);
+            // CAUSA RAÍZ (2026-09-30): Response.redirect() genera una respuesta
+            // con headers inmutables; withCors muta headers al final (X-Request-Id)
+            // y Cloudflare rompe con "Worker threw exception". Construir la
+            // redirección con new Response() conserva mutabilidad.
+            return new Response(null, {
+              status: 302,
+              headers: { Location: authUrl, ...corsHeaders, 'X-Request-Id': requestId },
+            });
+          } catch (err: any) {
+            console.error('[/api/calendar/auth] error', err?.message || err);
+            const msg = err?.message || String(err);
+            return jsonError(`No se pudo iniciar la conexión OAuth: ${msg}`, 500, corsHeaders, requestId);
+          }
         }, corsHeaders, requestId, env, request);
       }
 
@@ -324,6 +353,7 @@ export default {
 
       if (path === '/api/auth/register' && method === 'POST') return withCors(() => handleRegister(env, request, corsHeaders), corsHeaders, requestId, env, request);
       if (path === '/api/auth/login' && method === 'POST') return withCors(() => handleLogin(env, request, corsHeaders), corsHeaders, requestId, env, request);
+      if (path === '/api/auth/admin/reset-password' && method === 'POST') return withCors(() => handleAdminResetPassword(env, request, corsHeaders), corsHeaders, requestId, env, request);
       if (path === '/api/auth/refresh' && method === 'POST') return withCors(() => handleRefresh(env, request, corsHeaders), corsHeaders, requestId, env, request);
       if (path === '/api/auth/logout' && method === 'POST') return withCors(() => handleLogout(env, request, corsHeaders), corsHeaders, requestId, env, request);
       if (path === '/api/auth/me' && method === 'GET') return withCors(() => handleGetMe(env, request, corsHeaders), corsHeaders, requestId, env, request);

@@ -863,7 +863,7 @@ export function looksLikeCancel(text: string): boolean {
   return CANCEL_WORDS.some((w) => t.includes(w));
 }
 
-const YES_WORDS = ['sí', 'si,', 'confirmo', 'confirmar', 'vale', 'de acuerdo', 'correcto', 'adelante', 'ok'];
+const YES_WORDS = ['sí', 'si', 'si,', 'confirmo', 'confirmar', 'vale', 'de acuerdo', 'correcto', 'adelante', 'ok'];
 const NO_WORDS = ['no', 'mejor no', 'cancela', 'olvídalo', 'olvídalo', 'después'];
 
 function norm(s: string): string {
