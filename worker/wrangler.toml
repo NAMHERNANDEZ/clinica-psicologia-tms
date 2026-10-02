@@ -15,9 +15,9 @@ database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95"
 # bucket_name = "clinica-tms-documents"
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev"
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev,https://clinica-psicologia-tms.pages.dev"
 
 [env.production]
-vars = { ALLOWED_ORIGINS = "https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev,http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173" }
+vars = { ALLOWED_ORIGINS = "https://neurocienciaclinica.mx,https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev,http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://clinica-psicologia-tms.pages.dev" }
 d1_databases = [{ binding = "DB", database_name = "clinica-tms-db", database_id = "6137e5d1-7536-4c49-b68b-01f5778fde95" }]
 #r2_buckets = [{ binding = "BACKUPS_BUCKET", bucket_name = "clinica-tms-backups" }]

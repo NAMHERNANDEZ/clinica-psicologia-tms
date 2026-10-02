@@ -4,6 +4,10 @@ import { getAccessTokenFromDB } from '../../lib/calendar-oauth';
 import { TMS_PRICE_MESSAGE, THERAPY_PRICE_MESSAGE, PRICING_BOTH_MESSAGE, HOURS_MESSAGE, LOCATION_MESSAGE } from '../../lib/ai-secretary';
 // Detector de crisis tolerante (una sola fuente de verdad, sin duplicar).
 import { assessSafety } from '../../ai/services/safety-router';
+// Proyección a la agenda administrativa (reutiliza repos existentes; sin duplicar lógica).
+import { findPatientByPhone, createPatient } from '../patients/repository';
+import { findFirstActiveTherapist } from '../therapists/repository';
+import { createAppointment } from '../appointments/repository';
 
 // Agendamiento REAL Chat TMS — Google Calendar como fuente de verdad.
 // Sin horarios inventados: los slots derivan de la ventana de atención
@@ -48,6 +52,9 @@ export interface BookingResult {
   eventLink?: string;
   error?: string;
   code?: string;
+  // true cuando la cita además quedó proyectada en la agenda administrativa
+  // (tabla appointments). false = fallo explícito, ver logs del Worker.
+  agendaSynced?: boolean;
 }
 
 const GCAL = 'https://www.googleapis.com/calendar/v3';
@@ -274,7 +281,53 @@ export async function createBookingEvent(env: Env, input: {
   } catch (err) {
     console.error('[booking] mark confirmed error:', err);
   }
-  return { ok: true, eventId: data.id as string, eventLink: data.htmlLink as string };
+  let agendaSynced = false;
+  try {
+    await syncAppointmentFromBooking(env, req, { name, phone, email, apptType, modality, eventId: data.id as string });
+    agendaSynced = true;
+  } catch (err) {
+    // NO se revierte el evento Calendar: reintentar crearía dobles reservas.
+    // El fallo NO es silencioso: queda en logs (console.error) y expuesto en
+    // la respuesta (agendaSynced=false) para reconciliación manual.
+    console.error('[booking] agenda sync FAILED (el evento Calendar SÍ se creó):', err);
+  }
+  return { ok: true, eventId: data.id as string, eventLink: data.htmlLink as string, agendaSynced };
+}
+
+// Proyección de la reserva confirmada a la agenda administrativa (/api/appointments).
+// El evento de Google Calendar es la fuente de verdad para el PACIENTE; esta fila
+// es lo que ve la clínica en su agenda. Idempotente por marker [booking_request:N]
+// en notes: un reintento tras fallo parcial NO duplica la cita.
+// Paciente: reutiliza el existente por teléfono (misma política que leads→paciente),
+// o lo crea. Terapeuta: primer activo de la clínica (misma regla del dominio).
+export async function syncAppointmentFromBooking(env: Env, req: BookingRequest, d: {
+  name: string; phone: string; email: string; apptType: string; modality: string; eventId: string;
+}): Promise<void> {
+  const marker = `[booking_request:${req.id}]`;
+  const existing = await env.DB.prepare(
+    'SELECT id FROM appointments WHERE clinic_id = 1 AND notes LIKE ? AND deleted_at IS NULL LIMIT 1'
+  ).bind(`%${marker}%`).first();
+  if (existing) return;
+
+  if (!d.phone) {
+    throw new Error('booking sin teléfono: patients.phone es NOT NULL, no se puede proyectar a agenda');
+  }
+  const found = await findPatientByPhone(env, 1, d.phone);
+  const patientId = found?.id
+    ?? await createPatient(env, 1, { name: d.name || 'Paciente chat', phone: d.phone, email: d.email || undefined });
+
+  const therapistId = await findFirstActiveTherapist(env, 1);
+  if (!therapistId) throw new Error('sin terapeuta activo en la clínica: no se puede proyectar a agenda');
+
+  await createAppointment(env, 1, {
+    patient_id: patientId,
+    therapist_id: therapistId,
+    date: req.date,
+    time: req.time,
+    duration: CLINIC_SCHEDULE.durationMin,
+    type: d.apptType,
+    notes: `Chat TMS · Modalidad: ${d.modality} · ${marker} · eventId:${d.eventId}`,
+  });
 }
 
 export async function verifyBookingEvent(env: Env, eventId: string): Promise<{ ok: boolean; date?: string; time?: string; summary?: string; status?: string; error?: string }> {
@@ -705,6 +758,11 @@ export async function cancelRequestByEvent(env: Env, eventId: string, reason = '
     const row = await env.DB.prepare('SELECT id FROM booking_requests WHERE calendar_event_id = ?').bind(eventId).first() as any;
     if (!row?.id) return;
     await env.DB.prepare("UPDATE booking_requests SET status = 'cancelled', cancelled_at = datetime('now'), cancel_reason = ?, updated_at = datetime('now') WHERE id = ?").bind(reason, row.id).run();
+    // Regresión transversal: la cita proyectada en la agenda administrativa
+    // también se cancela (sin esto quedaría 'scheduled' huérfana).
+    await env.DB.prepare(
+      "UPDATE appointments SET status = 'cancelled', updated_at = datetime('now') WHERE clinic_id = 1 AND notes LIKE ? AND status = 'scheduled' AND deleted_at IS NULL"
+    ).bind(`%[booking_request:${row.id}]%`).run();
   } catch (err) {
     console.error('[booking] cancel by event error:', err);
   }

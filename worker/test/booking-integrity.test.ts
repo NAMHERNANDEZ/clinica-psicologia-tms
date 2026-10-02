@@ -5,6 +5,8 @@ import {
   createBookingRequest,
   verifyBookingRequest,
   cancelBookingRequest,
+  cancelRequestByEvent,
+  syncAppointmentFromBooking,
   updateBookingRequestSlot,
   sweepBookingRequests,
   normalizePhoneMX,
@@ -39,6 +41,10 @@ interface Ctx {
   dayItems: any[];
   requests: Map<number, any>;
   reqSeq: number;
+  patients: Map<number, any>;
+  patientSeq: number;
+  appointments: Map<number, any>;
+  apptSeq: number;
 }
 
 function applySet(store: Map<number, any>, sql: string, args: any[]): number {
@@ -60,7 +66,7 @@ function applySet(store: Map<number, any>, sql: string, args: any[]): number {
 }
 
 function makeCtx(): Ctx {
-  const ctx: Ctx = { env: null as any, state: {}, posts: [], dayItems: [], requests: new Map(), reqSeq: 0 };
+  const ctx: Ctx = { env: null as any, state: {}, posts: [], dayItems: [], requests: new Map(), reqSeq: 0, patients: new Map(), patientSeq: 0, appointments: new Map(), apptSeq: 0 };
   const claims = new Map<string, any>();
   ctx.env = {
     DB: {
@@ -103,6 +109,18 @@ function makeCtx(): Ctx {
               for (const r of ctx.requests.values()) if (r.calendar_event_id === args[0]) return { id: r.id };
               return null;
             }
+            if (sql.includes('FROM appointments WHERE clinic_id = 1 AND notes LIKE ?')) {
+              const marker = String(args[0]).replace(/%/g, '');
+              for (const a of ctx.appointments.values()) if (String(a.notes || '').includes(marker) && !a.deleted_at) return { id: a.id };
+              return null;
+            }
+            if (sql.includes('FROM patients WHERE clinic_id = ? AND phone = ?')) {
+              for (const p of ctx.patients.values()) if (p.phone === args[1]) return { id: p.id };
+              return null;
+            }
+            if (sql.includes('FROM therapists WHERE clinic_id = ?')) {
+              return { id: 1 };
+            }
             if (sql.includes('FROM calendar_auth')) {
               return { access_token: 'tok-test', refresh_token: 'refresh-test', expires_at: new Date(Date.now() + 3600 * 1000).toISOString() };
             }
@@ -134,6 +152,24 @@ function makeCtx(): Ctx {
               return { meta: { last_row_id: id } };
             }
             if (sql.startsWith('UPDATE booking_requests')) { applySet(ctx.requests, sql, args); return { meta: { changes: 1 } }; }
+            if (sql.startsWith('INSERT INTO patients')) {
+              const id = ++ctx.patientSeq;
+              ctx.patients.set(id, { id, clinic_id: args[0], name: args[1], phone: args[2], email: args[3], birthdate: args[4] });
+              return { meta: { last_row_id: id } };
+            }
+            if (sql.startsWith('INSERT INTO appointments')) {
+              const id = ++ctx.apptSeq;
+              ctx.appointments.set(id, { id, clinic_id: args[0], patient_id: args[1], therapist_id: args[2], date: args[3], time: args[4], duration: args[5], notes: args[6], lead_id: args[7], type: args[8], status: 'scheduled', deleted_at: null });
+              return { meta: { last_row_id: id } };
+            }
+            if (sql.startsWith("UPDATE appointments SET status = 'cancelled'")) {
+              const marker = String(args[0]).replace(/%/g, '');
+              let changed = 0;
+              for (const a of ctx.appointments.values()) {
+                if (String(a.notes || '').includes(marker) && a.status === 'scheduled' && !a.deleted_at) { a.status = 'cancelled'; changed++; }
+              }
+              return { meta: { changes: changed } };
+            }
             if (sql.startsWith('INSERT INTO booking_slot_claims')) {
               const key = `1|${args[0]}|${args[1]}`;
               if (claims.has(key)) throw new Error('UNIQUE constraint failed');
@@ -510,5 +546,88 @@ describe('chat exige teléfono y crea solicitud', () => {
     expect(ctx.state[sid].request_id).toBeGreaterThan(0);
     const done = await handleBookingTurn(ctx.env, sid, 'sí, confirmo', '127.0.0.1');
     expect(done.eventId).toBe('evt-int-001');
+  });
+});
+
+// Reserva del chat -> agenda administrativa (/api/appointments).
+// Regresión: antes la confirmación solo tocaba booking_requests + Calendar y la
+// cita NUNCA aparecía en el panel de la clínica.
+describe('proyección a agenda administrativa (appointments)', () => {
+  let ctx: Ctx;
+  let date: string;
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    ctx = makeCtx();
+    date = nextWorkday();
+  });
+
+  it('confirmación crea LA cita en appointments (1 sola) con paciente, terapeuta y marker', async () => {
+    const id = await verifiedReq(ctx, { name: 'Agenda Clara', email: 'agenda@x.com', phone: '2311442990', date, time: '12:00', sid: 's-ag' });
+    const r = await createBookingEvent(ctx.env, {
+      date, time: '12:00', apptType: 'TMS', modality: 'presencial',
+      name: 'Agenda Clara', email: 'agenda@x.com', phone: '2311442990', sessionId: 's-ag', requestId: id,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.agendaSynced).toBe(true);
+    expect(ctx.appointments.size).toBe(1);
+    const appt = [...ctx.appointments.values()][0];
+    expect(appt.date).toBe(date);
+    expect(appt.time).toBe('12:00');
+    expect(appt.status).toBe('scheduled');
+    expect(appt.type).toBe('TMS');
+    expect(appt.duration).toBe(CLINIC_SCHEDULE.durationMin);
+    expect(appt.therapist_id).toBe(1);
+    expect(appt.notes).toContain(`[booking_request:${id}]`);
+    expect(appt.notes).toContain('eventId:evt-int-001');
+    // Paciente creado con teléfono real (patients.phone es NOT NULL).
+    const patient = [...ctx.patients.values()].find((p) => p.id === appt.patient_id);
+    expect(patient.phone).toBe('2311442990');
+    expect(patient.name).toBe('Agenda Clara');
+  });
+
+  it('reutiliza paciente existente por teléfono (no duplica la ficha)', async () => {
+    const existingPatientId = ++ctx.patientSeq;
+    ctx.patients.set(existingPatientId, { id: existingPatientId, clinic_id: 1, name: 'Previo', phone: '2311442991', email: null, birthdate: null });
+    const id = await verifiedReq(ctx, { name: 'Previo', email: 'previo@x.com', phone: '2311442991', date, time: '13:00', sid: 's-re' });
+    const r = await createBookingEvent(ctx.env, {
+      date, time: '13:00', apptType: 'TMS', modality: 'presencial',
+      name: 'Previo', email: 'previo@x.com', phone: '2311442991', sessionId: 's-re', requestId: id,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.agendaSynced).toBe(true);
+    expect(ctx.patients.size).toBe(1);
+    expect([...ctx.appointments.values()][0].patient_id).toBe(existingPatientId);
+  });
+
+  it('sync idempotente: marker [booking_request:N] existente NO duplica la cita', async () => {
+    const req: any = { id: 777, date, time: '15:00' };
+    ctx.appointments.set(1, {
+      id: 1, clinic_id: 1, patient_id: 1, therapist_id: 1, date, time: '15:00', duration: 50,
+      notes: 'Chat TMS · [booking_request:777] · eventId:evt-prev', lead_id: null, type: 'TMS', status: 'scheduled', deleted_at: null,
+    });
+    await syncAppointmentFromBooking(ctx.env, req, { name: 'X', phone: '2311442992', email: 'x@x.com', apptType: 'TMS', modality: 'presencial', eventId: 'evt-nuevo' });
+    expect(ctx.appointments.size).toBe(1);
+    expect([...ctx.appointments.values()][0].notes).toContain('evt-prev');
+  });
+
+  it('cancelRequestByEvent cancela también la cita proyectada (sin huérfanas)', async () => {
+    const id = await verifiedReq(ctx, { name: 'Cancel Uno', email: 'cancel@x.com', phone: '2311442993', date, time: '16:00', sid: 's-cc' });
+    const r = await createBookingEvent(ctx.env, {
+      date, time: '16:00', apptType: 'TMS', modality: 'presencial',
+      name: 'Cancel Uno', email: 'cancel@x.com', phone: '2311442993', sessionId: 's-cc', requestId: id,
+    });
+    expect(r.ok).toBe(true);
+    expect([...ctx.appointments.values()][0].status).toBe('scheduled');
+    await cancelRequestByEvent(ctx.env, 'evt-int-001');
+    expect(ctx.requests.get(id).status).toBe('cancelled');
+    expect([...ctx.appointments.values()][0].status).toBe('cancelled');
+  });
+
+  it('booking sin teléfono -> error EXPLÍCITO (patients.phone NOT NULL), no fallback silencioso', async () => {
+    const req: any = { id: 778, date, time: '17:00' };
+    await expect(
+      syncAppointmentFromBooking(ctx.env, req, { name: 'Sin Tel', phone: '', email: 's@x.com', apptType: 'TMS', modality: 'presencial', eventId: 'evt-z' })
+    ).rejects.toThrow(/patients\.phone/i);
+    expect(ctx.appointments.size).toBe(0);
   });
 });
