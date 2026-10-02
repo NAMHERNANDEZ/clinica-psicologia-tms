@@ -2,9 +2,25 @@
 
 Estado del proyecto. Fuente legible; la versión machine-readable es `PROJECT_STATE.json`.
 
-## Fase actual: SECRETARY-RECONCILIACIÓN + MH-EXPANSION 1.2 siguiente
+## Fase actual: MH-EXPANSION 1.2 — CBT INTEGRADO ✅ VERIFICADO EN PRODUCCIÓN (2026-10-01)
 
-**Estado: SKEW `a63d0b10 ≠ HEAD` CERRADO.** Secretary commiteado (`6705a07`) + deploy reproducible `d20f53b8` verificado idéntico. MH-EXPANSION 1.2 (CBT integrado) desbloqueado.
+**Estado: PRODUCTION PASS VERIFICADO (E2E 22/22).** La fase ya estaba implementada y desplegada — commit `67b46de` (2026-09-13): migración 0044 `mh_cbt_sessions`, dominio CBT (`cbt-validators/service/repository/routes`), UI `/mh/cbt`, tests 23. Los archivos de estado estaban desactualizados (la listaban como "siguiente"): reconciliados en esta sesión.
+
+### Evidencia real (producida en esta sesión, 2026-10-01)
+- **Typecheck**: PASS (`tsc` EXIT=0). **Tests worker**: 352/352 PASS (26 archivos, CBT 23/23).
+- **Versión producción**: Worker `8051c00f-3416-4b16-8262-876422adfdb8` al 100% (incluye CBT, ancestro de HEAD).
+- **Assets CBT servidos**: `/mh/cbt` 200 (SPA), `/assets/MhCbtPage-B7L_1tTm.js` 200, `/assets/MhCbtSessionPage-DCAw4GuE.js` 200 (hash = `frontend-assets.ts` local).
+- **D1 remota**: tabla `mh_cbt_sessions` presente (migración 0044 aplicada).
+- **E2E producción** (`scripts/e2e-mh12-cbt-prod.cjs`, 22/22 PASS): register A/B → assessment wellbeing pss4 (score=8) → check-in (intensidad 7) → CBT create (context_json enlaza assessment+checkin) → formulate → **strategy: mapper determinista `cognitive_restructuring` → `pensamiento-cbt` (intervention_id=6, catálogo existente)** → practice → reevaluate **delta=-3** + insight + next_step + sesión MH creada (motor before/after reusado) → persistencia tras recarga → aislamiento user B → 404 → safety gate before=9: crisis=true y strategy **409** → export incluye CBT → delete account A/B verificado → D1 limpio (probes=0, residuos=0).
+- **Arquitectura confirmada**: NO se creó otro motor terapéutico; el mapper traduce formulación a intervenciones existentes del catálogo `mh_interventions` y `reevaluate` reutiliza `computeDelta`/`createSession` del motor MH V1.
+
+### Seguridad (hecho en esta sesión)
+- Contraseña admin que estaba en texto plano en `SESSION_HANDOFF.md` → **eliminada**. Tratar como **COMPROMETIDA → requiere rotación** por canal seguro.
+
+## Fase anterior (esta misma era): AGENDA SYNC (chat→appointments) ✅ PRODUCCIÓN
+
+- Fix en `worker/src/domains/voice/booking.ts` + tests regresión — **commiteado en `67d5075`** (main local; push pendiente de autorización).
+- Deploy `8051c00f` + E2E PASS: chat «sí» → Calendar + `appointments.id=5` (marker `[booking_request:44]`) → cancel transversal verificada en D1 y Calendar.
 
 ## Fase previa: MH-EXPANSION 1.1 — FRONTEND /mh/assessments (bienestar)
 

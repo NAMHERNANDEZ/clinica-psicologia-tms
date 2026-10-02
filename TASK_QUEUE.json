@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-09-12T23:05:00.000Z",
+  "updatedAt": "2026-10-01T23:00:00.000Z",
   "active": {
-    "phase": "MH-EXPANSION 1.2 — CBT INTEGRADO (siguiente)",
-    "name": "Conectar assessment wellbeing -> resultado -> therapeutic-engine -> formulacion/intervencion -> MH intervention before/after -> insight. Sin crear otro motor terapeutico. Repo y produccion reconciliados: diseno y deploy desbloqueados.",
-    "status": "READY - HEAD == runtime (secretary 6705a07 + deploy d20f53b8 verificados reproducibles)",
-    "next": "Disenar 1.2: contrato resultado->area relevante->therapeutic-engine->intervencion->before/after->insight"
+    "phase": "MH-EXPANSION 2 �?" WELLBEING GATEWAY (siguiente elegible)",
+    "name": "Gateway de bienestar continuo (recordatorios, evolucion). PARCIALMENTE BLOQUEADA: recordatorios 24/48h y challenge por codigo requieren canal de envio externo (Twilio/Resend/SMTP inexistentes). Alternativa sin bloqueo: FASE 12.6 frontend (SeguimientoTab en PatientChartPage; backend ya PASS en commit 99e0201).",
+    "status": "READY - sin bloqueadores tecnicos para la parte no externa; wrangler operativo",
+    "next": "Decidir en la proxima sesion: 12.6 frontend (desbloqueada) o MH-EXPANSION 2 acotada a lo interno"
   },
   "pending": [
-    { "phase": "MH-EXPANSION 2", "name": "Wellbeing: gateway/bienestar continuo (recordatorios, evolucion) si aplica" },
-    { "phase": "12.6", "name": "Seguimiento: tareas clínicas, recordatorios, evolución" },
-    { "phase": "12.7", "name": "Escalas: PHQ-9, GAD-7, BDI, etc." },
-    { "phase": "12.8", "name": "Reportes: evolución, gráficas, exportación" },
+    { "phase": "12.6-frontend", "name": "Seguimiento: SeguimientoTab en PatientChartPage + API client followups (backend ya hecho)" },
+    { "phase": "12.8", "name": "Reportes: evoluci��n, grǭficas, exportaci��n" },
     { "phase": "12.9", "name": "Portal paciente: acceso, citas, documentos, mensajes" },
-    { "phase": "13", "name": "Agentes clínicos IA: investigación, TMS, supervisor, documentación" },
+    { "phase": "13", "name": "Agentes cl��nicos IA: investigaci��n, TMS, supervisor, documentaci��n" },
     { "phase": "14", "name": "Paciente digital: portal con login, citas, recordatorios" },
-    { "phase": "15", "name": "Escalamiento empresarial: multi-clínica" },
+    { "phase": "15", "name": "Escalamiento empresarial: multi-cl��nica" },
     { "phase": "16", "name": "Ecosistema completo" }
   ],
   "done": [
     "11.0", "11.1", "11.2", "11.2.1", "11.2.2", "11.3", "11.4", "11.5", "11.5.1",
-    "11.6", "11.7", "11.8", "12.1", "12.2", "12.3", "12.4",
+    "11.6", "11.7", "11.8", "12.1", "12.2", "12.3", "12.4", "12.5", "12.6-backend", "12.7",
     "MH",
-    "MH-EXPANSION 1.0", "MH-EXPANSION 1.1", "SECRETARY-RECONCILIACION"
+    "MH-EXPANSION 1.0", "MH-EXPANSION 1.1", "MH-EXPANSION 1.2", "SECRETARY-RECONCILIACION",
+    "BOOKING-INTEGRITY", "BOOKING-DATE-CHANGE", "CHAT-PRICING-MODALITY", "CHAT-TABS-TEXTO-VOZ",
+    "VOZ-EXISTENTE", "CRISIS-SAFETY", "CALENDAR-OAUTH", "AGENDA-SYNC"
   ],
   "evergreen": {
     "clinicUrl": "https://neurocienciaclinica.mx",

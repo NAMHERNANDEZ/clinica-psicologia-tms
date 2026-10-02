@@ -1,6 +1,18 @@
 # SESSION_HANDOFF.md
 
-## CIERRE TOTAL (2026-09-15: todo verificado salvo 1 deploy bloqueado por auth)
+## ESTADO VIGENTE (2026-10-01 — reconciliado; las secciones anteriores son HISTORIAL)
+
+- **Fase actual: MH-EXPANSION 1.2 CBT INTEGRADO — VERIFICADO EN PRODUCCIÓN (E2E 22/22 PASS).** Ya estaba implementada desde el commit `67b46de` (2026-09-13); los archivos de estado la seguían listando como "siguiente" y fueron reconciliados en esta sesión. Cadena demostrada en producción: assessment wellbeing real → check-in → sesión CBT → formulación → mapper determinista a intervención existente (`pensamiento-cbt`) → práctica → reevaluación (delta=-3, insight, next_step, sesión MH creada con el motor before/after existente) → persistencia tras recarga → aislamiento user-scoped (404) → safety gate (before≥9 → strategy 409) → export → delete account verificado → D1 limpio.
+- **Versión producción**: Worker `8051c00f-3416-4b16-8262-876422adfdb8` (100%, 2026-10-01T22:30Z). **wrangler OAuth OPERATIVO** (el bloqueo histórico de abajo está SUPERADO — se re-autenticó en una era anterior; hubo varios deploys posteriores).
+- **AGENDA-SYNC commiteado**: `67d5075` en main local (fix booking→appointments, idempotente, cancel transversal). **Push pendiente de autorización del usuario.**
+- **Verificaciones de esta sesión**: typecheck PASS (tsc EXIT=0), worker tests 352/352 (26 archivos; CBT 23/23), migración 0044 presente en D1 remota, `/mh/cbt` 200 y chunks `MhCbtPage-B7L_1tTm.js`/`MhCbtSessionPage-DCAw4GuE.js` servidos (hash = build local). Script de evidencia: `scripts/e2e-mh12-cbt-prod.cjs`.
+- **Seguridad — ACCIÓN REQUERIDA (rotación)**: la contraseña de admin figuraba en texto plano más abajo en este archivo; fue ELIMINADA hoy. Tratar como comprometida → **rotar por canal seguro**. Nunca reescribirla aquí.
+- **Siguiente elegible**: FASE 12.6 frontend (SeguimientoTab — backend ya PASS `99e0201`) o MH-EXPANSION 2 acotada a lo interno. Recordatorios/canal externo siguen bloqueados (sin proveedor de envío).
+- **Pendientes administrativos**: commit+push de archivos de estado y del script E2E (requieren autorización); decidir descarte de handlers `handleAdminBootstrapReset`/`ADMIN_RESET_KEY` (especulativos, sin commit); cleanup histórico opcional de 2 eventos Calendar huérfanos (`1or5imhq0ua8afsd2im7ftpq94`, `0tsrne98q4v6v4u7qv6p8idlb0`).
+
+---
+
+## CIERRE TOTAL (2026-09-15: todo verificado salvo 1 deploy bloqueado por auth) — HISTORIAL (bloqueo ya superado)
 
 - **BLOQUEADOR ÚNICO (humano inevitable)**: `wrangler deploy` falla con OAuth expirado (400) y no hay CLOUDFLARE_API_TOKEN (env vacío, .dev.vars solo tiene GEMINI). Commits f159841 (mic-policy+immutable) y 4cd2d49 (release chain) listos. ACCIÓN HUMANA: `wrangler login` en su terminal O crear API token (dash.cloudflare.com) como CLOUDFLARE_API_TOKEN. Luego: `wrangler deploy --config worker/wrangler.toml` + `node scripts/smoke-chat-matrix.cjs` + `node scripts/e2e-ui-edge.cjs`.
 - **FIX PENDIENTE DE DEPLOY (verificado en local vía wrangler dev)**: Permissions-Policy microphone=(self) — causa raíz del mic muerto en workers.dev (Pages nunca tuvo el header); header confirmado en servidor local. Immutable en /assets/*.
@@ -332,7 +344,8 @@
 - `PHASES/12.6.md` – `12.9.md` — planes de fases siguientes
 
 ## Credenciales de acceso
-- Admin: `admin@clinica.com` / `Admin123!`
+- **REMOVIDAS DEL REPOSITORIO (2026-10-01)**: la contraseña de admin estuvo expuesta aquí en texto plano. Tratar como COMPROMETIDA → REQUIERE ROTACIÓN por canal seguro. Nunca volver a escribir credenciales en archivos de estado, commits ni logs.
+- Admin (usuario, sin secreto): `admin@clinica.com`
 - Worker URL: `https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev`
 
 ## Git tags

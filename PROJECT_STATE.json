@@ -1,54 +1,62 @@
 ﻿{
   "project": "clinica-psicologia-tms",
-  "updatedAt": "2026-09-15T02:00:00.000Z",
+  "updatedAt": "2026-10-01T23:00:00.000Z",
   "phase": {
-    "current": "CIERRE TOTAL (1 item bloqueado por auth deploy)",
-    "name": "Mic-policy microphone=(self)+immutable (f159841) COMMITTEADO y verificado en local (wrangler dev header OK) pero SIN desplegar: OAuth Cloudflare expirado, sin token disponible. Resto verificado repetido en prod: repeat 39/39, UI 19-21 (solo falla mic-denied pendiente del deploy), smoke 29/29.",
-    "status": "BLOCKED_DEPLOY_AUTH"
+    "current": "MH-EXPANSION 1.2 CBT INTEGRADO — VERIFICADO EN PRODUCCION (22/22 E2E PASS)",
+    "name": "Auditoria + reconciliacion: 1.2 ya estaba implementada (commit 67b46de, migracion 0044). Los archivos de estado estaban desactualizados (decian 'siguiente'); la verificacion E2E contra produccion confirma el flujo completo.",
+    "status": "VERIFIED_PRODUCTION_PASS"
   },
   "lastCommit": {
-    "hash": "eb58395",
-    "message": "feat(e2e): evidencia encuadrada del boton Iniciar conversacion en /chat"
+    "hash": "67d5075",
+    "message": "fix(booking): agenda-sync appointments (syncAppointmentFromBooking + idempotencia + cancel transversal) + tests regresion + CORS pages.dev"
   },
   "uncommittedChanges": {
-    "count": 0,
-    "files": ["migraciones 0035-0042 y 0038/0039 (otras tareas, aplicadas remoto algunas, pendientes de sus propios commits)", "worker/test/chat-ai-regression.test.ts (clinical-chat, otra tarea)", "EVIDENCE_CHAT_TERAPEUTICO_REAL.md + .bak (otra tarea)", "frontend/ legacy divergente inerte (flag, no tocar)", "archivos basura raiz ($null, %USERPROFILE%.config/, etc., preexistentes)"],
-    "note": "Secretary reconciliado en 6705a07. MH-EXPANSION 1.1 en 7463c67. Resto WIP pertenece a otras tareas."
+    "count": 8,
+    "files": [
+      "SESSION_HANDOFF.md (sanitizada credencial admin + seccion estado reconciliado)",
+      "PROJECT_STATE.json / PROJECT_STATE.md / TASK_QUEUE.json / TASK_QUEUE.md (reconciliacion estado real)",
+      "scripts/e2e-mh12-cbt-prod.cjs (nuevo, evidencia E2E 1.2 en produccion)",
+      "worker/src/domains/auth/routes.ts + worker/src/types.ts (admin-reset ESPECULATIVO preexistente; pendiente decidir descartar)",
+      "src/admin/AdminLayout.tsx + src/pages/app/AgendaPage.tsx (banner Conectar Google Calendar, ya en Pages)",
+      ".github/workflows/deploy.yml",
+      "worker/.wrangler/* sqlite local (nunca commitear)",
+      "legacy basura preexistente (no tocar)"
+    ],
+    "note": "Commit requiere autorizacion explicita del usuario. Nunca commitear _login.json, credenciales, .wrangler/, backup/."
   },
   "build": {
-    "typecheck": "PASS (tsc worker --noEmit 0 errores)",
-    "wranglerDryRun": "PASS",
-    "tests": "PASS worker 347/347 + frontend 28/28 (Chat tabs 5/5)",
-    "frontendBuild": "PASS (vite + regen assets; Worker d3058243 + Pages 0d5ce393)"
+    "typecheck": "PASS (tsc worker --noEmit EXIT=0, 2026-10-01)",
+    "tests": "PASS worker 352/352 (26 archivos; cbt 23/23) 2026-10-01",
+    "wranglerDeploy": "ultimo deploy preexistente: 8051c00f-3416-4b16-8262-876422adfdb8 (2026-10-01T22:30Z, 100% trafico). Sin cambios de codigo esta sesion (auditoria+verificacion)."
   },
   "deploy": {
-    "worker": "d3058243-b1c9-4067-9084-433dbc18eb83 (previo 49b4b47c)",
-    "pages": "0d5ce393.clinica-psicologia-tms.pages.dev",
-    "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev",
-    "migracion0043": "APPLIED (previa, MH-EXPANSION 1.0)",
-    "reproducibleDesdeHEAD": true
+    "worker": "8051c00f-3416-4b16-8262-876422adfdb8",
+    "pages": "baeb218c",
+    "url": "https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev"
   },
-  "e2eProduction": "PASS en /chat (ruta pedida): pestanas Texto|Voz visibles sin scroll, Voz muestra Iniciar conversacion + input + enviar (screenshot test-results/e2e-chat-voz-tab.png), mic del input cambia a Voz, texto sigue respondiendo precio. E2E UI Edge 19/19.",
-  "chatPricingFix": {
-    "commit": "9ba0296",
-    "rootCause": "looksLikeBooking incluia 'consulta'/'valoraci' (CUANTO LA CONSULTA TMS entraba a booking y pedia modalidad) + wantsBooking con state residual != idle (COSTO caia en need_slot->horarios). Sin prioridad PRICING.",
-    "files": ["worker/src/domains/voice/booking.ts", "worker/src/lib/ai-secretary.ts", "worker/test/chat-pricing-modality.test.ts"],
-    "rule": "PRICING > AVAILABILITY; TMS siempre presencial; pricing no muta booking state"
+  "mhExpansion12": {
+    "implementadoEn": "commit 67b46de (2026-09-13) — migracion 0044 mh_cbt_sessions + cbt-validators/service/repository/routes + UI /mh/cbt + tests 23",
+    "arquitectura": "mapper determinista (cbt-service.ts) formulation -> intervencion EXISTENTE del catalogo mh_interventions (respiracion-478, pensamiento-cbt, grounding-54321, etc.); computeDelta y createSession del motor MH existente reusados en reevaluate; safety gate crisis >=9 bloquea strategy/practice con 409; user-scoped; export/delete account integrados. NO se creo otro motor terapeutico (cumple el requisito).",
+    "evidenciaProd": {
+      "version": "8051c00f al 100% (incluye CBT, ancestro de HEAD)",
+      "e2e": "scripts/e2e-mh12-cbt-prod.cjs 22/22 PASS: register A/B -> assessment pss4 (id=5 score=8) -> checkin (id=10) -> cbt create (id=5) -> formulate -> strategy=cognitive_restructuring slug=pensamiento-cbt intervention_id=6 phase=intervene -> practice -> reevaluate delta=-3 + insight + next_step + sesion MH (phase=reevaluate status=completed) -> persistencia tras recarga -> aislamiento B->404 -> safety before=9 crisis=true y strategy 409 -> export incluye cbt -> delete account A (datos borrados, sesion 404) -> delete B -> D1 probe_users=0 residuos=0",
+      "assets": "/mh/cbt 200 SPA; /assets/MhCbtPage-B7L_1tTm.js 200; /assets/MhCbtSessionPage-DCAw4GuE.js 200 (hash = frontend-assets.ts local)",
+      "d1": "tabla mh_cbt_sessions presente en remoto (migracion 0044 aplicada)"
+    }
   },
-  "chatDateChangeFix": {
-    "commit": "0148f2e",
-    "rootCause": "need_slot jamas extraia fecha del mensaje y reenviaba offered_slots cacheados (Y EL LUNES->slots sabado). need_confirm corregia fecha con cualquier texto con dia (Domingo Perez->cambio a domingo).",
-    "files": ["worker/src/domains/voice/booking.ts", "worker/src/lib/ai-secretary.ts", "worker/test/booking-date-change.test.ts"],
-    "rule": "fecha nueva = selected_date nueva + slot null + availability invalidada + nueva consulta Calendar; looksLikeDateChange distingue fecha real de nombre; precios con fuente canonica unica en ai-secretary.ts"
+  "agendaSyncFix": {
+    "estado": "COMMITEADO en 67d5075 (main, local; push pendiente de autorizacion)",
+    "evidenciaProd": "E2E chat 'si' -> cita agendada 2026-10-02 11:00; appointments.id=5 con marker [booking_request:44] + eventId; cancel transversal (Calendar DELETE + ambas filas cancelled); GET /api/appointments?date=... con Bearer admin devuelve la fila"
   },
-  "bridge": {
-    "status": "RUNNING + auto-start configurado en Startup",
-    "queueDir": "bridge/queue",
-    "resultsDir": "bridge/results",
-    "fixes": ["promptMsgID no-duplicacion", "sesion perdida tras reinicio", "sesion colgada (stuck)"]
+  "seguridad": {
+    "credencialAdminComprometida": "La password de admin estaba en texto plano en SESSION_HANDOFF.md (eliminada 2026-10-01). TRATAR COMO COMPROMETIDA -> REQUIERE ROTACION por canal seguro. No volver a escribirla en repo/estado/logs."
+  },
+  "calendarOAuth": {
+    "status": "connected:true (usuario re-autorizo Google previamente; fix redirect inmutable 0288a206)",
+    "note": "calendar_auth en D1 contiene refresh token (secreto; nunca leer/exponer)"
   },
   "nextAction": {
-    "label": "MH-EXPANSION 1.2 (CBT integrado) sigue desbloqueado; decidir commit del resto de voice/ untracked.",
-    "detail": "Cierre chat-pricing PASS b66adb6d. Pendiente ajeno: voice/routes.ts y resto de voice/ siguen untracked (base del booking que produccion ya ejecuta). STT 500 = config voz preexistente (sin keys), fuera de alcance."
+    "label": "Siguiente fase elegible: MH-EXPANSION 2 (gateway/bienestar continuo) o FASE 12.6 frontend (SeguimientoTab en PatientChartPage). Recordatorios 24/48h y challenge por codigo siguen bloqueados por canal de envio externo (no existe proveedor).",
+    "detail": "Sin bloqueadores tecnicos activos. Deploy/wrangler OPERATIVO. Pendientes administrativos: autorizar commit de archivos de estado + script E2E; rotar credencial admin comprometida; decidir descarte de handlers admin-reset especulativos; cleanup historico opcional de eventos Calendar huerfanos (1or5imhq0ua8afsd2im7ftpq94 'Test Vivo', 0tsrne98q4v6v4u7qv6p8idlb0 dbg-ad3)."
   }
 }

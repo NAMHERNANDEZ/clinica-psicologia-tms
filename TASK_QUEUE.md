@@ -25,14 +25,16 @@
 - **FASE_12.5** Documentos avanzados ✅ (reparación + estabilización real): WIP roto reparado — `service.ts` integra R2 con patrón real del proyecto (`env.CLINIC_DOCUMENTS_BUCKET`, sin clases inventadas), restaurados métodos signDocument/archiveDocument/supersedeDocument, scopes corregidos, `scanFileForViruses` cerrado, endpoint `GET /api/documents/:id/download` registrado, `CLINIC_DOCUMENTS_BUCKET` agregado a `Env`. Conservados: migración 0032, PatientAIChat widget, Deploy-12.5/12.6.bat, PHASES 12.6–12.9. **En esta sesión**: corregidos 9 errores TS reales (clinical-chat, clinical-notes, sessions, index.ts), vitest instalado, rbac.test.ts alineado al modelo real. **Evidencia real: typecheck PASS (tsc EXIT=0), build PASS (wrangler dry-run EXIT=0), tests PASS 103/103 (vitest EXIT=0).** Commit: `61fada8` + commit pendiente de correcciones.
 - **BRIDGE + CONFIG PERSISTENTE** ✅: bridge comunicado con OpenCode/lildax v2 (flujo probado real: tarea→queue→OpenCode→lildax→results→DONE), fixes preservados (no-duplicación `promptMsgID`, sesión perdida, sesión colgada `stuck`), conector `bridge/run-task.cjs` (canal automático), auto-start Windows (Startup), y configuración persistente de sesión: `AGENTS.md`, `PROJECT_STATE.md/.json`, `TASK_QUEUE.json`, `SESSION_HANDOFF.md`. Pruebas reales: E2E PASS, recuperación PASS, auto-start PASS.
 
-## Pending
+## Completed (seguimiento)
 - **FASE_12.5** Documentos avanzados (completar funcionalidad restante): validación adjuntos, firmas digitales en documentos.
 - **FASE_12.6** Seguimiento Clinico ✅ (backend): Dominio followups (migracion 0033, repository, service, validators, routes), endpoints POST/GET `/api/followups`, GET/PUT/DELETE `/api/followups/:id`, POST `/api/followups/:id/complete`, permisos `followups:read/write/delete` en RBAC (admin, therapist, psychiatrist, reception), tipo Followup en types.ts, tests 11 assertions (validators). **Evidencia real: typecheck PASS, build PASS, tests 114/114 PASS.** Commit: `99e0201`. Pendiente: frontend SeguimientoTab.
+- **FASE_12.7** Escalas Clínicas ✅ (PHQ-9, GAD-7, BDI-II, PCL-5, AUDIT, DASS-21; commits 84e3e1b+a33fce0; migración 0034; smoke 23/23 producción).
+- **MH-EXPANSION 1.0/1.1** Wellbeing ✅ (backend 6 escalas + UI /mh/assessments; E2E producción PASS).
+- **MH-EXPANSION 1.2** CBT Integrado ✅ VERIFICADO EN PRODUCCIÓN (2026-10-01): commit `67b46de` (migración 0044 `mh_cbt_sessions`, mapper determinista formulación→intervención del catálogo existente, safety gate crisis≥9→409, reevaluación before/after con delta+insight reutilizando motor MH, user-scoped, UI `/mh/cbt`). Verificación de esta sesión: typecheck PASS, worker 352/352, E2E producción 22/22 (`scripts/e2e-mh12-cbt-prod.cjs`), versión `8051c00f` al 100% sirviendo chunks `MhCbt*` con hash coincidente.
+- **AGENDA-SYNC** ✅ (commit `67d5075`): reservas del chat se proyectan a `appointments` con paciente/terapeuta reales, marker idempotente `[booking_request:N]`, cancelación transversal; E2E producción PASS.
 
 ## Pending
 - **FASE_12.6** Seguimiento Clinico (frontend): SeguimientoTab en PatientChartPage, API client followup.
-- **FASE_12.7** Escalas: PHQ-9, GAD-7, BDI, etc.
-- **FASE_12.7** Escalas: PHQ-9, GAD-7, BDI, etc.
 - **FASE_12.8** Reportes: evolución, gráficas, exportación.
 - **FASE_12.9** Portal paciente: acceso paciente, citas, documentos, mensajes.
 - **FASE_13** Agentes clinicos IA: Investigacion (evidencia/papers), TMS (educacion paciente), Supervisor (revision calidad), Documentacion (ayuda administrativa).
