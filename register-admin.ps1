@@ -1,6 +1,6 @@
 $body = @{
     email = "admin@clinica.com"
-    password = "Admin123!"
+    password = process.env.ADMIN_PASSWORD
     name = "Admin"
     clinic_name = "Neurociencia Clinica"
 } | ConvertTo-Json

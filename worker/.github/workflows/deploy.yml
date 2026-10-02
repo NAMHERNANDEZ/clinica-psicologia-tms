@@ -109,7 +109,7 @@ jobs:
           # Login
           LOGIN=$(curl -sf -X POST https://clinica-tms-api.terapiamagneticatranscraneal.workers.dev/api/auth/login \
             -H "Content-Type: application/json" \
-            -d '{"email":"admin@clinica.com","password":"Admin123!"}')
+            -d '{"email":"admin@clinica.com","password":process.env.ADMIN_PASSWORD}')
           TOKEN=$(echo $LOGIN | jq -r '.data.accessToken')
           echo "Auth: OK (token received: ${TOKEN:0:20}...)"
           # Dashboard

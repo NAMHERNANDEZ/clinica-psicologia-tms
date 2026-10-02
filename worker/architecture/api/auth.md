@@ -8,7 +8,7 @@ Content-Type: application/json
 
 {
   "email": "admin@clinica.com",
-  "password": "Admin123!"
+  "password": process.env.ADMIN_PASSWORD
 }
 ```
 

@@ -132,7 +132,7 @@ Run-Stage 10 "Smoke Test" {
   Write-Host "  Health: OK (db: $($healthData.data.db), latency: $($healthData.data.dbLatency)ms)" -ForegroundColor Green
 
   # Login test
-  $loginBody = @{ email = "admin@clinica.com"; password = "Admin123!" } | ConvertTo-Json
+  $loginBody = @{ email = "admin@clinica.com"; password = process.env.ADMIN_PASSWORD } | ConvertTo-Json
   $login = Invoke-WebRequest -Uri "$baseUrl/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json" -UseBasicParsing -TimeoutSec 15
   $token = ($login.Content | ConvertFrom-Json).data.accessToken
   if (-not $token) { throw "Login failed: no token" }

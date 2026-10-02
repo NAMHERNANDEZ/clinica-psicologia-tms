@@ -5,7 +5,7 @@ import '../pages/Login.css'
 
 export default function Login() {
   const [email, setEmail] = useState('admin@clinica.com')
-  const [password, setPassword] = useState('Admin123!')
+  const [password, setPassword] = useState(process.env.ADMIN_PASSWORD)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -60,7 +60,7 @@ export default function Login() {
         </form>
         <div className="credentials-hint">
           <strong>Credenciales por defecto:</strong><br />
-          admin@clinica.com / Admin123!
+          admin@clinica.com / process.env.ADMIN_PASSWORD
         </div>
       </div>
     </div>

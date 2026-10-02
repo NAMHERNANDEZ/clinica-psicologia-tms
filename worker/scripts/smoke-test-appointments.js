@@ -38,7 +38,7 @@ async function main() {
   console.log('\n[smoke:appointments] Probando flujo Lead→Cita→Agenda en producción...\n');
 
   // Login admin
-  const login = await httpReq('POST', '/api/auth/login', { email: 'admin@clinica.com', password: 'Admin123!' });
+  const login = await httpReq('POST', '/api/auth/login', { email: 'admin@clinica.com', password: process.env.ADMIN_PASSWORD });
   const loginJson = parse(login);
   const accessToken = loginJson?.data?.accessToken;
   check('Login admin', !!accessToken, 'No token');

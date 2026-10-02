@@ -9,7 +9,7 @@ function check(label, ok, msg) {
 const BASE_URL = process.env.SMOKE_URL ||
   'https://clinica-psicologia-tms.terapiamagneticatranscraneal.workers.dev';
 const EMAIL = process.env.SMOKE_EMAIL || 'admin@clinica.com';
-const PASS = process.env.SMOKE_PASS || 'Admin123!';
+const PASS = process.env.SMOKE_PASS || process.env.ADMIN_PASSWORD;
 
 function httpReq(method, path, body, headers) {
   return new Promise((resolve) => {
